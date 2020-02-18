@@ -1,0 +1,13 @@
+
+Important Android Build Files.txt
+==================================================
+
+src/main/AndroidManifest.xml:
+    Contains package information, version codes, supported features, and app
+    metadata.
+
+src/main/jni/Application.mk:
+    Compilation flags
+
+src/main/jni/src/Android.mk:
+    Makefile variables that point to code directories

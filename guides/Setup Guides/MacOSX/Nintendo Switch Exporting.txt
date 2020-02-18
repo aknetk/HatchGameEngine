@@ -1,0 +1,30 @@
+
+Installing DevkitPro PacMan and necessary packages
+==================================================
+1. Download the DevkitPro PacMan installer from:
+   https://github.com/devkitPro/pacman/releases/latest
+
+   Install the .pkg.
+
+2. sudo dkp-pacman -S switch-dev
+   Don't enter a number, install them all.
+
+3. sudo dkp-pacman -S switch-libogg
+   sudo dkp-pacman -S switch-libvorbis
+   sudo dkp-pacman -S switch-libvorbisidec
+   sudo dkp-pacman -S switch-glad
+   sudo dkp-pacman -S switch-mesa
+   sudo dkp-pacman -S switch-sdl2
+   sudo dkp-pacman -S switch-zlib
+
+4. export DEVKITPRO=/opt/devkitpro
+   export DEVKITARM=/opt/devkitpro/devkitARM
+   export DEVKITPPC=/opt/devkitpro/devkitPPC
+
+Upgrading Packages
+==================
+1. sudo dkp-pacman -Sy
+   This resyncs the databases.
+
+2. sudo dkp-pacman -Syu
+   This updates all installed packages.

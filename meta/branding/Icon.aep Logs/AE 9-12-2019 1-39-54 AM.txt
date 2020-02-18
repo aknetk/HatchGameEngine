@@ -1,0 +1,22 @@
+Adobe After Effects v15.1.2 Windows 64 render log for project “Icon.aep”
+
+Rendering started on 9/12/2019 at 1:39:54 AM
+
+  9/12/2019 1:39:54 AM: Starting composition “Logo”.
+
+  Output To: C:\Users\Justin\Dropbox\ImpostorEngine3\notes\Icons\Logo64.png    9/12/2019 1:39:54 AM: Finished composition “Logo”.
+
+
+  9/12/2019 1:39:54 AM: Starting composition “Logo”.
+
+  Output To: C:\Users\Justin\Dropbox\ImpostorEngine3\notes\Icons\Logo32.png    9/12/2019 1:39:54 AM: Finished composition “Logo”.
+
+
+  9/12/2019 1:39:54 AM: Starting composition “Logo”.
+
+  Output To: C:\Users\Justin\Dropbox\ImpostorEngine3\notes\Icons\Logo16.png    9/12/2019 1:39:54 AM: Finished composition “Logo”.
+
+
+  Total Time Elapsed: 0 Seconds
+Log closed on 9/12/2019 at 1:39:54 AM
+
