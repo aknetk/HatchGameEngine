@@ -116,7 +116,7 @@ public:
 vector<SceneLayer>    Scene::Layers;
 bool                  Scene::AnyLayerTileChange = false;
 int                   Scene::MainLayer = 0;
-int                   Scene::PriorityPerLayer = 2; // NOTE: Replace this with a non-pot number you whackjob
+int                   Scene::PriorityPerLayer = 16;
 vector<Entity*>*      Scene::PriorityLists = NULL;
 
 // Rendering variables
@@ -188,6 +188,20 @@ void _ObjectList_RemoveNonPersistentDynamicFromLists(Uint32, ObjectList* list) {
 void _ObjectList_Clear(Uint32, ObjectList* list) {
     list->Clear();
 }
+void _ObjectList_ResetPerf(Uint32, ObjectList* list) {
+    // list->AverageTime = 0.0;
+    list->AverageItemCount = 0.0;
+}
+void _UpdateObjectLate(Entity* ent) {
+    if (Scene::Paused && ent->Pauseable)
+        return;
+    if (!ent->Active)
+        return;
+    if (!ent->OnScreen)
+        return;
+
+    ent->UpdateLate();
+}
 void _UpdateObject(Entity* ent) {
     if (Scene::Paused && ent->Pauseable)
         return;
@@ -195,12 +209,43 @@ void _UpdateObject(Entity* ent) {
     if (!ent->Active)
         return;
 
-    // int oldPriority = ent->Priority;
+    if ((ent->OnScreenHitboxW == 0.0f || (
+        ent->X + ent->OnScreenHitboxW * 0.5f >= Scene::Views[0].X &&
+        ent->X - ent->OnScreenHitboxW * 0.5f <  Scene::Views[0].X + Scene::Views[0].Width)) &&
+        (ent->OnScreenHitboxH == 0.0f || (
+        ent->Y + ent->OnScreenHitboxH * 0.5f >= Scene::Views[0].Y &&
+        ent->Y - ent->OnScreenHitboxH * 0.5f <  Scene::Views[0].Y + Scene::Views[0].Height))) {
+        double elapsed = Clock::GetTicks();
 
-    ent->Update();
+        ent->OnScreen = true;
+
+        ent->Update();
+
+        elapsed = Clock::GetTicks() - elapsed;
+
+        if (ent->List) {
+            ObjectList* list = ent->List;
+            double count = list->AverageItemCount;
+            if (count < 60.0 * 60.0) {
+                count += 1.0;
+                if (count == 1.0)
+                    list->AverageTime = elapsed;
+                else
+                    list->AverageTime =
+                        list->AverageTime + (elapsed - list->AverageTime) / count;
+                list->AverageItemCount = count;
+            }
+        }
+    }
+    else {
+        ent->OnScreen = false;
+    }
+
+    if (!Scene::PriorityLists)
+        return;
 
     int oldPriority = ent->PriorityOld;
-    int maxPriority = (Scene::Layers.size() << Scene::PriorityPerLayer) - 1;
+    int maxPriority = Scene::PriorityPerLayer - 1;
     // HACK: This needs to error
     // if (ent->Priority < 0 || (ent->Priority >= (Scene::Layers.size() << Scene::PriorityPerLayer)))
     //     return;
@@ -320,6 +365,8 @@ PUBLIC STATIC void Scene::Init() {
 
     SourceFileMap::CheckForUpdate();
 
+    Application::GameStart = true;
+
     BytecodeObjectManager::Init();
     BytecodeObjectManager::ResetStack();
     BytecodeObjectManager::LinkStandardLibrary();
@@ -365,17 +412,18 @@ PUBLIC STATIC void Scene::Restart() {
         Scene::Views[i].Active = false;
     }
 
-    int layerSize = (int)Layers.size();
     if (Scene::AnyLayerTileChange) {
         // Copy backup tiles into main tiles
-        for (int l = 0; l < layerSize; l++) {
+        for (int l = 0; l < (int)Layers.size(); l++) {
             memcpy(Layers[l].Tiles, Layers[l].TilesBackup, Layers[l].Width * Layers[l].Height * sizeof(Uint32));
         }
         Scene::AnyLayerTileChange = false;
     }
-    layerSize <<= PriorityPerLayer;
-    for (int l = 0; l < layerSize; l++) {
-        Scene::PriorityLists[l].clear();
+
+    if (Scene::PriorityLists) {
+        for (int l = 0; l < Scene::PriorityPerLayer; l++) {
+            Scene::PriorityLists[l].clear();
+        }
     }
 
     // Remove all non-persistent objects from lists
@@ -430,20 +478,28 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     // TODO: Alter this for persistency
     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
         next = ent->NextEntity;
-        ent->Dispose();
+        if (!ent->Persistent) {
+            ent->Dispose();
+            // Scene::Remove(&Scene::StaticObjectFirst, &Scene::StaticObjectLast, &Scene::StaticObjectCount, ent);
+        }
     }
     Scene::Clear(&Scene::StaticObjectFirst, &Scene::StaticObjectLast, &Scene::StaticObjectCount);
 
     for (Entity* ent = Scene::DynamicObjectFirst, *next; ent; ent = next) {
         next = ent->NextEntity;
-        ent->Dispose();
+        if (!ent->Persistent) {
+            ent->Dispose();
+            // Scene::Remove(&Scene::DynamicObjectFirst, &Scene::DynamicObjectLast, &Scene::DynamicObjectCount, ent);
+        }
     }
     Scene::Clear(&Scene::DynamicObjectFirst, &Scene::DynamicObjectLast, &Scene::DynamicObjectCount);
 
     // Clear PriorityLists
-    int layerSize = Scene::Layers.size() << PriorityPerLayer;
-    for (int l = 0; l < layerSize; l++) {
-        Scene::PriorityLists[l].clear();
+    if (Scene::PriorityLists) {
+        int layerSize = Scene::PriorityPerLayer;
+        for (int l = 0; l < layerSize; l++) {
+            Scene::PriorityLists[l].clear();
+        }
     }
 
     // Dispose of layers
@@ -546,251 +602,6 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
             stageConfigReader->Close();
         }
 
-        ResourceStream* sceneBinReader;
-        if ((sceneBinReader = ResourceStream::New(String_SceneBin))) {
-            MemoryStream* memoryReader;
-            if ((memoryReader = MemoryStream::New(sceneBinReader))) {
-                memoryReader->ReadUInt32BE(); // Magic
-                memoryReader->Skip(16); // 16 bytes
-                memoryReader->Skip(memoryReader->ReadByte()); // RSDKString
-
-            	memoryReader->ReadByte();
-
-                double ticks;
-
-                ticks = Clock::GetTicks();
-
-                int layerCount = memoryReader->ReadByte();
-                Layers.resize(layerCount);
-                for (int i = 0; i < layerCount; i++) {
-                    memoryReader->ReadByte(); // Ignored Byte
-
-                    char* Name = memoryReader->ReadHeaderedString();
-                    memoryReader->ReadByte(); // int   IsScrollingVertical = memoryReader->ReadByte() == 1 ? true : false;
-                    memoryReader->ReadByte(); // int   Flags = memoryReader->ReadByte();
-                    int   Width = (int)memoryReader->ReadUInt16();
-                    int   Height = (int)memoryReader->ReadUInt16();
-
-                    SceneLayer layer(Width, Height);
-
-                    memset(layer.Name, 0, 50);
-                    strcpy(layer.Name, Name);
-                    Memory::Free(Name);
-
-                    if (MainLayer == 0 && layer.Name[0] == 'F' && layer.Name[1] == 'G')
-                        MainLayer = i;
-
-                    layer.RelativeY = memoryReader->ReadUInt16();
-                    layer.ConstantY = (short)memoryReader->ReadUInt16();
-
-                    layer.Flags = SceneLayer::FLAGS_COLLIDEABLE;
-
-                    layer.ScrollInfoCount = (int)memoryReader->ReadUInt16();
-                    layer.ScrollInfos = (ScrollingInfo*)Memory::Malloc(layer.ScrollInfoCount * sizeof(ScrollingInfo));
-                    for (int g = 0; g < layer.ScrollInfoCount; g++) {
-                        layer.ScrollInfos[g].RelativeX = memoryReader->ReadUInt16();
-                        layer.ScrollInfos[g].ConstantX = memoryReader->ReadUInt16();
-
-                        memoryReader->ReadByte();
-                        memoryReader->ReadByte();
-                    }
-
-                    memoryReader->ReadCompressed(layer.ScrollIndexes);
-                    memoryReader->ReadCompressed(layer.Tiles);
-
-        			Log::Print(Log::LOG_VERBOSE, "Layer %d (%s): Width (%d) Height (%d)", i, layer.Name, layer.Width, layer.Height);
-
-                    Layers[i] = layer;
-                }
-
-                PriorityLists = (vector<Entity*>*)Memory::TrackedCalloc("Scene::PriorityLists", layerCount * (1 << PriorityPerLayer), sizeof(vector<Entity*>));
-
-                ticks = Clock::GetTicks() - ticks;
-                Log::Print(Log::LOG_VERBOSE, "Scene Layer load took %.3f milliseconds.", ticks);
-
-                ticks = Clock::GetTicks();
-
-                int objectDefinitionCount = memoryReader->ReadByte();
-                Log::Print(Log::LOG_VERBOSE, "Object Definition Count: %d", objectDefinitionCount);
-
-                int roundedUpPow2 = objectDefinitionCount;
-
-                roundedUpPow2--;
-                roundedUpPow2 |= roundedUpPow2 >> 1;
-                roundedUpPow2 |= roundedUpPow2 >> 2;
-                roundedUpPow2 |= roundedUpPow2 >> 4;
-                roundedUpPow2 |= roundedUpPow2 >> 16;
-                roundedUpPow2++;
-
-                if (Scene::ObjectLists == NULL) {
-                    Scene::ObjectLists = new HashMap<ObjectList*>(CombinedHash::EncryptString, roundedUpPow2);
-                    Scene::ObjectRegistries = new HashMap<ObjectList*>(CombinedHash::EncryptString, 16);
-                }
-
-                int    objectListTotalCount = 0;
-
-                Uint8  hashTemp[16];
-                Uint32 objectNameHash;
-                int    argumentTypes[0x10];
-                Uint32 argumentHashes[0x10];
-                int    argumentCount;
-                int    entityCount;
-
-                for (int i = 0; i < objectDefinitionCount; i++) {
-                    memoryReader->ReadBytes(hashTemp, 16);
-                    objectNameHash = CRC32::EncryptData(hashTemp, 16);
-
-                    ObjectList* objectList = new ObjectList();
-                    Scene::ObjectLists->Put(objectNameHash, objectList);
-
-                    argumentCount = memoryReader->ReadByte();
-
-                    argumentTypes[0] = 8;
-                    argumentHashes[0] = 0x00000000U;
-                    for (int a = 1; a < argumentCount; a++) {
-                        memoryReader->ReadBytes(hashTemp, 16);
-                        argumentTypes[a] = memoryReader->ReadByte();
-                        argumentHashes[a] = CRC32::EncryptData(hashTemp, 16);
-                    }
-
-                    entityCount = memoryReader->ReadUInt16();
-
-                    if (ObjectHashes.Exists(objectNameHash)) {
-                        // Log::Print(Log::LOG_VERBOSE, "Object Hash: 0x%08XU Count: %*d Argument Count: %d (%s)", objectNameHash, 3, entityCount, argumentCount, ObjectHashes[objectNameHash]);
-                    }
-                    else {
-                        // Log::Print(Log::LOG_VERBOSE, "Object Hash: 0x%08XU Count: %*d Argument Count: %d", objectNameHash, 3, entityCount, argumentCount);
-                    }
-
-                    /*
-                    char filename[64];
-                    ResourceStream* stream;
-                    sprintf(filename, "Objects/%08X.ibc", objectNameHash);
-                    if ((stream = ResourceStream::New(filename)) && ObjectHashes.Exists(objectNameHash)) {
-                        // Check to see if bytecode hasn't already been loaded, and if so just point to that one
-                        BytecodeObjectManager::Load(stream);
-                        stream->Close();
-                        BytecodeObjectManager::SetCurrentObjectHash(FNV1A::EncryptString(ObjectHashes.Get(objectNameHash)));
-
-                        objectList->SpawnFunction = BytecodeObjectManager::SpawnFunction;
-                    }
-                    //*/
-                    if (ObjectHashes.Exists(objectNameHash))
-                        objectList->SpawnFunction = (Entity* (*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, ObjectHashes.Get(objectNameHash));
-
-                    if (objectList->SpawnFunction) {
-                        objectListTotalCount += entityCount;
-                        // Objects.reserve(objectListTotalCount);
-                        // objectList->ReserveStatic(entityCount);
-                    }
-
-                    for (int n = 0; n < entityCount; n++) {
-                        memoryReader->ReadUInt16(); // int SlotID = memoryReader->ReadUInt16();
-
-                        Uint32 X = memoryReader->ReadUInt32();
-                        Uint32 Y = memoryReader->ReadUInt32();
-
-                        if (objectList->SpawnFunction && n == 0) {
-                            Entity* obj = objectList->SpawnFunction();
-                            obj->X = (X / 65536.f);
-                            obj->Y = (Y / 65536.f);
-                            obj->InitialX = X;
-                            obj->InitialY = Y;
-                            obj->List = objectList;
-                            Scene::AddStatic(obj);
-
-                            for (int a = 1; a < argumentCount; a++) {
-                                AttributeValue attr;
-                                switch (argumentTypes[a]) {
-                                    case 0x0: attr.Value.asUint8  = memoryReader->ReadByte(); break;
-                                    case 0x1: attr.Value.asUint16 = memoryReader->ReadUInt16(); break;
-                                    case 0x2: attr.Value.asUint32 = memoryReader->ReadUInt32(); break;
-                                    case 0x3: attr.Value.asInt8   = memoryReader->ReadByte(); break;
-                                    case 0x4: attr.Value.asInt16  = memoryReader->ReadInt16(); break;
-                                    case 0x5: attr.Value.asInt32  = memoryReader->ReadInt32(); break;
-                                    // Var
-                                    case 0x6: attr.Value.asInt32  = memoryReader->ReadInt32(); break;
-                                    // Bool
-                                    case 0x7: attr.Value.asBool   = (bool)memoryReader->ReadUInt32(); break;
-                                    // String
-                                    case 0x8:
-                                        attr.Value.asString.Length = memoryReader->ReadUInt16();
-                                        attr.Value.asString.Data = (char*)Memory::TrackedMalloc("Args::asString::Data", attr.Value.asString.Length + 1);
-                                        for (int c = 0; c < attr.Value.asString.Length; c++)
-                                            attr.Value.asString.Data[c] = (char)(Uint8)memoryReader->ReadUInt16();
-                                        attr.Value.asString.Data[attr.Value.asString.Length] = 0;
-                                        break;
-                                    // Position
-                                    case 0x9:
-                                        attr.Value.asUint32 = memoryReader->ReadUInt32();
-                						memoryReader->ReadUInt32();
-                                        break;
-                                    // Color
-                                    case 0xB: attr.Value.asUint32 = memoryReader->ReadUInt32(); break;
-                                }
-                                // obj->Attributes.Put(argumentHashes[a], attr);
-                            }
-                        }
-                        else {
-                            int len;
-                            for (int a = 1; a < argumentCount; a++) {
-                                switch (argumentTypes[a]) {
-                                    case 0x0: memoryReader->Skip(1); break;
-                                    case 0x1: memoryReader->Skip(2); break;
-                                    case 0x2: memoryReader->Skip(4); break;
-                                    case 0x3: memoryReader->Skip(1); break;
-                                    case 0x4: memoryReader->Skip(2); break;
-                                    case 0x5: memoryReader->Skip(4); break;
-                                    // Var
-                                    case 0x6: memoryReader->Skip(4); break;
-                                    // Bool
-                                    case 0x7: memoryReader->Skip(4); break;
-                                    // String
-                                    case 0x8:
-                                        len = memoryReader->ReadUInt16();
-                                        memoryReader->Skip(len << 1);
-                                        break;
-                                    // Position
-                                    case 0x9:
-                                        memoryReader->Skip(8);
-                                        break;
-                                    // Color
-                                    case 0xB: memoryReader->Skip(4); break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                ticks = Clock::GetTicks() - ticks;
-                Log::Print(Log::LOG_VERBOSE, "Scene Object load took %.3f milliseconds.", ticks);
-
-                memoryReader->Close();
-            }
-            sceneBinReader->Close();
-        }
-
-        ResourceStream* tileConfigReader;
-        if ((tileConfigReader = ResourceStream::New(String_TileConfig))) {
-            if (Scene::TileCfgA == NULL) {
-        		Scene::TileCfgA = (TileConfig*)Memory::TrackedCalloc("Scene::TileCfgA", 0x800, sizeof(TileConfig));
-        		Scene::TileCfgB = Scene::TileCfgA + 0x400 * sizeof(TileConfig);
-
-                for (int i = 0; i < 0x800; i++) {
-                    Scene::TileCfgA[i].Collision = (Uint8*)Memory::Calloc(1, Scene::TileSize);
-                    Scene::TileCfgA[i].HasCollision = (Uint8*)Memory::Calloc(1, Scene::TileSize);
-                }
-            }
-            MemoryStream* memoryReader;
-            if ((memoryReader = MemoryStream::New(tileConfigReader))) {
-                memoryReader->ReadUInt32(); // Magic 0x4C4954
-                // NOTE: This won't work because pointers now
-                // memoryReader->ReadCompressed(Scene::TileCfgA);
-                memoryReader->Close();
-            }
-            tileConfigReader->Close();
-        }
-
         if (String_TileSprite && false) {
             TileSprite = new ISprite(String_TileSprite);
             TileSprite->ReserveAnimationCount(1);
@@ -809,6 +620,41 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
             Memory::Free(string);
         });
     #endif
+
+    // Add "Static" class
+    if (Application::GameStart) {
+        BytecodeObject* obj;
+        const char* objectName;
+        Uint32 objectNameHash;
+        ObjectList* objectList;
+
+        objectName = "Static";
+        objectNameHash = CombinedHash::EncryptString(objectName);
+        objectList = new ObjectList();
+        strcpy(objectList->ObjectName, objectName);
+        objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, (char*)objectName);
+        // Scene::ObjectLists->Put(objectNameHash, objectList);
+
+        if (objectList->SpawnFunction) {
+            obj = (BytecodeObject*)objectList->SpawnFunction();
+            if (obj) {
+                obj->X = 0.0f;
+                obj->Y = 0.0f;
+                obj->InitialX = obj->X;
+                obj->InitialY = obj->Y;
+                obj->List = objectList;
+                obj->Persistent = true;
+                // Scene::AddStatic(objectList, obj);
+
+                BytecodeObjectManager::Globals->Put("global", OBJECT_VAL(obj->Instance));
+
+                if (Application::GameStart) {
+                    obj->RunFunction("GameStart");
+                    Application::GameStart = false;
+                }
+            }
+        }
+    }
 
     if (Graphics::SupportsBatching && Scene::TileSprite) {
         struct tempVertex {
@@ -915,9 +761,11 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
             Scene::TileCfgA = (TileConfig*)Memory::TrackedCalloc("Scene::TileCfgA", (Scene::TileCount << 1), sizeof(TileConfig));
             Scene::TileCfgB = Scene::TileCfgA + Scene::TileCount;
 
-            for (Uint32 i = 0, iSz = (Uint32)(Scene::TileCount << 1); i < iSz; i++) {
+            for (Uint32 i = 0, iSz = (Uint32)Scene::TileCount; i < iSz; i++) {
                 Scene::TileCfgA[i].Collision = (Uint8*)Memory::Calloc(1, Scene::TileSize);
                 Scene::TileCfgA[i].HasCollision = (Uint8*)Memory::Calloc(1, Scene::TileSize);
+                Scene::TileCfgB[i].Collision = (Uint8*)Memory::Calloc(1, Scene::TileSize);
+                Scene::TileCfgB[i].HasCollision = (Uint8*)Memory::Calloc(1, Scene::TileSize);
             }
         }
 
@@ -957,8 +805,7 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
 
         Memory::Free(tileInfo);
     }
-    else
-    if (magic != 0x00000000U) {
+    else if (magic == 0x4C4F4354U) {
         Uint32 tileCount = tileColReader->ReadUInt32();
         Uint8  tileSize  = tileColReader->ReadByte();
         tileColReader->ReadByte();
@@ -986,24 +833,40 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
         }
 
         for (Uint32 i = 0; i < tileCount; i++) {
-            // Uint16 hasCollision = tileColReader->ReadUInt16();
-            // Uint16 tileAngle    = tileColReader->ReadUInt16();
-            // Scene::TileCfgA[i].IsCeiling = tileColReader->ReadByte();
-            // Scene::TileCfgA[i].Config[0] = tileColReader->ReadByte();
-            Scene::TileCfgB[i].IsCeiling = Scene::TileCfgA[i].IsCeiling = tileColReader->ReadByte();
-            Scene::TileCfgB[i].Config[0] = Scene::TileCfgA[i].Config[0] = tileColReader->ReadByte();
+            Scene::TileCfgA[i].IsCeiling = Scene::TileCfgB[i].IsCeiling = tileColReader->ReadByte();
+            Scene::TileCfgA[i].Config[0] = Scene::TileCfgB[i].Config[0] = tileColReader->ReadByte();
             Scene::TileCfgA[i].Config[1] = false;
             bool hasCollision = tileColReader->ReadByte();
             for (int t = 0; t < tileSize; t++) {
-                // Scene::TileCfgA[i].Collision[t] = tileColReader->ReadByte(); // collision
-                // Scene::TileCfgA[i].HasCollision[t] = hasCollision; // (Scene::TileCfgA[i].Collision[t] != tileSize)
-                Scene::TileCfgB[i].Collision[t] = Scene::TileCfgA[i].Collision[t] = tileColReader->ReadByte(); // collision
-                Scene::TileCfgB[i].HasCollision[t] = Scene::TileCfgA[i].HasCollision[t] = hasCollision; // (Scene::TileCfgA[i].Collision[t] != tileSize)
-
-                // Config[1] = IsThereEmptySpace
-                Scene::TileCfgA[i].Config[1] |= (Scene::TileCfgA[i].Collision[t] == tileSize);
+                Scene::TileCfgA[i].Collision[t] = Scene::TileCfgB[i].Collision[t] = tileColReader->ReadByte(); // collision
+                Scene::TileCfgA[i].HasCollision[t] = Scene::TileCfgB[i].HasCollision[t] = hasCollision; // (Scene::TileCfgA[i].Collision[t] != tileSize)
             }
-            Scene::TileCfgB[i].Config[1] = Scene::TileCfgA[i].Config[1];
+
+            Uint8 angle = Scene::TileCfgA[i].Config[0];
+
+            if (angle == 0xFF) {
+                Scene::TileCfgA[i].Config[0] = 0x00;
+                Scene::TileCfgA[i].Config[1] = 0xC0;
+                Scene::TileCfgA[i].Config[2] = 0x40;
+                Scene::TileCfgA[i].Config[3] = 0x80;
+            }
+            else {
+                if (Scene::TileCfgA[i].IsCeiling) {
+                    Scene::TileCfgA[i].Config[0] = 0x00;
+                    Scene::TileCfgA[i].Config[1] = angle >= 0x81 && angle <= 0xB6 ? angle : 0xC0;
+                    Scene::TileCfgA[i].Config[2] = angle >= 0x4A && angle <= 0x7F ? angle : 0x40;
+                    Scene::TileCfgA[i].Config[3] = angle;
+                }
+                else {
+                    Scene::TileCfgA[i].Config[0] = angle;
+                    Scene::TileCfgA[i].Config[1] = angle >= 0xCA && angle <= 0xF6 ? angle : 0xC0;
+                    Scene::TileCfgA[i].Config[2] = angle >= 0x0A && angle <= 0x36 ? angle : 0x40;
+                    Scene::TileCfgA[i].Config[3] = 0x80;
+                }
+            }
+
+            // Copy over to B
+            memcpy(Scene::TileCfgB[i].Config, Scene::TileCfgA[i].Config, 5);
         }
     }
     tileColReader->Close();
@@ -1048,6 +911,9 @@ PUBLIC STATIC void Scene::SaveTileCollisions() {
 }
 
 PUBLIC STATIC void Scene::Update() {
+    if (Scene::ObjectLists)
+        Scene::ObjectLists->ForAll(_ObjectList_ResetPerf);
+
     // Update objects
     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
         // Store the "next" so that when/if the current is removed,
@@ -1061,6 +927,16 @@ PUBLIC STATIC void Scene::Update() {
         next = ent->NextEntity;
 
         _UpdateObject(ent);
+    }
+
+    // Late Update
+    for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
+        next = ent->NextEntity;
+        _UpdateObjectLate(ent);
+    }
+    for (Entity* ent = Scene::DynamicObjectFirst, *next; ent; ent = next) {
+        next = ent->NextEntity;
+        _UpdateObjectLate(ent);
 
         if (!ent->Active) {
             Scene::Remove(&Scene::DynamicObjectFirst, &Scene::DynamicObjectLast, &Scene::DynamicObjectCount, ent);
@@ -1089,17 +965,27 @@ PUBLIC STATIC void Scene::Update() {
     AudioManager::Unlock();
     #endif
 
-    Scene::Frame++;
+    if (!Scene::Paused)
+        Scene::Frame++;
 }
 
 PUBLIC STATIC void Scene::Render() {
+    if (!Scene::PriorityLists)
+        return;
+    
     Graphics::ResetViewport();
+
+    float cx, cy, cz;
 
     for (int i = 0; i < 8; i++) {
         View* currentView = &Scene::Views[i];
 
         if (!currentView->Active)
             return;
+
+        cx = std::floor(currentView->X);
+        cy = std::floor(currentView->Y);
+        cz = std::floor(currentView->Z);
 
         Scene::ViewCurrent = i;
 
@@ -1137,22 +1023,20 @@ PUBLIC STATIC void Scene::Render() {
             Matrix4x4::Rotate(currentView->ProjectionMatrix, currentView->ProjectionMatrix, currentView->RotateX, 1.0, 0.0, 0.0);
             Matrix4x4::Rotate(currentView->ProjectionMatrix, currentView->ProjectionMatrix, currentView->RotateY, 0.0, 1.0, 0.0);
             Matrix4x4::Rotate(currentView->ProjectionMatrix, currentView->ProjectionMatrix, currentView->RotateZ, 0.0, 0.0, 1.0);
-            Matrix4x4::Translate(currentView->ProjectionMatrix, currentView->BaseProjectionMatrix, -std::floor(currentView->X), -std::floor(currentView->Y), -std::floor(currentView->Z));
+            Matrix4x4::Translate(currentView->ProjectionMatrix, currentView->BaseProjectionMatrix, -cx, -cy, -cz);
         }
         Graphics::UpdateProjectionMatrix();
 
         // Graphics::SetBlendColor(0.5, 0.5, 0.5, 1.0);
         // Graphics::FillRectangle(currentView->X, currentView->Y, currentView->Width, currentView->Height);
 
-        int layerSize = Layers.size() << PriorityPerLayer;
-        int layerMask = (1 << PriorityPerLayer) - 1;
         int tileSize = Scene::TileSize;
         int tileSizeHalf = tileSize >> 1;
         int tileCellMaxWidth = 2 + (currentView->Width / tileSize);
         int tileCellMaxHeight = 2 + (currentView->Height / tileSize);
 
         // RenderEarly
-        for (int l = 0; l < layerSize; l++) {
+        for (int l = 0; l < Scene::PriorityPerLayer; l++) {
             if (DEV_NoObjectRender)
                 break;
 
@@ -1161,22 +1045,11 @@ PUBLIC STATIC void Scene::Render() {
                 if (PriorityLists[l][o] && PriorityLists[l][o]->Active)
                     PriorityLists[l][o]->RenderEarly();
             }
-            // if (l == 2) {
-            //     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
-            //         next = ent->NextEntity;
-            //         ent->RenderEarly();
-            //     }
-            //     for (Entity* ent = Scene::DynamicObjectFirst, *next; ent; ent = next) {
-            //         next = ent->NextEntity;
-            //         ent->RenderEarly();
-            //     }
-            // }
         }
 
         // Render
-        for (int l = 0; l < layerSize; l++) {
+        for (int l = 0; l < Scene::PriorityPerLayer; l++) {
             size_t oSz = PriorityLists[l].size();
-            SceneLayer layer = Layers[l >> PriorityPerLayer];
 
             if (DEV_NoObjectRender)
                 goto DEV_NoTilesCheck;
@@ -1185,16 +1058,6 @@ PUBLIC STATIC void Scene::Render() {
                 if (PriorityLists[l][o] && PriorityLists[l][o]->Active)
                     PriorityLists[l][o]->Render(currentView->X, currentView->Y);
             }
-            // if (l == 2) {
-            //     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
-            //         next = ent->NextEntity;
-            //         ent->Render(currentView->X, currentView->Y);
-            //     }
-            //     for (Entity* ent = Scene::DynamicObjectFirst, *next; ent; ent = next) {
-            //         next = ent->NextEntity;
-            //         ent->Render(currentView->X, currentView->Y);
-            //     }
-            // }
 
             DEV_NoTilesCheck:
             if (DEV_NoTiles)
@@ -1203,110 +1066,127 @@ PUBLIC STATIC void Scene::Render() {
             if (!Scene::TileSprite)
                 continue;
 
-            // Skip layer tile render if already rendered
-            if ((l & layerMask) != 0)
-                continue;
-
-            // Draw Tiles
-            if (layer.Visible) {
-                int flipX, flipY;
-                int TileBaseX, TileBaseY, baseX, baseY, tile, baseXOff, baseYOff;
-                float tBX, tBY;
-
-                Graphics::SetBlendColor(1.0, 1.0, 1.0, 1.0);
-                // TileBaseX = (int)(currentView->X);
-                // TileBaseY = (int)(currentView->Y);
-                // if (layer.ScrollInfos) {
-                //     baseXOff = (int)(currentView->X * (1.0f - layer.ScrollInfos[0].RelativeX / 256.f));
-                // }
-                // baseYOff = (currentView->Y * (1.0f - layer.RelativeY / 256.f));
-                //
-                // TileBaseX -= layer.OffsetX;
-                // TileBaseY -= layer.OffsetY;
-                // TileBaseX -= baseXOff;
-                // TileBaseY -= baseYOff;
-
-                tBX = currentView->X;
-                tBY = currentView->Y;
-                baseXOff = 0;
-                if (layer.ScrollInfos) {
-                    baseXOff = (int)std::ceil(currentView->X * (1.0f - layer.ScrollInfos[0].RelativeX / 256.f));
-                }
-                baseYOff = (int)std::ceil(currentView->Y * (1.0f - layer.RelativeY / 256.f));
-
-                tBX -= layer.OffsetX;
-                tBY -= layer.OffsetY;
-                tBX -= baseXOff;
-                tBY -= baseYOff;
-
-                TileBaseX = (int)tBX;
-                TileBaseY = (int)tBY;
-
-                if (Graphics::SupportsBatching && false) { // && Scene::UseBatchedTiles
-                    Graphics::Save();
-                    Graphics::Translate(-TileBaseX, -TileBaseY, 0.0f);
-                    GLRenderer::DrawTexturedShapeBuffer(Scene::TileSprite->Spritesheets[0], layer.BufferID, layer.VertexCount);
-                    Graphics::Restore();
+            for (size_t li = 0; li < Layers.size(); li++) {
+                SceneLayer layer = Layers[li];
+                // Skip layer tile render if already rendered
+                if (layer.DrawGroup != l)
                     continue;
+
+                // Draw Tiles
+                if (layer.Visible) {
+                    Graphics::Save();
+                    Graphics::Translate(cx, cy, cz);
+
+                    int flipX, flipY;
+                    int TileBaseX, TileBaseY, baseX, baseY, tile, baseXOff, baseYOff;
+                    float tBX, tBY;
+
+                    int layerWidth = layer.Width << 4;
+                    int layerHeight = layer.Height << 4;
+
+                    Graphics::SetBlendColor(1.0, 1.0, 1.0, 1.0);
+
+                    if (layer.ScrollInfos)
+                        baseXOff = (int)std::floor(
+                            currentView->X * layer.ScrollInfos[0].RelativeX / 256.f +
+                            Scene::Frame * layer.ScrollInfos[0].ConstantX / 256.f * 0.0f);
+                    else
+                        baseXOff = (int)std::floor(currentView->X);
+
+                    baseYOff = (int)std::floor(
+                        currentView->Y * layer.RelativeY / 256.f +
+                        Scene::Frame * layer.ConstantY / 256.f * 0.0f);
+
+                    baseXOff += layer.OffsetX;
+                    baseYOff += layer.OffsetY;
+
+                    tBX = currentView->X;
+                    tBY = currentView->Y;
+                    TileBaseX = baseXOff;
+                    TileBaseY = baseYOff;
+
+                    if (Graphics::SupportsBatching && Application::Platform == Platforms::Android) { // && Scene::UseBatchedTiles
+                        int xxx = baseXOff % layerWidth;
+                        int yyy = baseYOff % layerHeight;
+                        if (xxx < 0) xxx += layerWidth;
+                        if (yyy < 0) yyy += layerHeight;
+
+                        Graphics::Save();
+                        Graphics::Translate(-xxx, -yyy, 0.0f);
+                            GLRenderer::DrawTexturedShapeBuffer(Scene::TileSprite->Spritesheets[0], layer.BufferID, layer.VertexCount);
+                            if (!(layer.Flags & SceneLayer::FLAGS_NO_REPEAT_X)) {
+                                Graphics::Translate(layerWidth, 0.0f, 0.0f);
+                                GLRenderer::DrawTexturedShapeBuffer(Scene::TileSprite->Spritesheets[0], layer.BufferID, layer.VertexCount);
+                            }
+                            if (layerWidth < currentView->Width) {
+                                Graphics::Translate(layerWidth, 0.0f, 0.0f);
+                                GLRenderer::DrawTexturedShapeBuffer(Scene::TileSprite->Spritesheets[0], layer.BufferID, layer.VertexCount);
+                            }
+                        Graphics::Restore();
+
+                        Graphics::Restore();
+                        continue;
+                    }
+
+                    int tileCellStartX = (TileBaseX / tileSize);
+                    int tileCellStartY = (TileBaseY / tileSize);
+                    int tileCellEndX = tileCellStartX + tileCellMaxWidth;
+                    int ix = tileCellStartX,
+                        iy = tileCellStartY,
+                        sourceTileCellX, sourceTileCellY;
+
+                    for (int t = 0, fullSize = tileCellMaxWidth * tileCellMaxHeight; t < fullSize; t++) {
+                        sourceTileCellX = ix;
+                        sourceTileCellY = iy;
+
+                        if (layer.Flags & SceneLayer::FLAGS_NO_REPEAT_X) {
+                            if (sourceTileCellX < 0) goto LAYER_THICK_CONTINUE;
+                            if (sourceTileCellX >= layer.Width) goto LAYER_THICK_CONTINUE;
+                        }
+                        if (layer.Flags & SceneLayer::FLAGS_NO_REPEAT_Y) {
+                            if (sourceTileCellY < 0) goto LAYER_THICK_CONTINUE;
+                            if (sourceTileCellY >= layer.Height) goto LAYER_THICK_CONTINUE;
+                        }
+
+                        // while (sourceTileCellX < 0) sourceTileCellX += layer.Width;
+                        // while (sourceTileCellX >= layer.Width) sourceTileCellX -= layer.Width;
+                        sourceTileCellX = ((sourceTileCellX % layer.Width) + layer.Width) % layer.Width;
+
+                        // while (sourceTileCellY < 0) sourceTileCellY += layer.Height;
+                        // while (sourceTileCellY >= layer.Height) sourceTileCellY -= layer.Height;
+                        sourceTileCellY = ((sourceTileCellY % layer.Height) + layer.Height) % layer.Height;
+
+                        baseX = (ix * tileSize) + tileSizeHalf;
+                        baseY = (iy * tileSize) + tileSizeHalf;
+
+                        baseX -= baseXOff;
+                        baseY -= baseYOff;
+
+                        tile = layer.Tiles[sourceTileCellX + sourceTileCellY * layer.Width];
+                        flipX = (tile & TILE_FLIPX_MASK);
+                        flipY = (tile & TILE_FLIPY_MASK);
+
+                        tile &= TILE_IDENT_MASK;
+                        if (tile != EmptyTile) {
+                            Graphics::DrawSprite(TileSprite, 0, tile - FIRSTGID, baseX, baseY, flipX, flipY);
+                        }
+
+                        LAYER_THICK_CONTINUE:
+
+                        ix++;
+                        if (ix >= tileCellEndX) {
+                            ix = tileCellStartX;
+                            iy++;
+                        }
+                    }
+
+                    Graphics::Restore();
                 }
-
-                int tileCellStartX = (TileBaseX / tileSize);
-                int tileCellStartY = (TileBaseY / tileSize);
-                int tileCellEndX = tileCellStartX + tileCellMaxWidth;
-                int ix = tileCellStartX,
-                    iy = tileCellStartY,
-                    sourceTileCellX, sourceTileCellY;
-
-                for (int t = 0, fullSize = tileCellMaxWidth * tileCellMaxHeight; t < fullSize; t++) {
-                    sourceTileCellX = ix;
-                    sourceTileCellY = iy;
-
-                    if (layer.Flags & SceneLayer::FLAGS_NO_REPEAT_X) {
-                        if (sourceTileCellX < 0) goto LAYER_THICK_CONTINUE;
-                        if (sourceTileCellX >= layer.Width) goto LAYER_THICK_CONTINUE;
-                    }
-                    if (layer.Flags & SceneLayer::FLAGS_NO_REPEAT_Y) {
-                        if (sourceTileCellY < 0) goto LAYER_THICK_CONTINUE;
-                        if (sourceTileCellY >= layer.Height) goto LAYER_THICK_CONTINUE;
-                    }
-
-                    // while (sourceTileCellX < 0) sourceTileCellX += layer.Width;
-                    // while (sourceTileCellX >= layer.Width) sourceTileCellX -= layer.Width;
-                    sourceTileCellX = ((sourceTileCellX % layer.Width) + layer.Width) % layer.Width;
-
-                    // while (sourceTileCellY < 0) sourceTileCellY += layer.Height;
-                    // while (sourceTileCellY >= layer.Height) sourceTileCellY -= layer.Height;
-                    sourceTileCellY = ((sourceTileCellY % layer.Height) + layer.Height) % layer.Height;
-
-                    baseX = (ix * tileSize) + tileSizeHalf;
-                    baseY = (iy * tileSize) + tileSizeHalf;
-
-                    baseX += baseXOff;
-                    baseY += baseYOff;
-
-                    tile = layer.Tiles[sourceTileCellX + sourceTileCellY * layer.Width];
-                    flipX = (tile & TILE_FLIPX_MASK);
-                    flipY = (tile & TILE_FLIPY_MASK);
-
-                    tile &= TILE_IDENT_MASK;
-                    if (tile != EmptyTile) {
-                        Graphics::DrawSprite(TileSprite, 0, tile - FIRSTGID, baseX, baseY, flipX, flipY);
-                    }
-
-                    LAYER_THICK_CONTINUE:
-
-                    ix++;
-                    if (ix >= tileCellEndX) {
-                        ix = tileCellStartX;
-                        iy++;
-                    }
-                }
-
             }
         }
 
         // RenderLate
-        for (int l = 0; l < layerSize; l++) {
+        for (int l = 0; l < Scene::PriorityPerLayer; l++) {
             if (DEV_NoObjectRender)
                 break;
 
@@ -1315,16 +1195,6 @@ PUBLIC STATIC void Scene::Render() {
                 if (PriorityLists[l][o] && PriorityLists[l][o]->Active)
                     PriorityLists[l][o]->RenderLate();
             }
-            // if (l == 2) {
-            //     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
-            //         next = ent->NextEntity;
-            //         ent->RenderLate();
-            //     }
-            //     for (Entity* ent = Scene::DynamicObjectFirst, *next; ent; ent = next) {
-            //         next = ent->NextEntity;
-            //         ent->RenderLate();
-            //     }
-            // }
         }
 
         if (currentView->UseDrawTarget && currentView->DrawTarget) {
@@ -1645,7 +1515,8 @@ PUBLIC STATIC void Scene::Dispose() {
     Scene::Clear(&Scene::DynamicObjectFirst, &Scene::DynamicObjectLast, &Scene::DynamicObjectCount);
 
     // Free Priority Lists
-    Memory::Free(Scene::PriorityLists);
+    if (Scene::PriorityLists)
+        Memory::Free(Scene::PriorityLists);
     Scene::PriorityLists = NULL;
 
     for (size_t i = 0; i < Scene::Layers.size(); i++) {
@@ -1672,13 +1543,16 @@ PUBLIC STATIC void Scene::Dispose() {
     Scene::ExtraPalettes = NULL;
 
     if (Scene::TileCfgA) {
-        for (int i = 0; i < (Scene::TileCount << 1); i++) {
+        for (int i = 0; i < Scene::TileCount; i++) {
             Memory::Free(Scene::TileCfgA[i].Collision);
             Memory::Free(Scene::TileCfgA[i].HasCollision);
+            Memory::Free(Scene::TileCfgB[i].Collision);
+            Memory::Free(Scene::TileCfgB[i].HasCollision);
         }
         Memory::Free(Scene::TileCfgA);
     }
     Scene::TileCfgA = NULL;
+    Scene::TileCfgB = NULL;
 
     BytecodeObjectManager::Dispose();
     SourceFileMap::Dispose();

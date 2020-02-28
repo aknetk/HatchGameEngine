@@ -160,6 +160,44 @@ bool              ValuesEqual(VMValue a, VMValue b) {
     return false;
 }
 
+const char*       GetTypeString(VMValue value) {
+    switch (value.Type) {
+        case VAL_NULL:
+            return "Null";
+        case VAL_INTEGER:
+        case VAL_LINKED_INTEGER:
+            return "Integer";
+        case VAL_DECIMAL:
+        case VAL_LINKED_DECIMAL:
+            return "Decimal";
+        case VAL_OBJECT:
+            switch (OBJECT_TYPE(value)) {
+                case OBJ_BOUND_METHOD:
+                    return "BOUND_METHOD";
+                case OBJ_CLASS:
+                    return "CLASS";
+                case OBJ_CLOSURE:
+                    return "CLOSURE";
+                case OBJ_FUNCTION:
+                    return "FUNCTION";
+                case OBJ_INSTANCE:
+                    return "INSTANCE";
+                case OBJ_NATIVE:
+                    return "NATIVE";
+                case OBJ_STRING:
+                    return "STRING";
+                case OBJ_ARRAY:
+                    return "ARRAY";
+                case OBJ_MAP:
+                    return "MAP";
+                default:
+                    return "Unknown Object Type";
+            }
+            break;
+    }
+    return "Unknown Type";
+}
+
 void              ChunkInit(Chunk* chunk) {
     chunk->Count = 0;
     chunk->Capacity = 0;

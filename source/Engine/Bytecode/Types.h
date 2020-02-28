@@ -42,6 +42,8 @@ void ChunkFree(Chunk* chunk);
 void ChunkWrite(Chunk* chunk, Uint8 byte, int line);
 int  ChunkAddConstant(Chunk* chunk, VMValue value);
 
+const char* GetTypeString(VMValue value);
+
 #define IS_INTEGER(value)  ((value).Type == VAL_INTEGER)
 #define IS_DECIMAL(value)  ((value).Type == VAL_DECIMAL)
 #define IS_OBJECT(value)   ((value).Type == VAL_OBJECT)
@@ -297,6 +299,8 @@ enum   OpCode {
     OP_SET_ELEMENT,
     OP_NEW_ARRAY,
     OP_NEW_MAP,
+    //
+    OP_SWITCH_TABLE,
 };
 
 static const char* vmvalue_type_strings[] = {

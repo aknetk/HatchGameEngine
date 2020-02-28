@@ -1,5 +1,7 @@
 #if INTERFACE
 #include <Engine/Bytecode/Types.h>
+#include <Engine/ResourceTypes/ISprite.h>
+
 class StandardLibrary {
 public:
 
@@ -13,7 +15,6 @@ public:
 #include <Engine/Scene.h>
 #include <Engine/Audio/AudioManager.h>
 #include <Engine/ResourceTypes/ISound.h>
-#include <Engine/ResourceTypes/ISprite.h>
 #include <Engine/Bytecode/BytecodeObject.h>
 #include <Engine/Bytecode/BytecodeObjectManager.h>
 #include <Engine/Bytecode/Compiler.h>
@@ -60,7 +61,7 @@ namespace LOCAL {
                 break;
             default:
                 BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type \"%s\".", index + 1, "Integer");
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Integer", GetTypeString(args[index]));
         }
         return value;
     }
@@ -77,7 +78,7 @@ namespace LOCAL {
                 break;
             default:
                 BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type \"%s\".", index + 1, "Decimal");
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Decimal", GetTypeString(args[index]));
         }
         return value;
     }
@@ -88,7 +89,7 @@ namespace LOCAL {
         if (BytecodeObjectManager::Lock()) {
             if (!IS_STRING(args[index]))
                 BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type \"%s\".", index + 1, "String");
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "String", GetTypeString(args[index]));
 
             value = AS_CSTRING(args[index]);
             BytecodeObjectManager::Unlock();
@@ -100,10 +101,10 @@ namespace LOCAL {
         if (BytecodeObjectManager::Lock()) {
             if (!IS_OBJECT(args[index]))
                 BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type \"%s\".", index + 1, "Array");
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Array", GetTypeString(args[index]));
             if (OBJECT_TYPE(args[index]) != OBJ_ARRAY)
                 BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type \"%s\".", index + 1, "Array");
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Array", GetTypeString(args[index]));
 
             value = (ObjArray*)(AS_OBJECT(args[index]));
             BytecodeObjectManager::Unlock();
@@ -115,10 +116,10 @@ namespace LOCAL {
         if (BytecodeObjectManager::Lock()) {
             if (!IS_OBJECT(args[index]))
                 BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type \"%s\".", index + 1, "Map");
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Map", GetTypeString(args[index]));
             if (OBJECT_TYPE(args[index]) != OBJ_MAP)
                 BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type \"%s\".", index + 1, "Map");
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Map", GetTypeString(args[index]));
 
             value = (ObjMap*)(AS_OBJECT(args[index]));
             BytecodeObjectManager::Unlock();
@@ -130,10 +131,10 @@ namespace LOCAL {
         if (BytecodeObjectManager::Lock()) {
             if (!IS_OBJECT(args[index]))
                 BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type \"%s\".", index + 1, "Event");
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Event", GetTypeString(args[index]));
             if (OBJECT_TYPE(args[index]) != OBJ_BOUND_METHOD)
                 BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type \"%s\".", index + 1, "Event");
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Event", GetTypeString(args[index]));
 
             value = (ObjBoundMethod*)(AS_OBJECT(args[index]));
             BytecodeObjectManager::Unlock();
@@ -181,6 +182,10 @@ PUBLIC STATIC char*     StandardLibrary::GetString(VMValue* args, int index) {
 PUBLIC STATIC ObjArray* StandardLibrary::GetArray(VMValue* args, int index) {
     Uint32 threadID = 0;
     return LOCAL::GetArray(args, index, threadID);
+}
+PUBLIC STATIC ISprite*  StandardLibrary::GetSprite(VMValue* args, int index) {
+    Uint32 threadID = 0;
+    return LOCAL::GetSprite(args, index, threadID);
 }
 
 PUBLIC STATIC void      StandardLibrary::CheckArgCount(int argCount, int expects) {
@@ -498,6 +503,23 @@ VMValue Draw_VideoPartSized(int argCount, VMValue* args, Uint32 threadID) {
     float h = GetDecimal(args, 8, threadID);
 
     Graphics::DrawTexture(video->VideoTexture, sx, sy, sw, sh, x, y, w, h);
+    return NULL_VAL;
+}
+VMValue Draw_Tile(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(5);
+
+    int id = GetInteger(args, 0, threadID);
+    int x = (int)GetDecimal(args, 1, threadID) + 8;
+    int y = (int)GetDecimal(args, 2, threadID) + 8;
+    int flipX = GetInteger(args, 3, threadID);
+    int flipY = GetInteger(args, 4, threadID);
+
+    id -= 1;
+
+    if (Scene::TileSprite) {
+        // Graphics::SetBlendColor(1.0, 1.0, 1.0, 1.0);
+        Graphics::DrawSprite(Scene::TileSprite, 0, id, x, y, flipX, flipY);
+    }
     return NULL_VAL;
 }
 VMValue Draw_Texture(int argCount, VMValue* args, Uint32 threadID) {
@@ -1291,6 +1313,7 @@ VMValue Instance_Create(int argCount, VMValue* args, Uint32 threadID) {
     ObjectList* objectList = NULL;
     if (!Scene::ObjectLists->Exists(objectName)) {
         objectList = new ObjectList();
+        strcpy(objectList->ObjectName, objectName);
         objectList->SpawnFunction = (Entity* (*)())BytecodeObjectManager::GetSpawnFunction(CombinedHash::EncryptString(objectName), objectName);
         Scene::ObjectLists->Put(objectName, objectList);
     }
@@ -1778,7 +1801,7 @@ VMValue Number_ToString(int argCount, VMValue* args, Uint32 threadID) {
         }
         default:
             BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                "Expected argument %d to be of type \"%s\".", 0 + 1, "Number");
+                "Expected argument %d to be of type %s instead of %s.", 0 + 1, "Number", GetTypeString(args[0]));
     }
 
     return NULL_VAL;
@@ -2361,14 +2384,14 @@ VMValue Sound_Play(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISound* audio = Scene::SoundList[GetInteger(args, 0, threadID)]->AsSound;
     int channel = GetInteger(args, 0, threadID);
-    AudioManager::SetSound(channel & 0xFF, audio);
+    AudioManager::SetSound(channel % AudioManager::SoundArrayLength, audio);
     return NULL_VAL;
 }
 VMValue Sound_Loop(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISound* audio = Scene::SoundList[GetInteger(args, 0, threadID)]->AsSound;
     int channel = GetInteger(args, 0, threadID);
-    AudioManager::SetSound(channel & 0xFF, audio, true, 0);
+    AudioManager::SetSound(channel % AudioManager::SoundArrayLength, audio, true, 0);
     return NULL_VAL;
 }
 VMValue Sound_Stop(int argCount, VMValue* args, Uint32 threadID) {
@@ -2376,19 +2399,19 @@ VMValue Sound_Stop(int argCount, VMValue* args, Uint32 threadID) {
 
     int channel = GetInteger(args, 0, threadID);
 
-    AudioManager::AudioStop(channel & 0xFF);
+    AudioManager::AudioStop(channel % AudioManager::SoundArrayLength);
     return NULL_VAL;
 }
 VMValue Sound_Pause(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int channel = GetInteger(args, 0, threadID);
-    AudioManager::AudioPause(channel & 0xFF);
+    AudioManager::AudioPause(channel % AudioManager::SoundArrayLength);
     return NULL_VAL;
 }
 VMValue Sound_Resume(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int channel = GetInteger(args, 0, threadID);
-    AudioManager::AudioUnpause(channel & 0xFF);
+    AudioManager::AudioUnpause(channel % AudioManager::SoundArrayLength);
     return NULL_VAL;
 }
 VMValue Sound_StopAll(int argCount, VMValue* args, Uint32 threadID) {
@@ -3011,6 +3034,10 @@ VMValue Window_SetSize(int argCount, VMValue* args, Uint32 threadID) {
     int window_h = (int)GetDecimal(args, 1, threadID);
     SDL_SetWindowSize(Application::Window, window_w, window_h);
 
+    int defaultMonitor = 0;
+    Application::Settings->GetInteger("display", "defaultMonitor", &defaultMonitor);
+    SDL_SetWindowPosition(Application::Window, SDL_WINDOWPOS_CENTERED_DISPLAY(defaultMonitor), SDL_WINDOWPOS_CENTERED_DISPLAY(defaultMonitor));
+
     // Incase the window just doesn't resize (Android)
     SDL_GetWindowSize(Application::Window, &window_w, &window_h);
 
@@ -3107,6 +3134,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Draw, VideoPart);
     DEF_NATIVE(Draw, VideoSized);
     DEF_NATIVE(Draw, VideoPartSized);
+    DEF_NATIVE(Draw, Tile);
     DEF_NATIVE(Draw, Texture);
     DEF_NATIVE(Draw, TextureSized);
     DEF_NATIVE(Draw, TexturePart);

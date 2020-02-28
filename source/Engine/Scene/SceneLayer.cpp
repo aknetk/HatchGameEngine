@@ -26,6 +26,7 @@ public:
     Sint8*         Deform = NULL;
 
     int            Flags = 0x0000;
+    int            DrawGroup = 0;
 
     int            ScrollInfoCount = 0;
     ScrollingInfo* ScrollInfos = NULL;

@@ -12,6 +12,7 @@ public:
 
     static float       FPS;
     static bool        Running;
+    static bool        GameStart;
 
     static SDL_Window* Window;
     static Platforms   Platform;
@@ -60,6 +61,7 @@ INI*        Application::Settings = NULL;
 float       Application::FPS = 60.f;
 int         TargetFPS = 60;
 bool        Application::Running = false;
+bool        Application::GameStart = false;
 
 SDL_Window* Application::Window = NULL;
 
@@ -67,9 +69,9 @@ char        StartingScene[256];
 
 ISprite*    DEBUG_fontSprite = NULL;
 void        DEBUG_DrawText(char* text, float x, float y) {
-    for (size_t i = 0; i < strlen(text); i++) {
-        Graphics::DrawSprite(DEBUG_fontSprite, 0, (int)text[i], x, y, 0, 0);
-        x += DEBUG_fontSprite->Animations[0].Frames[(int)text[i]].ID;
+    for (char* i = text; *i; i++) {
+        Graphics::DrawSprite(DEBUG_fontSprite, 0, (int)*i, x, y, 0, 0);
+        x += DEBUG_fontSprite->Animations[0].Frames[(int)*i].ID;
     }
 }
 
@@ -97,13 +99,17 @@ PUBLIC STATIC void Application::Init(int argc, char* args[]) {
     bool allowRetina = false;
     Application::Settings->GetBool("display", "retina", &allowRetina);
 
+    int defaultMonitor = 0;
+    Application::Settings->GetInteger("display", "defaultMonitor", &defaultMonitor);
+
     Uint32 window_flags = 0;
     window_flags |= SDL_WINDOW_SHOWN;
     window_flags |= Graphics::GetWindowFlags();
     if (allowRetina)
         window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
-    Application::Window = SDL_CreateWindow(NULL, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    Application::Window = SDL_CreateWindow(NULL,
+        SDL_WINDOWPOS_CENTERED_DISPLAY(defaultMonitor), SDL_WINDOWPOS_CENTERED_DISPLAY(defaultMonitor),
         640, 480, window_flags);
 
     if (Application::Platform == Platforms::Switch) {
@@ -178,6 +184,10 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
     int     UpdatesPerFrame = 1;
     int     UpdatesPerFastForward = 4;
 
+    if (Application::Platform == Platforms::Android) {
+        ShowFPS = true;
+    }
+
     Application::Settings->GetBool("dev", "devMenu", &DevMenu);
     Application::Settings->GetBool("dev", "viewPerformance", &ShowFPS);
     Application::Settings->GetBool("dev", "donothing", &DoNothing);
@@ -203,7 +213,7 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
     else if (*StartingScene) {
         Scene::LoadScene(StartingScene);
     }
-    Scene::LoadTileCollisions("Scenes/TileCol.bin");
+    // Scene::LoadTileCollisions("Scenes/TileCol.bin");
 
     Scene::Restart();
 
@@ -285,8 +295,21 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                                 Scene::Init();
                                 if (*StartingScene)
                                     Scene::LoadScene(StartingScene);
-                                Scene::LoadTileCollisions("Scenes/TileCol.bin");
+                                // Scene::LoadTileCollisions("Scenes/TileCol.bin");
                                 Scene::Restart();
+                            }
+                            break;
+                        }
+                        // Print performance snapshot (dev)
+                        case SDLK_F3: {
+                            if (DevMenu) {
+                                if (Scene::ObjectLists) {
+                                    Log::Print(Log::LOG_IMPORTANT, "Performance Snapshot:");
+                            		Scene::ObjectLists->WithAll([](Uint32, ObjectList* list) -> void {
+                                        if (list->AverageTime > 0.0)
+                                            Log::Print(Log::LOG_INFO, "Object \"%s\": Avg Update %.1f mcs (Total %.1f mcs, Count %d)", list->ObjectName, list->AverageTime * 1000.0, list->AverageTime * list->AverageItemCount * 1000.0, (int)list->AverageItemCount);
+                                    });
+                                }
                             }
                             break;
                         }
@@ -315,7 +338,7 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                                 memcpy(Scene::CurrentScene, temp, 256);
                                 Scene::LoadScene(Scene::CurrentScene);
 
-                                Scene::LoadTileCollisions("Scenes/TileCol.bin");
+                                // Scene::LoadTileCollisions("Scenes/TileCol.bin");
                                 Scene::Restart();
                             }
                             break;
@@ -548,70 +571,91 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                     DEBUG_DrawText(textBuffer, 0.0, 0.0);
                 Graphics::Restore();
 
-                // Draw bar
-                float total = 0.0001;
-                for (int i = 0; i < typeCount; i++) {
-                    if (types[i] < 0.0)
-                        types[i] = 0.0;
-                    total += types[i];
-                }
+                if (Application::Platform == Platforms::Android || true) {
+                    // Draw bar
+                    float total = 0.0001;
+                    for (int i = 0; i < typeCount; i++) {
+                        if (types[i] < 0.0)
+                            types[i] = 0.0;
+                        total += types[i];
+                    }
 
-                Graphics::Save();
-                Graphics::Translate(infoPadding, 50.0, 0.0);
-                    Graphics::SetBlendColor(0.0, 0.0, 0.0, 0.25);
-                    Graphics::FillRectangle(0.0, 0.0f, infoW - infoPadding * 2, 30.0);
-                Graphics::Restore();
-
-                float rectx = 0.0;
-                for (int i = 0; i < typeCount; i++) {
                     Graphics::Save();
                     Graphics::Translate(infoPadding, 50.0, 0.0);
-                        Graphics::SetBlendColor(colors[i].r, colors[i].g, colors[i].b, 0.5);
-                        Graphics::FillRectangle(rectx, 0.0f, types[i] / total * (infoW - infoPadding * 2), 30.0);
+                        Graphics::SetBlendColor(0.0, 0.0, 0.0, 0.25);
+                        Graphics::FillRectangle(0.0, 0.0f, infoW - infoPadding * 2, 30.0);
                     Graphics::Restore();
 
-                    rectx += types[i] / total * (infoW - infoPadding * 2);
-                }
+                    float rectx = 0.0;
+                    for (int i = 0; i < typeCount; i++) {
+                        Graphics::Save();
+                        Graphics::Translate(infoPadding, 50.0, 0.0);
+                            Graphics::SetBlendColor(colors[i].r, colors[i].g, colors[i].b, 0.5);
+                            Graphics::FillRectangle(rectx, 0.0f, types[i] / total * (infoW - infoPadding * 2), 30.0);
+                        Graphics::Restore();
 
-                // Draw list
-                float listY = 90.0;
-                infoPadding += infoPadding;
-                for (int i = 0; i < typeCount; i++) {
+                        rectx += types[i] / total * (infoW - infoPadding * 2);
+                    }
+
+                    // Draw list
+                    float listY = 90.0;
+                    infoPadding += infoPadding;
+                    for (int i = 0; i < typeCount; i++) {
+                        Graphics::Save();
+                        Graphics::Translate(infoPadding, listY, 0.0);
+                            Graphics::SetBlendColor(colors[i].r, colors[i].g, colors[i].b, 0.5);
+                            Graphics::FillRectangle(-infoPadding / 2.0, 0.0, 12.0, 12.0);
+                        Graphics::Scale(0.6, 0.6, 1.0);
+                            snprintf(textBuffer, 256, typeNames[i], types[i]);
+                            DEBUG_DrawText(textBuffer, 0.0, 0.0);
+                            listY += 20.0;
+                        Graphics::Restore();
+                    }
+
+                    float count = (float)Memory::MemoryUsage;
+                    const char* moniker = "B";
+
+                    if (count >= 1000000000) {
+                        count /= 1000000000;
+                        moniker = "GB";
+                    }
+                    else if (count >= 1000000) {
+                        count /= 1000000;
+                        moniker = "MB";
+                    }
+                    else if (count >= 1000) {
+                        count /= 1000;
+                        moniker = "KB";
+                    }
+
+                    listY += 30.0 - 20.0;
+
                     Graphics::Save();
-                    Graphics::Translate(infoPadding, listY, 0.0);
-                        Graphics::SetBlendColor(colors[i].r, colors[i].g, colors[i].b, 0.5);
-                        Graphics::FillRectangle(-infoPadding / 2.0, 0.0, 12.0, 12.0);
+                    Graphics::Translate(infoPadding / 2.0, listY, 0.0);
                     Graphics::Scale(0.6, 0.6, 1.0);
-                        snprintf(textBuffer, 256, typeNames[i], types[i]);
+                        snprintf(textBuffer, 256, "RAM Usage: %.3f %s", count, moniker);
                         DEBUG_DrawText(textBuffer, 0.0, 0.0);
-                        listY += 20.0;
                     Graphics::Restore();
-                }
 
-                float count = (float)Memory::MemoryUsage;
-                const char* moniker = "B";
+                    listY += 30.0;
 
-                if (count >= 1000000000) {
-                    count /= 1000000000;
-                    moniker = "GB";
-                }
-                else if (count >= 1000000) {
-                    count /= 1000000;
-                    moniker = "MB";
-                }
-                else if (count >= 1000) {
-                    count /= 1000;
-                    moniker = "KB";
-                }
+                    float* listYPtr = &listY;
+                    if (Scene::ObjectLists && Application::Platform != Platforms::Android) {
+                        Scene::ObjectLists->WithAll([infoPadding, listYPtr](Uint32, ObjectList* list) -> void {
+                            char textBufferXXX[256];
+                            if (list->AverageItemCount > 0.0) {
+                                Graphics::Save();
+                                Graphics::Translate(infoPadding / 2.0, *listYPtr, 0.0);
+                                Graphics::Scale(0.6, 0.6, 1.0);
+                                    snprintf(textBufferXXX, 256, "Object \"%s\": Avg Update %.1f mcs (Total %.1f mcs, Count %d)", list->ObjectName, list->AverageTime * 1000.0, list->AverageTime * list->AverageItemCount * 1000.0, (int)list->AverageItemCount);
+                                    DEBUG_DrawText(textBufferXXX, 0.0, 0.0);
+                                Graphics::Restore();
 
-                listY += 30.0 - 20.0;
-
-                Graphics::Save();
-                Graphics::Translate(infoPadding / 2.0, listY, 0.0);
-                Graphics::Scale(0.6, 0.6, 1.0);
-                    snprintf(textBuffer, 256, "RAM Usage: %.3f %s", count, moniker);
-                    DEBUG_DrawText(textBuffer, 0.0, 0.0);
-                Graphics::Restore();
+                                *listYPtr += 20.0;
+                            }
+                        });
+                    }
+                }
             Graphics::Restore();
         }
 

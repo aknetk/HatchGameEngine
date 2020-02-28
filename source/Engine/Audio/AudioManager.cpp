@@ -13,6 +13,7 @@ public:
 
     static deque<StackNode*> MusicStack;
     static StackNode*        SoundArray;
+    static int               SoundArrayLength;
 
     static double            FadeOutTimer;
     static double            FadeOutTimerMax;
@@ -45,6 +46,7 @@ bool              AudioManager::AudioEnabled = false;
 
 deque<StackNode*> AudioManager::MusicStack;
 StackNode*        AudioManager::SoundArray = NULL;
+int               AudioManager::SoundArrayLength = 512;
 
 double            AudioManager::FadeOutTimer = 1.0;
 double            AudioManager::FadeOutTimerMax = 1.0;
@@ -149,8 +151,8 @@ PUBLIC STATIC float  AudioManager::ProcessSampleFloat(float inSample, int channe
 PUBLIC STATIC void   AudioManager::Init() {
     CalculateCoeffs();
 
-    SoundArray = (StackNode*)Memory::Calloc(256, sizeof(StackNode));
-    for (int i = 0; i < 256; i++)
+    SoundArray = (StackNode*)Memory::Calloc(SoundArrayLength, sizeof(StackNode));
+    for (int i = 0; i < SoundArrayLength; i++)
         SoundArray[i].Paused = true;
 
     SDL_AudioSpec Want;
@@ -321,19 +323,19 @@ PUBLIC STATIC void   AudioManager::AudioStop(int channel) {
 }
 PUBLIC STATIC void   AudioManager::AudioUnpauseAll() {
     AudioManager::Lock();
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < SoundArrayLength; i++)
         SoundArray[i].Paused = false;
     AudioManager::Unlock();
 }
 PUBLIC STATIC void   AudioManager::AudioPauseAll() {
     AudioManager::Lock();
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < SoundArrayLength; i++)
         SoundArray[i].Paused = true;
     AudioManager::Unlock();
 }
 PUBLIC STATIC void   AudioManager::AudioStopAll() {
     AudioManager::Lock();
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < SoundArrayLength; i++)
         SoundArray[i].Stopped = true;
     AudioManager::Unlock();
 }
@@ -391,7 +393,7 @@ PUBLIC STATIC void   AudioManager::AudioCallback(void* data, Uint8* stream, int 
         }
     }
 
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < SoundArrayLength; i++) {
         StackNode* audio = &SoundArray[i];
         if (!audio->Audio)
             continue;

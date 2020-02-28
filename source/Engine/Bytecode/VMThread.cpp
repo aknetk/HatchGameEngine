@@ -288,6 +288,7 @@ PUBLIC int     VMThread::RunInstruction() {
             PRINT_CASE(OP_SET_ELEMENT)
             PRINT_CASE(OP_NEW_ARRAY)
             PRINT_CASE(OP_NEW_MAP)
+            PRINT_CASE(OP_SWITCH_TABLE)
 
             default:
                 Log::Print(Log::LOG_ERROR, "Unknown opcode %d\n", frame->IP); break;
@@ -376,6 +377,13 @@ PUBLIC int     VMThread::RunInstruction() {
                     BytecodeObjectManager::Unlock();
                     break;
                 }
+                // else {
+                //     instance->Fields->WithAll([](Uint32 hash, VMValue v) -> void {
+                //         printf("%s: \n", __Tokens__ && __Tokens__->Exists(hash) ? __Tokens__->Get(hash) : "null");
+                //     });
+                // }
+
+                // printf("BindMethod %s: \n", __Tokens__ && __Tokens__->Exists(hash) ? __Tokens__->Get(hash) : "null");
                 if (BindMethod(instance->Class, hash)) {
                     BytecodeObjectManager::Unlock();
                     break;
@@ -620,6 +628,37 @@ PUBLIC int     VMThread::RunInstruction() {
         case OP_FALSE:          Push(INTEGER_VAL(0)); break;
         case OP_CONSTANT:       Push(ReadConstant(frame)); break;
 
+        // Switch statements
+        case OP_SWITCH_TABLE: {
+            Uint16 count = ReadUInt16(frame);
+            VMValue switch_value = Pop();
+
+            Uint8* end = frame->IP + ((1 + 2) * count) + 3;
+
+            int default_offset = -1;
+            for (int i = 0; i < count; i++) {
+                int constant_index = ReadByte(frame);
+                int offset = ReadUInt16(frame);
+                if (constant_index == 0xFF) {
+                    default_offset = offset;
+                }
+                else {
+                    VMValue constant = (*frame->Function->Chunk.Constants)[constant_index];
+                    if (BytecodeObjectManager::ValuesSortaEqual(switch_value, constant)) {
+                        frame->IP = end + offset;
+                        goto JUMPED;
+                    }
+                }
+            }
+
+            if (default_offset > -1) {
+                frame->IP = end + default_offset;
+            }
+
+            JUMPED:
+            break;
+        }
+
         // Stack Operations
         case OP_POP: {
             Pop();
@@ -679,8 +718,9 @@ PUBLIC int     VMThread::RunInstruction() {
         }
         case OP_JUMP_IF_FALSE: {
             Sint32 offset = ReadSInt16(frame);
-            if (BytecodeObjectManager::ValueFalsey(Peek(0)))
+            if (BytecodeObjectManager::ValueFalsey(Peek(0))) {
                 frame->IP += offset;
+            }
             break;
         }
 
@@ -723,6 +763,7 @@ PUBLIC int     VMThread::RunInstruction() {
                 if (receiver.Type == VAL_NULL) {
                     frame->IP += offset;
                     Pop(); // pop receiver
+                    break;
                 }
                 else if (IS_STRING(receiver)) {
                     // iterate through objectlist
@@ -738,28 +779,54 @@ PUBLIC int     VMThread::RunInstruction() {
                         break;
                     }
 
-                    if (objectList->Count() == 0) {
+                    int objectListCount = objectList->Count();
+                    if (objectListCount == 0) {
+                        frame->IP += offset;
+                        break;
+                    }
+
+                    BytecodeObject* objectStart = NULL;
+                    int objectListStartIndex = 0;
+
+                    // If in list,
+                    if (!objectList->Registry) {
+                        for (Entity* ent = objectList->EntityFirst; ent; ent = ent->NextEntityInList) {
+                            if (ent->Active) {
+                                objectStart = (BytecodeObject*)ent;
+                                break;
+                            }
+                        }
+                    }
+                    // Otherwise in registry,
+                    else {
+                        for (int o = 0; o < objectListCount; o++) {
+                            Entity* ent = objectList->GetNth(o);
+                            if (ent && ent->Active) {
+                                objectStart = (BytecodeObject*)ent;
+                                objectListStartIndex = o;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!objectStart) {
                         frame->IP += offset;
                         break;
                     }
 
                     // Add iterator
                     if (objectList->Registry)
-                        *WithIteratorStackTop = WithIter { NULL, NULL, 0, objectList };
+                        *WithIteratorStackTop = WithIter { NULL, NULL, objectListStartIndex, objectList };
                     else
-                        *WithIteratorStackTop = WithIter { objectList->EntityFirst, objectList->EntityFirst->NextEntityInList, 0, objectList };
+                        *WithIteratorStackTop = WithIter { objectStart, objectStart->NextEntityInList, objectListStartIndex, objectList };
                     WithIteratorStackTop++;
-
-                    BytecodeObject* object = (BytecodeObject*)objectList->EntityFirst;
-                    if (objectList->Registry)
-                        object = (BytecodeObject*)objectList->GetNth(0);
 
                     // Backup original receiver
                     BytecodeObjectManager::Globals->Put("other", frame->Slots[0]);
                     *WithReceiverStackTop = frame->Slots[0];
                     WithReceiverStackTop++;
                     // Replace receiver
-                    frame->Slots[0] = OBJECT_VAL(object->Instance);
+                    frame->Slots[0] = OBJECT_VAL(objectStart->Instance);
                 }
                 else if (IS_INSTANCE(receiver)) {
                     // Backup original receiver
@@ -785,23 +852,36 @@ PUBLIC int     VMThread::RunInstruction() {
                 WithIteratorStackTop--;
                 WithIter it = *WithIteratorStackTop;
 
-                if (it.list) {
-                    it.entity = it.entityNext;
-                    if (!((ObjectList*)it.list)->Registry && it.entity) {
-                        it.entityNext = ((Entity*)it.entity)->NextEntityInList;
+                ObjectList* list = (ObjectList*)it.list;
+                if (list) {
+                    // If in list,
+                    if (!list->Registry) {
+                        Entity* objectNext = NULL;
 
-                        frame->IP -= offset;
+                        for (Entity* ent = (Entity*)it.entityNext; ent; ent = ent->NextEntityInList) {
+                            if (ent->Active) {
+                                objectNext = (BytecodeObject*)ent;
+                                break;
+                            }
+                        }
 
-                        // Put iterator back onto stack
-                        *WithIteratorStackTop = it;
-                        WithIteratorStackTop++;
+                        if (objectNext) {
+                            it.entity = objectNext;
+                            it.entityNext = objectNext->NextEntityInList;
 
-                        BytecodeObject* object = (BytecodeObject*)it.entity;
-                        // Backup original receiver
-                        *WithReceiverStackTop = originalReceiver;
-                        WithReceiverStackTop++;
-                        // Replace receiver
-                        frame->Slots[0] = OBJECT_VAL(object->Instance);
+                            frame->IP -= offset;
+
+                            // Put iterator back onto stack
+                            *WithIteratorStackTop = it;
+                            WithIteratorStackTop++;
+
+                            BytecodeObject* object = (BytecodeObject*)it.entity;
+                            // Backup original receiver
+                            *WithReceiverStackTop = originalReceiver;
+                            WithReceiverStackTop++;
+                            // Replace receiver
+                            frame->Slots[0] = OBJECT_VAL(object->Instance);
+                        }
                     }
                     else if (((ObjectList*)it.list)->Registry && ++it.index < ((ObjectList*)it.list)->Count()) {
                         frame->IP -= offset;
@@ -846,6 +926,8 @@ PUBLIC int     VMThread::RunInstruction() {
             // if (__Tokens__ && __Tokens__->Exists(hash))
             //     hashName = __Tokens__->Get(hash);
 
+            // printf("hashName: %s\n", __Tokens__->Get(0x1C70FC20U));
+
             VMValue receiver = Peek(argCount);
 
             if (IS_CLASS(receiver)) {
@@ -868,6 +950,7 @@ PUBLIC int     VMThread::RunInstruction() {
                     else {
                         // ThrowError(true, "Cannot get non-native function value from class.");
                         // return INTERPRET_RUNTIME_ERROR;
+                        // StackTop[-argCount - 1] = receiver;
                         if (!CallValue(nat, argCount)) {
                             ThrowError(true, "Could not call value!", hash);
                             return INTERPRET_RUNTIME_ERROR;
@@ -984,9 +1067,10 @@ PUBLIC bool    VMThread::BindMethod(ObjClass* klass, Uint32 hash) {
 
         method = klass->Methods->Get(hash);
 
-        ObjBoundMethod* bound = NewBoundMethod(Peek(0), AS_FUNCTION(method));
+        // ObjBoundMethod* bound = NewBoundMethod(Peek(0), AS_FUNCTION(method));
         Pop(); // Instance.
-        Push(OBJECT_VAL(bound));
+        // Push(OBJECT_VAL(bound));
+        Push(method);
         BytecodeObjectManager::Unlock();
         return true;
     }
@@ -1123,6 +1207,7 @@ PUBLIC bool    VMThread::Invoke(Uint32 hash, int argCount) {
     if (BytecodeObjectManager::Lock()) {
         if ((exists = instance->Fields->Exists(hash)))
             value = instance->Fields->Get(hash);
+
         BytecodeObjectManager::Unlock();
 
         // if (IS_OBJECT(value)) {

@@ -167,7 +167,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
 
         char* Name = r->ReadHeaderedString();
         r->ReadByte(); // int   IsScrollingVertical = r->ReadByte() == 1 ? true : false;
-        int   Flags = r->ReadByte(); // int   Flags = r->ReadByte();
+        int   DrawGroup = r->ReadByte();
         int   Width = (int)r->ReadUInt16();
         int   Height = (int)r->ReadUInt16();
 
@@ -187,6 +187,10 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
 
         layer.Flags |= // SceneLayer::FLAGS_NO_REPEAT_X |
             SceneLayer::FLAGS_NO_REPEAT_Y;
+
+        layer.DrawGroup = DrawGroup & 0xF;
+        if (DrawGroup & 0x10)
+            layer.Visible = false;
 
         layer.ScrollInfoCount = (int)r->ReadUInt16();
         layer.ScrollInfos = (ScrollingInfo*)Memory::Malloc(layer.ScrollInfoCount * sizeof(ScrollingInfo));
@@ -211,6 +215,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
             layer.Tiles[t] |= (tileBoys[t] & 0xC000) << 12; // Collision B
             layer.Tiles[t] |= (tileBoys[t] & 0x3000) << 16; // Collision A
         }
+        memcpy(layer.TilesBackup, layer.Tiles, sizeof(Uint32) * Width * Height);
 
         // Sprite Flag? (Entity -> 0x53)
         // 0x1: Can flip
@@ -220,19 +225,13 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
 
         free(tileBoys);
 
-        Log::Print(Log::LOG_VERBOSE, "Layer %d (%s): Width (%d) Height (%d) DrawGroup (%X)", i, layer.Name, layer.Width, layer.Height, Flags);
+        Log::Print(Log::LOG_VERBOSE, "Layer %d (%s): Width (%d) Height (%d) DrawGroup (%d)", i, layer.Name, layer.Width, layer.Height, DrawGroup);
 
         Scene::Layers[i] = layer;
     }
 
-    if (Scene::PriorityLists) {
-        size_t size = Scene::Layers.size() * (1 << Scene::PriorityPerLayer) * sizeof(vector<Entity*>);
-        Scene::PriorityLists = (vector<Entity*>*)Memory::Realloc(Scene::PriorityLists, size);
-
-        memset(Scene::PriorityLists, 0, size);
-    }
-    else {
-        Scene::PriorityLists = (vector<Entity*>*)Memory::TrackedCalloc("Scene::PriorityLists", Scene::Layers.size() * (1 << Scene::PriorityPerLayer), sizeof(vector<Entity*>));
+    if (!Scene::PriorityLists) {
+        Scene::PriorityLists = (vector<Entity*>*)Memory::TrackedCalloc("Scene::PriorityLists", Scene::PriorityPerLayer, sizeof(vector<Entity*>));
     }
 
     ticks = Clock::GetTicks() - ticks;
@@ -265,6 +264,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         objectName = "WindowManager";
         objectNameHash = CombinedHash::EncryptString(objectName);
         objectList = new ObjectList();
+        strcpy(objectList->ObjectName, objectName);
         objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName);
         Scene::ObjectLists->Put(objectNameHash, objectList);
 
@@ -279,6 +279,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         objectName = "InputManager";
         objectNameHash = CombinedHash::EncryptString(objectName);
         objectList = new ObjectList();
+        strcpy(objectList->ObjectName, objectName);
         objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName);
         Scene::ObjectLists->Put(objectNameHash, objectList);
 
@@ -293,6 +294,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         objectName = "PauseManager";
         objectNameHash = CombinedHash::EncryptString(objectName);
         objectList = new ObjectList();
+        strcpy(objectList->ObjectName, objectName);
         objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName);
         Scene::ObjectLists->Put(objectNameHash, objectList);
 
@@ -314,6 +316,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
             objectNameHash2 = ObjectHashes->HashFunction(ObjectHashes->Get(objectNameHash));
 
         objectList = new ObjectList();
+        strcpy(objectList->ObjectName, ObjectHashes->Get(objectNameHash));
         Scene::ObjectLists->Put(objectNameHash2, objectList);
 
         argumentCount = r->ReadByte();
@@ -334,9 +337,11 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
                 objectNameHash2,
                 ObjectHashes->Get(objectNameHash));
 
-            for (int a = 1; a < argumentCount; a++) {
-                if (PropertyHashes->Exists(argumentHashes[a]) && argumentHashes[a] != 0x7CEA5BB0U) {
-                    Log::Print(Log::LOG_VERBOSE, "Property Hash: %08XU (%s)", argumentHashes[a], PropertyHashes->Get(argumentHashes[a]));
+            if (objectList->SpawnFunction) {
+                for (int a = 1; a < argumentCount; a++) {
+                    if (PropertyHashes->Exists(argumentHashes[a]) && argumentHashes[a] != 0x7CEA5BB0U) {
+                        Log::Print(Log::LOG_VERBOSE, "Property Hash: %08XU (%s)", argumentHashes[a], PropertyHashes->Get(argumentHashes[a]));
+                    }
                 }
             }
         }
@@ -432,8 +437,6 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
 
     ticks = Clock::GetTicks() - ticks;
     Log::Print(Log::LOG_VERBOSE, "Scene Object load took %.3f milliseconds.", ticks);
-
-    Log::Print(Log::LOG_IMPORTANT, "YEET");
 
     FREE:
     r->Close();

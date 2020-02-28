@@ -665,7 +665,10 @@ PUBLIC STATIC Entity* BytecodeObjectManager::SpawnFunction() {
     BytecodeObject* object = new BytecodeObject;
     ObjClass* klass = AS_CLASS(Globals->Get(CurrentObjectHash));
     if (!klass) {
-        Log::Print(Log::LOG_ERROR, "No class! Can't find: %X\n", CurrentObjectHash);
+        if (Tokens && Tokens->Exists(CurrentObjectHash))
+            Log::Print(Log::LOG_ERROR, "No class! Can't find: %s\n", Tokens->Get(CurrentObjectHash));
+        else
+            Log::Print(Log::LOG_ERROR, "No class! Can't find: %X\n", CurrentObjectHash);
         exit(0);
     }
 
@@ -733,12 +736,16 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
             return NULL;
         }
         BytecodeObjectManager::DefineNative(klass, "InView", BytecodeObject::VM_InView);
-        // BytecodeObjectManager::DefineNative(klass, "Animate", BytecodeObject::VM_SetAnimation);
+        BytecodeObjectManager::DefineNative(klass, "Animate", BytecodeObject::VM_Animate);
         BytecodeObjectManager::DefineNative(klass, "SetAnimation", BytecodeObject::VM_SetAnimation);
         BytecodeObjectManager::DefineNative(klass, "ResetAnimation", BytecodeObject::VM_ResetAnimation);
+        BytecodeObjectManager::DefineNative(klass, "GetHitboxFromSprite", BytecodeObject::VM_GetHitboxFromSprite);
         BytecodeObjectManager::DefineNative(klass, "AddToRegistry", BytecodeObject::VM_AddToRegistry);
         BytecodeObjectManager::DefineNative(klass, "RemoveFromRegistry", BytecodeObject::VM_RemoveFromRegistry);
         BytecodeObjectManager::DefineNative(klass, "CollidedWithObject", BytecodeObject::VM_CollidedWithObject);
+        BytecodeObjectManager::DefineNative(klass, "CollideWithObject", BytecodeObject::VM_CollideWithObject);
+        BytecodeObjectManager::DefineNative(klass, "SolidCollideWithObject", BytecodeObject::VM_SolidCollideWithObject);
+        BytecodeObjectManager::DefineNative(klass, "TopSolidCollideWithObject", BytecodeObject::VM_TopSolidCollideWithObject);
         BytecodeObjectManager::DefineNative(klass, "PropertyGet", BytecodeObject::VM_PropertyGet);
         BytecodeObjectManager::DefineNative(klass, "PropertyExists", BytecodeObject::VM_PropertyExists);
     }

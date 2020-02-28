@@ -20,6 +20,7 @@ public:
 #include <Engine/IO/FileStream.h>
 #include <Engine/IO/MemoryStream.h>
 #include <Engine/IO/Stream.h>
+#include <Engine/Application.h>
 
 struct      StreamNode {
     Stream*            Table;
@@ -70,6 +71,16 @@ PUBLIC STATIC void   ResourceManager::Init(const char* filename) {
     }
     else {
         Log::Print(Log::LOG_INFO, "Cannot find \"%s\".", filename);
+    }
+
+    char modpacksString[1024];
+    if (Application::Settings->GetString("game", "modpacks", modpacksString)) {
+        if (File::Exists(modpacksString)) {
+            ResourceManager::UsingDataFolder = false;
+
+            Log::Print(Log::LOG_IMPORTANT, "Using \"%s\"", modpacksString);
+            ResourceManager::Load(modpacksString);
+        }
     }
 }
 PUBLIC STATIC void   ResourceManager::Load(const char* filename) {
@@ -137,45 +148,24 @@ PUBLIC STATIC void   ResourceManager::Load(const char* filename) {
     }
 }
 PUBLIC STATIC bool   ResourceManager::LoadResource(const char* filename, Uint8** out, size_t* size) {
-    if (ResourceManager::UsingDataFolder) {
-        char resourcePath[256];
-        ResourceManager::PrefixResourcePath(resourcePath, filename);
+    Uint8* memory;
+    char resourcePath[256];
+    ResourceRegistryItem item;
 
-        SDL_RWops* rw = SDL_RWFromFile(resourcePath, "rb");
-        if (!rw) {
-            // Log::Print(Log::LOG_ERROR, "ResourceManager::LoadResource: No RW!: %s", resourcePath, SDL_GetError());
-            return false;
-        }
+    if (ResourceManager::UsingDataFolder)
+        goto DATA_FOLDER;
 
-        Sint64 rwSize = SDL_RWsize(rw);
-        if (rwSize < 0) {
-            Log::Print(Log::LOG_ERROR, "Could not get size of file \"%s\": %s", resourcePath, SDL_GetError());
-            return false;
-        }
-
-        Uint8* memory = (Uint8*)Memory::Malloc(rwSize + 1);
-        if (!memory)
-            return false;
-        memory[rwSize] = 0;
-
-        SDL_RWread(rw, memory, rwSize, 1);
-        SDL_RWclose(rw);
-
-        *out = memory;
-        *size = rwSize;
-        return true;
-    }
     if (!ResourceRegistry)
-        return false;
+        goto DATA_FOLDER;
 
     if (!ResourceRegistry->Exists(filename))
-        return false;
+        goto DATA_FOLDER;
 
-    ResourceRegistryItem item = ResourceRegistry->Get(filename);
+    item = ResourceRegistry->Get(filename);
 
-    Uint8* memory = (Uint8*)Memory::Malloc(item.Size + 1);
+    memory = (Uint8*)Memory::Malloc(item.Size + 1);
     if (!memory)
-        return false;
+        goto DATA_FOLDER;
 
     memory[item.Size] = 0;
 
@@ -184,7 +174,7 @@ PUBLIC STATIC bool   ResourceManager::LoadResource(const char* filename, Uint8**
         Uint8* compressedMemory = (Uint8*)Memory::Malloc(item.Size);
         if (!compressedMemory) {
             Memory::Free(memory);
-            return false;
+            goto DATA_FOLDER;
         }
         item.Table->ReadBytes(compressedMemory, item.CompressedSize);
 
@@ -198,26 +188,55 @@ PUBLIC STATIC bool   ResourceManager::LoadResource(const char* filename, Uint8**
     *out = memory;
     *size = (size_t)item.Size;
     return true;
-}
-PUBLIC STATIC bool   ResourceManager::ResourceExists(const char* filename) {
-    if (ResourceManager::UsingDataFolder) {
-        char resourcePath[256];
-        ResourceManager::PrefixResourcePath(resourcePath, filename);
 
-        SDL_RWops* rw = SDL_RWFromFile(resourcePath, "rb");
-        if (!rw) {
-            return false;
-        }
-        SDL_RWclose(rw);
-        return true;
+    DATA_FOLDER:
+    ResourceManager::PrefixResourcePath(resourcePath, filename);
+
+    SDL_RWops* rw = SDL_RWFromFile(resourcePath, "rb");
+    if (!rw) {
+        // Log::Print(Log::LOG_ERROR, "ResourceManager::LoadResource: No RW!: %s", resourcePath, SDL_GetError());
+        return false;
     }
 
-    if (!ResourceRegistry)
+    Sint64 rwSize = SDL_RWsize(rw);
+    if (rwSize < 0) {
+        Log::Print(Log::LOG_ERROR, "Could not get size of file \"%s\": %s", resourcePath, SDL_GetError());
         return false;
+    }
+
+    memory = (Uint8*)Memory::Malloc(rwSize + 1);
+    if (!memory)
+        return false;
+    memory[rwSize] = 0;
+
+    SDL_RWread(rw, memory, rwSize, 1);
+    SDL_RWclose(rw);
+
+    *out = memory;
+    *size = rwSize;
+    return true;
+}
+PUBLIC STATIC bool   ResourceManager::ResourceExists(const char* filename) {
+    char resourcePath[256];
+    if (ResourceManager::UsingDataFolder)
+        goto DATA_FOLDER;
+
+    if (!ResourceRegistry)
+        goto DATA_FOLDER;
 
     if (!ResourceRegistry->Exists(filename))
-        return false;
+        goto DATA_FOLDER;
 
+    return true;
+
+    DATA_FOLDER:
+    ResourceManager::PrefixResourcePath(resourcePath, filename);
+
+    SDL_RWops* rw = SDL_RWFromFile(resourcePath, "rb");
+    if (!rw) {
+        return false;
+    }
+    SDL_RWclose(rw);
     return true;
 }
 PUBLIC STATIC void   ResourceManager::Dispose() {

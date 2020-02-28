@@ -78,6 +78,7 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
     va_start(args, format);
     vsnprintf(string, 512, format, args);
     va_end(args);
+    string[511] = 0;
 
     #if ANDROID
     switch (sev) {

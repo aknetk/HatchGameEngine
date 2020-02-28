@@ -171,7 +171,7 @@ PUBLIC bool   GLShader::CheckShaderError(GLuint shader) {
     infoLog[strlen(infoLog) - 1] = 0;
 
     if (infoLogLength > 0)
-        Log::Print(Log::LOG_ERROR, "%s", infoLog + 7);
+        Log::Print(Log::LOG_ERROR, "%s", infoLog);
 
     delete[] infoLog;
     return false;
@@ -187,7 +187,7 @@ PUBLIC bool   GLShader::CheckProgramError(GLuint prog) {
     infoLog[strlen(infoLog) - 1] = 0;
 
     if (infoLogLength > 0)
-        Log::Print(Log::LOG_ERROR, "%s", infoLog + 7);
+        Log::Print(Log::LOG_ERROR, "%s", infoLog);
 
     delete[] infoLog;
     return false;

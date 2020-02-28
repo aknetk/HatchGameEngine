@@ -1126,7 +1126,7 @@ PUBLIC void Compiler::GetConstant(bool canAssign) {
             GetDecimal(canAssign);
             break;
         default:
-            Error("Invalid value for enum!");
+            Error("Invalid value!");
             break;
     }
 }
@@ -1229,9 +1229,15 @@ PUBLIC void Compiler::GetExpression() {
     ParsePrecedence(PREC_ASSIGNMENT);
 }
 // Reading statements
+struct switch_case {
+    int position;
+    int constant_index;
+    int patch_ptr;
+};
 stack<vector<int>*> BreakJumpListStack;
 stack<vector<int>*> ContinueJumpListStack;
-stack<vector<int>*> SwitchJumpListStack;
+stack<vector<switch_case>*> SwitchJumpListStack;
+stack<int> SwitchScopeStack;
 PUBLIC void Compiler::GetPrintStatement() {
     GetExpression();
     ConsumeToken(TOKEN_SEMICOLON, "Expected \";\" after value.");
@@ -1262,12 +1268,8 @@ PUBLIC void Compiler::GetDoWhileStatement() {
     // Push new jump list on continue stack
     StartContinueJumpList();
 
-    ConsumeToken(TOKEN_LEFT_BRACE, "Expected { after do");
-
     // Execute code block
     GetStatement();
-
-    ConsumeToken(TOKEN_RIGHT_BRACE, "Expected } after do body");
 
     // Pop jump list off continue stack, patch all continue to this code point
     EndContinueJumpList();
@@ -1346,31 +1348,161 @@ PUBLIC void Compiler::GetRepeatStatement() {
 }
 // TODO: Implement
 PUBLIC void Compiler::GetSwitchStatement() {
-/*
+    /*
 
-switch (value) {
-    case 1:
-        oh = true;
-    case 0:
-    case 2:
-        thattoo = true;
-        break;
-    default:
-        guessnot = true;
-        break;
-}
+    switch (value) {
+        case 1:
+            oh = true;
+        case 0:
+        case 2:
+            thattoo = true;
+            break;
+        default:
+            guessnot = true;
+            break;
+    }
 
-*/
+    */
+
+    Chunk* chunk = CurrentChunk();
+
+    StartBreakJumpList();
+
+    // Evaluate the condition
+    ConsumeToken(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+    GetExpression();
+    ConsumeToken(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    ConsumeToken(TOKEN_LEFT_BRACE, "Expected \"{\" before statements.");
+
+    int code_block_start = CodePointer();
+    int code_block_length = code_block_start;
+    Uint8* code_block_copy = NULL;
+    int*   line_block_copy = NULL;
+
+    StartSwitchJumpList();
+    ScopeBegin();
+    GetBlockStatement();
+    ScopeEnd();
+
+    code_block_length = CodePointer() - code_block_length;
+
+    // Copy code block
+    code_block_copy = (Uint8*)malloc(code_block_length * sizeof(Uint8));
+    memcpy(code_block_copy, &chunk->Code[code_block_start], code_block_length * sizeof(Uint8));
+
+    // Copy line info block
+    line_block_copy = (int*)malloc(code_block_length * sizeof(int));
+    memcpy(line_block_copy, &chunk->Lines[code_block_start], code_block_length * sizeof(int));
+
+    chunk->Count -= code_block_length;
+
+    // printf("code_block_start: %d\n", code_block_start);
+    // printf("code_block_length: %d\n", code_block_length);
+
+    int integer_min = 0x7FFFFFFF;
+    int integer_max = 0x80000000;
+    bool all_constants_are_integer = true;
+    vector<switch_case> cases = *SwitchJumpListStack.top();
+    for (size_t i = 0; i < cases.size(); i++) {
+        // int position = cases[i].position;
+        int constant_index = cases[i].constant_index;
+        if (constant_index > -1) {
+            VMValue value = chunk->Constants->at(constant_index);
+
+            all_constants_are_integer &= (value.Type == VAL_INTEGER);
+            if (all_constants_are_integer) {
+                int val = AS_INTEGER(value);
+                if (integer_min > val)
+                    integer_min = val;
+                if (integer_max < val)
+                    integer_max = val;
+            }
+
+            // printf("case ");
+            // PrintValue(value);
+        }
+        else {
+            // printf("default");
+        }
+        // printf(": %d\n", position - code_block_start);
+    }
+
+    if (all_constants_are_integer && false) {
+        //
+    }
+    else {
+        // Stack:
+        //  0 : switch value
+
+        // EmitByte(OP_PRINT_STACK);
+
+        EmitByte(OP_SWITCH_TABLE);
+        EmitUint16(cases.size());
+        for (size_t i = 0; i < cases.size(); i++) {
+            int position = cases[i].position - code_block_start;
+            int constant_index = cases[i].constant_index;
+            EmitByte(constant_index);
+            EmitUint16(position);
+        }
+
+        int exitJump = EmitJump(OP_JUMP);
+
+        int new_block_pos = CodePointer();
+        // We do this here so that if an allocation is needed, it happens.
+        for (int i = 0; i < code_block_length; i++) {
+            ChunkWrite(chunk, code_block_copy[i], line_block_copy[i]);
+        }
+        free(code_block_copy);
+        free(line_block_copy);
+
+        PatchJump(exitJump);
+
+        // Set the old break opcode positions to the newly placed ones
+        vector<int>* top = BreakJumpListStack.top();
+        for (size_t i = 0; i < top->size(); i++) {
+            (*top)[i] += -code_block_start + new_block_pos;
+            // printf("break at: %d (%d)\n", (*top)[i], chunk->Code[(*top)[i] - 1]);
+        }
+    }
+
+    EndSwitchJumpList();
+
+    // vector<switch_case>* sdf = SwitchJumpListStack.top();
+
+    // // Pop value since OP_JUMP_IF_FALSE doesn't pop off expression value
+    // EmitByte(OP_POP);
+
+    // Pop jump list off break stack, patch all breaks to this code point
+    EndBreakJumpList();
 }
 PUBLIC void Compiler::GetCaseStatement() {
     if (SwitchJumpListStack.size() == 0) {
         Error("Cannot use case label outside of switch statement.");
     }
+
+    int position, constant_index;
+    position = CodePointer();
+
+    GetConstant(false);
+    ConsumeToken(TOKEN_COLON, "Expected \":\" after \"case\".");
+
+    constant_index = CurrentChunk()->Code[position + 1];
+    CurrentChunk()->Count = position;
+
+    SwitchJumpListStack.top()->push_back(switch_case { position, constant_index, 0 });
 }
 PUBLIC void Compiler::GetDefaultStatement() {
     if (SwitchJumpListStack.size() == 0) {
         Error("Cannot use default label outside of switch statement.");
     }
+
+    ConsumeToken(TOKEN_COLON, "Expected \":\" after \"default\".");
+
+    int position, constant_index;
+    position = CodePointer();
+
+    SwitchJumpListStack.top()->push_back(switch_case { position, -1, 0 });
 }
 PUBLIC void Compiler::GetWhileStatement() {
     // Set the start of the loop to before the condition
@@ -1632,8 +1764,8 @@ PUBLIC int  Compiler::GetFunction(int type) {
                 compiler->DefineVariableToken(parser.Previous);
 
                 compiler->Function->Arity++;
-                if (compiler->Function->Arity > 8) {
-                    compiler->Error("Cannot have more than 8 parameters.");
+                if (compiler->Function->Arity > 255) {
+                    compiler->Error("Cannot have more than 255 parameters.");
                 }
             }
             while (compiler->MatchToken(TOKEN_COMMA));
@@ -1671,6 +1803,11 @@ PUBLIC void Compiler::GetMethod() {
     EmitStringHash(constantToken);
 }
 PUBLIC void Compiler::GetVariableDeclaration() {
+    if (SwitchScopeStack.size() != 0) {
+        if (SwitchScopeStack.top() == ScopeDepth)
+            Error("Cannot initialize variable inside switch statement.");
+    }
+
     do {
         // Uint8 global =
             ParseVariable("Expected variable name.");
@@ -1909,6 +2046,10 @@ PUBLIC void          Compiler::EmitBytes(Uint8 byte1, Uint8 byte2) {
     EmitByte(byte1);
     EmitByte(byte2);
 }
+PUBLIC void          Compiler::EmitUint16(Uint16 value) {
+    EmitByte(value & 0xFF);
+    EmitByte(value >> 8 & 0xFF);
+}
 PUBLIC void          Compiler::EmitUint32(Uint32 value) {
     EmitByte(value & 0xFF);
     EmitByte(value >> 8 & 0xFF);
@@ -1917,10 +2058,8 @@ PUBLIC void          Compiler::EmitUint32(Uint32 value) {
 }
 PUBLIC void          Compiler::EmitConstant(VMValue value) {
     int index = FindConstant(value);
-    if (index < 0) {
-        EmitBytes(OP_CONSTANT, MakeConstant(value));
-        return;
-    }
+    if (index < 0)
+        index = MakeConstant(value);
 
     EmitBytes(OP_CONSTANT, index);
 }
@@ -1948,6 +2087,11 @@ PUBLIC int           Compiler::EmitJump(Uint8 instruction) {
     EmitByte(instruction);
     EmitByte(0xFF);
     EmitByte(0xFF);
+    return CurrentChunk()->Count - 2;
+}
+PUBLIC int           Compiler::EmitJump(Uint8 instruction, int jump) {
+    EmitByte(instruction);
+    EmitUint16(jump);
     return CurrentChunk()->Count - 2;
 }
 PUBLIC void          Compiler::PatchJump(int offset) {
@@ -2000,16 +2144,18 @@ PUBLIC void          Compiler::EndContinueJumpList() {
     ContinueJumpListStack.pop();
 }
 PUBLIC void          Compiler::StartSwitchJumpList() {
-    SwitchJumpListStack.push(new vector<int>());
+    SwitchJumpListStack.push(new vector<switch_case>());
+    SwitchScopeStack.push(ScopeDepth + 1);
 }
 PUBLIC void          Compiler::EndSwitchJumpList() {
-    vector<int>* top = SwitchJumpListStack.top();
+    vector<switch_case>* top = SwitchJumpListStack.top();
     for (size_t i = 0; i < top->size(); i++) {
-        int offset = (*top)[i];
-        PatchJump(offset);
+        // switch_case offset = (*top)[i];
+        // PatchJump(offset);
     }
     delete top;
     SwitchJumpListStack.pop();
+    SwitchScopeStack.pop();
 }
 
 PUBLIC int           Compiler::FindConstant(VMValue value) {

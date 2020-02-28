@@ -294,10 +294,10 @@ PUBLIC bool ISprite::LoadAnimation(const char* filename) {
             if (anfrm.BoxCount) {
                 anfrm.Boxes = (CollisionBox*)Memory::Malloc(anfrm.BoxCount * sizeof(CollisionBox));
                 for (int h = 0; h < anfrm.BoxCount; h++) {
-                    anfrm.Boxes[h].Left = reader->ReadUInt16();
-                    anfrm.Boxes[h].Top = reader->ReadUInt16();
-                    anfrm.Boxes[h].Right = reader->ReadUInt16();
-                    anfrm.Boxes[h].Bottom = reader->ReadUInt16();
+                    anfrm.Boxes[h].Left = reader->ReadInt16();
+                    anfrm.Boxes[h].Top = reader->ReadInt16();
+                    anfrm.Boxes[h].Right = reader->ReadInt16();
+                    anfrm.Boxes[h].Bottom = reader->ReadInt16();
                 }
             }
 

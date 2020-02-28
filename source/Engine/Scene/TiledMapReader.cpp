@@ -261,6 +261,7 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
             scenelayer.RelativeY = 0x100;
             scenelayer.ConstantY = 0x00;
             scenelayer.Flags = SceneLayer::FLAGS_COLLIDEABLE | SceneLayer::FLAGS_NO_REPEAT_X | SceneLayer::FLAGS_NO_REPEAT_Y;
+            scenelayer.DrawGroup = 0;
 
             if (layer->attributes.Exists("visible") && XMLParser::MatchToken(layer->attributes.Get("visible"), "0")) {
                 scenelayer.Visible = false;
@@ -303,6 +304,7 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
                 }
                 else {
                     objectList = new ObjectList();
+                    strcpy(objectList->ObjectName, object_type_string);
                     Scene::ObjectLists->Put(object_type_hash, objectList);
                     objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(object_type_hash, object_type_string);
                 }
@@ -376,13 +378,13 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
     }
 
     if (Scene::PriorityLists) {
-        size_t size = Scene::Layers.size() * (1 << Scene::PriorityPerLayer) * sizeof(vector<Entity*>);
-        Scene::PriorityLists = (vector<Entity*>*)Memory::Realloc(Scene::PriorityLists, size);
+        size_t size = Scene::PriorityPerLayer * sizeof(vector<Entity*>);
+        // Scene::PriorityLists = (vector<Entity*>*)Memory::Realloc(Scene::PriorityLists, size);
 
         memset(Scene::PriorityLists, 0, size);
     }
     else {
-        Scene::PriorityLists = (vector<Entity*>*)Memory::TrackedCalloc("Scene::PriorityLists", Scene::Layers.size() * (1 << Scene::PriorityPerLayer), sizeof(vector<Entity*>));
+        Scene::PriorityLists = (vector<Entity*>*)Memory::TrackedCalloc("Scene::PriorityLists", Scene::PriorityPerLayer, sizeof(vector<Entity*>));
     }
 
 

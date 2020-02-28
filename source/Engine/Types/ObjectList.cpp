@@ -13,6 +13,10 @@ public:
     bool            Registry = false;
     vector<Entity*> List;
 
+    char ObjectName[256];
+    double AverageTime = 0.0;
+    double AverageItemCount = 0;
+
     Entity* (*SpawnFunction)() = NULL;
 };
 #endif
@@ -84,6 +88,9 @@ PUBLIC void    ObjectList::Clear() {
     EntityCount = 0;
     EntityFirst = NULL;
     EntityLast = NULL;
+
+    AverageTime = 0.0;
+    AverageItemCount = 0;
 }
 
 // ObjectList functions
@@ -107,15 +114,17 @@ PUBLIC bool    ObjectList::RemoveDynamic(Entity* obj) {
 }
 
 PUBLIC Entity* ObjectList::GetNth(int n) {
-    if (Registry) {
+    if (Registry)
         return List[n];
-    }
 
     Entity* ent = EntityFirst;
     for (ent = EntityFirst; ent != NULL && n > 0; ent = ent->NextEntityInList, n--);
     return ent;
 }
 PUBLIC Entity* ObjectList::GetClosest(int x, int y) {
+    if (EntityCount == 1)
+        return EntityFirst;
+
     Entity* closest = NULL;
 
     int xD, yD;

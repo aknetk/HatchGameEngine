@@ -29,9 +29,12 @@ PUBLIC void BytecodeObject::Link(ObjInstance* instance) {
     LINK_DEC(Z);
     LINK_DEC(XSpeed);
     LINK_DEC(YSpeed);
-    // LINK_DEC(Gravity);
-    // LINK_INT(AutoPhysics);
+    LINK_DEC(GroundSpeed);
+    LINK_DEC(Gravity);
+    LINK_INT(AutoPhysics);
     LINK_INT(Angle);
+    LINK_INT(AngleMode);
+    LINK_INT(Ground);
     LINK_DEC(Rotation);
     // LINK_DEC(Timer);
     LINK_INT(Priority);
@@ -41,6 +44,11 @@ PUBLIC void BytecodeObject::Link(ObjInstance* instance) {
     LINK_INT(CurrentFrame);
     LINK_DEC(CurrentFrameTimeLeft);
     LINK_DEC(AnimationSpeedMult);
+    LINK_INT(AutoAnimate);
+
+    LINK_INT(OnScreen);
+    LINK_DEC(OnScreenHitboxW);
+    LINK_DEC(OnScreenHitboxH);
 
     LINK_DEC(HitboxW);
     LINK_DEC(HitboxH);
@@ -114,8 +122,17 @@ PUBLIC void BytecodeObject::Update() {
     if (!Instance) return;
 
     RunFunction("Update");
+}
+PUBLIC void BytecodeObject::UpdateLate() {
+    if (!Active) return;
+    if (!Instance) return;
 
-    Animate();
+    RunFunction("UpdateLate");
+
+    if (AutoAnimate)
+        Animate();
+    if (AutoPhysics)
+        ApplyMotion();
 }
 PUBLIC void BytecodeObject::RenderEarly() {
     if (!Active) return;
@@ -295,6 +312,64 @@ PUBLIC STATIC VMValue BytecodeObject::VM_CollidedWithObject(int argCount, VMValu
     }
 
     return INTEGER_VAL(false);
+}
+PUBLIC STATIC VMValue BytecodeObject::VM_GetHitboxFromSprite(int argCount, VMValue* args, Uint32 threadID) {
+    StandardLibrary::CheckArgCount(argCount, 5);
+    Entity* self    = (Entity*)AS_INSTANCE(args[0])->EntityPtr;
+    ISprite* sprite = StandardLibrary::GetSprite(args, 1);
+    int animation   = StandardLibrary::GetInteger(args, 2);
+    int frame       = StandardLibrary::GetInteger(args, 3);
+    int hitbox      = StandardLibrary::GetInteger(args, 4);
+
+    if (!(animation > -1 && (size_t)animation < sprite->Animations.size())) {
+        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Animation %d is not in bounds of sprite.", animation);
+        return NULL_VAL;
+    }
+    if (!(frame > -1 && (size_t)frame < sprite->Animations[animation].Frames.size())) {
+        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Frame %d is not in bounds of animation %d.", frame, animation);
+        return NULL_VAL;
+    }
+
+    AnimFrame frameO = sprite->Animations[animation].Frames[frame];
+
+    if (!(hitbox > -1 && hitbox < frameO.BoxCount)) {
+        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Hitbox %d is not in bounds of frame %d.", hitbox, frame);
+        return NULL_VAL;
+    }
+
+    CollisionBox box = frameO.Boxes[hitbox];
+    self->HitboxW = box.Right - box.Left;
+    self->HitboxH = box.Bottom - box.Top;
+    self->HitboxOffX = box.Left + self->HitboxW * 0.5f;
+    self->HitboxOffY = box.Top + self->HitboxH * 0.5f;
+
+    return NULL_VAL;
+}
+
+/*
+bool Entity::CollideWithObject
+int  Entity::SolidCollideWithObject
+bool Entity::TopSolidCollideWithObject
+*/
+PUBLIC STATIC VMValue BytecodeObject::VM_CollideWithObject(int argCount, VMValue* args, Uint32 threadID) {
+    StandardLibrary::CheckArgCount(argCount, 2);
+    BytecodeObject* self = (BytecodeObject*)AS_INSTANCE(args[0])->EntityPtr;
+    BytecodeObject* other = (BytecodeObject*)AS_INSTANCE(args[1])->EntityPtr;
+    return INTEGER_VAL(self->CollideWithObject(other));
+}
+PUBLIC STATIC VMValue BytecodeObject::VM_SolidCollideWithObject(int argCount, VMValue* args, Uint32 threadID) {
+    StandardLibrary::CheckArgCount(argCount, 3);
+    BytecodeObject* self = (BytecodeObject*)AS_INSTANCE(args[0])->EntityPtr;
+    BytecodeObject* other = (BytecodeObject*)AS_INSTANCE(args[1])->EntityPtr;
+    int flag = StandardLibrary::GetInteger(args, 2);
+    return INTEGER_VAL(self->SolidCollideWithObject(other, flag));
+}
+PUBLIC STATIC VMValue BytecodeObject::VM_TopSolidCollideWithObject(int argCount, VMValue* args, Uint32 threadID) {
+    StandardLibrary::CheckArgCount(argCount, 3);
+    BytecodeObject* self = (BytecodeObject*)AS_INSTANCE(args[0])->EntityPtr;
+    BytecodeObject* other = (BytecodeObject*)AS_INSTANCE(args[1])->EntityPtr;
+    int flag = StandardLibrary::GetInteger(args, 2);
+    return INTEGER_VAL(self->TopSolidCollideWithObject(other, flag));
 }
 
 PUBLIC STATIC VMValue BytecodeObject::VM_PropertyExists(int argCount, VMValue* args, Uint32 threadID) {

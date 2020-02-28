@@ -32,6 +32,7 @@ SET TARGET_SUBSYSTEM=/SUBSYSTEM:CONSOLE
 
 SET SRC_FOLDER=%~dp0source\
 SET OBJ_FOLDER=out\win\
+SET OBJ_FOLDER=C:\Users\Justin\Documents\_hatch_out_win\
 SET OBJ_LIST=
 
 IF NOT EXIST %OBJ_FOLDER% MKDIR %OBJ_FOLDER%
@@ -40,7 +41,7 @@ IF NOT EXIST %TARGET_FOLDER% MKDIR %TARGET_FOLDER%
 ECHO Compiling: %TARGET_NAME%...
 
 CD "tools"
-"makeheaders.exe" %SRC_FOLDER%
+"makeheaders.exe" ../source
 CD ..
 
 IF EXIST meta\icon.ico (

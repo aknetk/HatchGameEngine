@@ -50,7 +50,7 @@ LINKER	  =	-framework SDL2 \
 
 DEFINES   = -DMACOSX -DTARGET_NAME=\"$(TARGET)\"
 DEFINES	 +=	-DDEBUG
-DEFINES	 +=	-DUSING_LIBAV
+DEFINES	 +=	-DNO_LIBAV
 DEFINES	 +=	-DUSING_FRAMEWORK
 # DEFINES	 +=	-Ofast
 
@@ -121,12 +121,14 @@ package:
 	@cp "meta/mac/libpng16.16.dylib" "$(TARGETDIR).app/Contents/Frameworks/_libpng16.16.dylib"
 	@cp "meta/mac/libvorbis.0.dylib" "$(TARGETDIR).app/Contents/Frameworks/_libvorbis.0.dylib"
 	@cp "meta/mac/libvorbisfile.3.dylib" "$(TARGETDIR).app/Contents/Frameworks/_libvorbisfile.3.dylib"
+	@cp "meta/mac/libcurl.4.dylib" "$(TARGETDIR).app/Contents/Frameworks/_libcurl.4.dylib"
 	@# Link to copies
 	@install_name_tool -change @rpath/SDL2.framework/Versions/A/SDL2 @executable_path/../Frameworks/_SDL2.framework/Versions/A/SDL2 "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
 	@install_name_tool -change /usr/local/opt/libogg/lib/libogg.0.dylib @executable_path/../Frameworks/_libogg.0.dylib "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
 	@install_name_tool -change /usr/local/opt/libpng/lib/libpng16.16.dylib @executable_path/../Frameworks/_libpng16.16.dylib "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
 	@install_name_tool -change /usr/local/opt/libvorbis/lib/libvorbis.0.dylib @executable_path/../Frameworks/_libvorbis.0.dylib "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
 	@install_name_tool -change /usr/local/opt/libvorbis/lib/libvorbisfile.3.dylib @executable_path/../Frameworks/_libvorbisfile.3.dylib "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
+	@install_name_tool -change /usr/local/opt/curl/lib/libcurl.4.dylib @executable_path/../Frameworks/_libcurl.4.dylib "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
 	@# Link copies to themselves
 	@#@install_name_tool -change /usr/local/opt/libogg/lib/libogg.0.dylib @executable_path/../Frameworks/_libogg.0.dylib "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
 	@#@install_name_tool -change /usr/local/opt/libpng/lib/libpng16.16.dylib @executable_path/../Frameworks/_libpng16.16.dylib "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
@@ -142,7 +144,7 @@ debug:
 	@mkdir -p $(OBJ_DIRS)
 	@./tools/makeheaders source
 	@make build
-	@(cd source_mania && lldb -o r -f ./../"$(TARGETDIR)")
+	@(cd source && lldb -o r -f ./../"$(TARGETDIR)")
 
 clean:
 	@@rm -rf $(OBJS)

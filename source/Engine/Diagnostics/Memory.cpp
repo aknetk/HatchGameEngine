@@ -15,7 +15,7 @@ public:
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Memory.h>
 
-#ifdef SWITCH
+#if defined(SWITCH)
 #define NOTRACK
 #endif
 
