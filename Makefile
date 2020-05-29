@@ -15,7 +15,7 @@ OBJ_DIRS := $(sort \
 OBJS     := $(addprefix out/osx/, $(SRC_C:source/%.c=%.o)) \
 			$(addprefix out/osx/, $(SRC_CPP:source/%.cpp=%.o))
 
-INCLUDES  =	-Wall -Wno-deprecated \
+INCLUDES  =	-Wall -Wno-deprecated -Wno-unused-variable \
 			-F/Library/Frameworks/ \
 			-F/System/Library/Frameworks/ \
 			-Fmeta/mac/ \
@@ -59,6 +59,18 @@ all:
 	@./tools/makeheaders source
 	@make build
 	@(cd source && exec ./../"$(TARGETDIR)")
+
+gal:
+	@mkdir -p $(OBJ_DIRS)
+	@./tools/makeheaders source
+	@make build
+	@(cd source_galactic && exec ./../"$(TARGETDIR)")
+
+trivia:
+	@mkdir -p $(OBJ_DIRS)
+	@./tools/makeheaders source
+	@make build
+	@(cd source_chat_trivia && exec ./../"$(TARGETDIR)")
 
 binj:
 	@mkdir -p $(OBJ_DIRS)
@@ -144,7 +156,7 @@ debug:
 	@mkdir -p $(OBJ_DIRS)
 	@./tools/makeheaders source
 	@make build
-	@(cd source && lldb -o r -f ./../"$(TARGETDIR)")
+	@(cd source_galactic && lldb -o r -f ./../"$(TARGETDIR)")
 
 clean:
 	@@rm -rf $(OBJS)

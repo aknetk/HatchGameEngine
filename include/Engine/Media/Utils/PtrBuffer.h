@@ -1,11 +1,12 @@
-#ifndef PTRBUFFER_H
-#define PTRBUFFER_H
+#ifndef ENGINE_MEDIA_UTILS_PTRBUFFER_H
+#define ENGINE_MEDIA_UTILS_PTRBUFFER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -32,4 +33,4 @@ public:
     int    IsFull();
 };
 
-#endif /* PTRBUFFER_H */
+#endif /* ENGINE_MEDIA_UTILS_PTRBUFFER_H */

@@ -15,6 +15,7 @@ public:
     static bool        GameStart;
 
     static SDL_Window* Window;
+    static char        WindowTitle[256];
     static Platforms   Platform;
 };
 #endif
@@ -23,6 +24,7 @@ public:
 #include <Engine/Graphics.h>
 
 #include <Engine/Bytecode/BytecodeObjectManager.h>
+#include <Engine/Bytecode/GarbageCollector.h>
 #include <Engine/Bytecode/SourceFileMap.h>
 #include <Engine/Diagnostics/Clock.h>
 #include <Engine/Diagnostics/Log.h>
@@ -64,6 +66,7 @@ bool        Application::Running = false;
 bool        Application::GameStart = false;
 
 SDL_Window* Application::Window = NULL;
+char        Application::WindowTitle[256];
 
 char        StartingScene[256];
 
@@ -71,7 +74,7 @@ ISprite*    DEBUG_fontSprite = NULL;
 void        DEBUG_DrawText(char* text, float x, float y) {
     for (char* i = text; *i; i++) {
         Graphics::DrawSprite(DEBUG_fontSprite, 0, (int)*i, x, y, 0, 0);
-        x += DEBUG_fontSprite->Animations[0].Frames[(int)*i].ID;
+        x += 14; // DEBUG_fontSprite->Animations[0].Frames[(int)*i].ID;
     }
 }
 
@@ -95,6 +98,8 @@ PUBLIC STATIC void Application::Init(int argc, char* args[]) {
     Application::LoadSettings();
 
     Graphics::ChooseBackend();
+
+    Application::Settings->GetBool("dev", "writeToFile", &Log::WriteToFile);
 
     bool allowRetina = false;
     Application::Settings->GetBool("display", "retina", &allowRetina);
@@ -123,10 +128,6 @@ PUBLIC STATIC void Application::Init(int argc, char* args[]) {
         // SDL_SetWindowDisplayMode(Application::Window, &mode);
         Log::Print(Log::LOG_INFO, "Display Mode: %i x %i", mode.w, mode.h);
         #endif
-    }
-
-    if (Application::Platform == Platforms::Android) {
-        Graphics::VsyncEnabled = true;
     }
 
     // Initialize subsystems
@@ -165,11 +166,78 @@ PUBLIC STATIC void Application::Init(int argc, char* args[]) {
             Log::Print(Log::LOG_INFO, "Current Platform: %s", "Unknown"); break;
     }
 
-    char WindowTitle[256];
-    sprintf(WindowTitle, "%s%s", "Hatch Game Engine", ResourceManager::UsingDataFolder ? " (using Resources folder)" : "");
-    SDL_SetWindowTitle(Application::Window, WindowTitle);
+    memset(Application::WindowTitle, 0, sizeof(Application::WindowTitle));
+    sprintf(Application::WindowTitle, "%s%s", "Hatch Game Engine", ResourceManager::UsingDataFolder ? " (using Resources folder)" : "");
+    SDL_SetWindowTitle(Application::Window, Application::WindowTitle);
 
     Running = true;
+}
+
+int     MetricFrameCounterTime = 0;
+
+double  MetricEventTime = -1;
+double  MetricAfterSceneTime = -1;
+double  MetricPollTime = -1;
+double  MetricUpdateTime = -1;
+double  MetricClearTime = -1;
+double  MetricRenderTime = -1;
+double  MetricFPSCounterTime = -1;
+double  MetricPresentTime = -1;
+double  MetricFrameTime = 0.0;
+
+vector<ObjectList*> ListList;
+PUBLIC STATIC void Application::GetPerformanceSnapshot() {
+    if (Scene::ObjectLists) {
+        double types[] = {
+            MetricEventTime,
+            MetricAfterSceneTime,
+            MetricPollTime,
+            MetricUpdateTime,
+            MetricClearTime,
+            MetricRenderTime,
+            MetricFPSCounterTime,
+            MetricPresentTime,
+            MetricFrameTime,
+            FPS,
+        };
+        const char* typeNames[] = {
+            "Event Polling: %3.3f ms",
+            "Garbage Collector: %3.3f ms",
+            "Input Polling: %3.3f ms",
+            "Entity Update: %3.3f ms",
+            "Clear Time: %3.3f ms",
+            "World Render Commands: %3.3f ms",
+            "FPS Counter Time: %3.3f ms",
+            "Frame Present Time: %3.3f ms",
+            "Frame Time: %3.3f ms",
+            "FPS: %3.3f",
+        };
+
+        ListList.clear();
+        Scene::ObjectLists->WithAll([](Uint32, ObjectList* list) -> void {
+            if (list->AverageUpdateTime > 0.0 && list->AverageUpdateItemCount > 0)
+                ListList.push_back(list);
+        });
+        std::sort(ListList.begin(), ListList.end(), [](ObjectList* a, ObjectList* b) -> bool {
+            return a->AverageUpdateTime * a->AverageUpdateItemCount * 1000.0 > b->AverageUpdateTime * b->AverageUpdateItemCount * 1000.0;
+        });
+
+        Log::Print(Log::LOG_IMPORTANT, "Global Performance Snapshot:");
+        for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); i++) {
+            Log::Print(Log::LOG_INFO, typeNames[i], types[i]);
+        }
+
+        Log::Print(Log::LOG_IMPORTANT, "Object Performance Snapshot:");
+        for (size_t i = 0; i < ListList.size(); i++) {
+            ObjectList* list = ListList[i];
+            Log::Print(Log::LOG_INFO, "Object \"%s\": \n            Avg Update %.1f mcs (Total %.1f mcs, Count %d)\n            Avg Render %.1f mcs (Total %.1f mcs, Count %d)", list->ObjectName,
+                list->AverageUpdateTime * 1000.0, list->AverageUpdateTime * list->AverageUpdateItemCount * 1000.0, (int)list->AverageUpdateItemCount,
+                list->AverageRenderTime * 1000.0, list->AverageRenderTime * list->AverageRenderItemCount * 1000.0, (int)list->AverageRenderItemCount);
+        }
+
+        Log::Print(Log::LOG_IMPORTANT, "Garbage Size:");
+        Log::Print(Log::LOG_INFO, "%u", (Uint32)GarbageCollector::GarbageSize);
+    }
 }
 
 PUBLIC STATIC void Application::Run(int argc, char* args[]) {
@@ -183,10 +251,6 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
     bool    DoNothing = false;
     int     UpdatesPerFrame = 1;
     int     UpdatesPerFastForward = 4;
-
-    if (Application::Platform == Platforms::Android) {
-        ShowFPS = true;
-    }
 
     Application::Settings->GetBool("dev", "devMenu", &DevMenu);
     Application::Settings->GetBool("dev", "viewPerformance", &ShowFPS);
@@ -220,26 +284,23 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
     bool    Stepper = false;
     bool    Step = false;
 
-    int     MetricFrameCounterTime = 0;
-    double  MetricEventTime = -1;
-    double  MetricPollTime = -1;
-    double  MetricUpdateTime = -1;
-    double  MetricRenderTime = -1;
-    double  MetricClearTime = -1;
-    double  MetricPresentTime = -1;
     int     BenchmarkFrameCount = 0;
+    double  BenchmarkTickStart = 0.0;
+
     double  Overdelay = 0.0;
+    double  FrameTimeStart = 0.0;
+    double  FrameTimeDesired = 1000.0 / TargetFPS;
 
     Graphics::Clear();
     Graphics::Present();
 
     SDL_Event e;
+    int test = 0;
     while (Running) {
         if (BenchmarkFrameCount == 0)
-            Clock::Start();
+            BenchmarkTickStart = Clock::GetTicks();
 
-        if (!Graphics::VsyncEnabled || Application::Platform == Platforms::MacOSX)
-            Clock::Start();
+        FrameTimeStart = Clock::GetTicks();
 
         // Event loop
         MetricEventTime = Clock::GetTicks();
@@ -272,7 +333,7 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                         }
                         // Take snapshot
                         case SDLK_F10: {
-                            TakeSnapshot = true;
+                            // TakeSnapshot = true;
                             break;
                         }
                         // Restart application (dev)
@@ -303,13 +364,7 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                         // Print performance snapshot (dev)
                         case SDLK_F3: {
                             if (DevMenu) {
-                                if (Scene::ObjectLists) {
-                                    Log::Print(Log::LOG_IMPORTANT, "Performance Snapshot:");
-                            		Scene::ObjectLists->WithAll([](Uint32, ObjectList* list) -> void {
-                                        if (list->AverageTime > 0.0)
-                                            Log::Print(Log::LOG_INFO, "Object \"%s\": Avg Update %.1f mcs (Total %.1f mcs, Count %d)", list->ObjectName, list->AverageTime * 1000.0, list->AverageTime * list->AverageItemCount * 1000.0, (int)list->AverageItemCount);
-                                    });
-                                }
+                                TakeSnapshot = true;
                             }
                             break;
                         }
@@ -360,13 +415,20 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                                     UpdatesPerFrame = 4;
                                 else
                                     UpdatesPerFrame = 1;
+
+                                char full[512];
+                                if (UpdatesPerFrame == 1)
+                                    sprintf(full, "%s", Application::WindowTitle);
+                                else
+                                    sprintf(full, "%s%s", Application::WindowTitle, " (Frame Limit OFF)");
+                                SDL_SetWindowTitle(Application::Window, full);
                             }
                             break;
                         }
-                        // Reset frame counter (dev)
+                        // Cycle view tile collision (dev)
                         case SDLK_F7: {
                             if (DevMenu) {
-                                MetricFrameCounterTime = 0;
+                                Scene::ShowTileCollisionFlag = (Scene::ShowTileCollisionFlag + 1) % 3;
                             }
                             break;
                         }
@@ -376,6 +438,13 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                             if (DevMenu) {
                                 Stepper = !Stepper;
                                 MetricFrameCounterTime = 0;
+
+                                char full[512];
+                                if (Stepper)
+                                    sprintf(full, "%s%s", Application::WindowTitle, " (Frame Stepper ON)");
+                                else
+                                    sprintf(full, "%s", Application::WindowTitle);
+                                SDL_SetWindowTitle(Application::Window, full);
                             }
                             break;
                         }
@@ -386,6 +455,10 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                                 Stepper = true;
                                 Step = true;
                                 MetricFrameCounterTime++;
+
+                                char full[512];
+                                sprintf(full, "%s%s", Application::WindowTitle, " (Frame Stepper ON)");
+                                SDL_SetWindowTitle(Application::Window, full);
                             }
                             break;
                         }
@@ -451,7 +524,9 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
         if (*Scene::NextScene)
             Step = true;
 
+        MetricAfterSceneTime = Clock::GetTicks();
         Scene::AfterScene();
+        MetricAfterSceneTime = Clock::GetTicks() - MetricAfterSceneTime;
 
         if (DoNothing) goto DO_NOTHING;
 
@@ -480,14 +555,10 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
         Scene::Render();
         MetricRenderTime = Clock::GetTicks() - MetricRenderTime;
 
-        if (TakeSnapshot) {
-            TakeSnapshot = false;
-            // Graphics::SaveScreenshot(NULL);
-        }
-
         DO_NOTHING:
 
         // Show FPS counter
+        MetricFPSCounterTime = Clock::GetTicks();
         if (ShowFPS) {
             if (!DEBUG_fontSprite) {
                 bool original = Graphics::TextureInterpolate;
@@ -523,28 +594,30 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
             Graphics::SetBlendMode(BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA, BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
 
             float infoW = 400.0;
-            float infoH = 235.0;
+            float infoH = 290.0;
             float infoPadding = 20.0;
             Graphics::Save();
             Graphics::Translate(0.0, 0.0, 0.0);
                 Graphics::SetBlendColor(0.0, 0.0, 0.0, 0.75);
                 Graphics::FillRectangle(0.0f, 0.0f, infoW, infoH);
 
-                int typeCount = 5;
-
-                double types[5] = {
+                double types[] = {
                     MetricEventTime,
+                    MetricAfterSceneTime,
                     MetricPollTime,
-                    MetricClearTime,
                     MetricUpdateTime,
+                    MetricClearTime,
                     MetricRenderTime,
+                    MetricPresentTime,
                 };
-                const char* typeNames[5] = {
+                const char* typeNames[] = {
                     "Event Polling: %3.3f ms",
+                    "Garbage Collector: %3.3f ms",
                     "Input Polling: %3.3f ms",
-                    "Clear Time: %3.3f ms",
                     "Entity Update: %3.3f ms",
+                    "Clear Time: %3.3f ms",
                     "World Render Commands: %3.3f ms",
+                    "Frame Present Time: %3.3f ms",
                 };
                 struct { float r; float g; float b; } colors[8] = {
                     { 1.0, 0.0, 0.0 },
@@ -556,6 +629,9 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                     { 1.0, 1.0, 1.0 },
                     { 0.0, 0.0, 0.0 },
                 };
+
+                int typeCount = sizeof(types) / sizeof(double);
+
 
                 Graphics::Save();
                 Graphics::Translate(infoPadding - 2.0, infoPadding, 0.0);
@@ -590,7 +666,10 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                     for (int i = 0; i < typeCount; i++) {
                         Graphics::Save();
                         Graphics::Translate(infoPadding, 50.0, 0.0);
-                            Graphics::SetBlendColor(colors[i].r, colors[i].g, colors[i].b, 0.5);
+                            if (i < 8)
+                                Graphics::SetBlendColor(colors[i].r, colors[i].g, colors[i].b, 0.5);
+                            else
+                                Graphics::SetBlendColor(0.5, 0.5, 0.5, 0.5);
                             Graphics::FillRectangle(rectx, 0.0f, types[i] / total * (infoW - infoPadding * 2), 30.0);
                         Graphics::Restore();
 
@@ -599,6 +678,7 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
 
                     // Draw list
                     float listY = 90.0;
+                    float totalFrameCount = 0.0f;
                     infoPadding += infoPadding;
                     for (int i = 0; i < typeCount; i++) {
                         Graphics::Save();
@@ -610,7 +690,31 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                             DEBUG_DrawText(textBuffer, 0.0, 0.0);
                             listY += 20.0;
                         Graphics::Restore();
+
+                        totalFrameCount += types[i];
                     }
+
+                    // Draw total
+                    Graphics::Save();
+                    Graphics::Translate(infoPadding, listY, 0.0);
+                        Graphics::SetBlendColor(1.0, 1.0, 1.0, 0.5);
+                        Graphics::FillRectangle(-infoPadding / 2.0, 0.0, 12.0, 12.0);
+                    Graphics::Scale(0.6, 0.6, 1.0);
+                        snprintf(textBuffer, 256, "Total Frame Time: %.3f ms", totalFrameCount);
+                        DEBUG_DrawText(textBuffer, 0.0, 0.0);
+                        listY += 20.0;
+                    Graphics::Restore();
+
+                    // Draw Overdelay
+                    Graphics::Save();
+                    Graphics::Translate(infoPadding, listY, 0.0);
+                        Graphics::SetBlendColor(1.0, 1.0, 1.0, 0.5);
+                        Graphics::FillRectangle(-infoPadding / 2.0, 0.0, 12.0, 12.0);
+                    Graphics::Scale(0.6, 0.6, 1.0);
+                        snprintf(textBuffer, 256, "Overdelay: %.3f ms", Overdelay);
+                        DEBUG_DrawText(textBuffer, 0.0, 0.0);
+                        listY += 20.0;
+                    Graphics::Restore();
 
                     float count = (float)Memory::MemoryUsage;
                     const char* moniker = "B";
@@ -642,12 +746,13 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                     float* listYPtr = &listY;
                     if (Scene::ObjectLists && Application::Platform != Platforms::Android) {
                         Scene::ObjectLists->WithAll([infoPadding, listYPtr](Uint32, ObjectList* list) -> void {
-                            char textBufferXXX[256];
-                            if (list->AverageItemCount > 0.0) {
+                            char textBufferXXX[1024];
+                            if (list->AverageUpdateItemCount > 0.0) {
                                 Graphics::Save();
                                 Graphics::Translate(infoPadding / 2.0, *listYPtr, 0.0);
                                 Graphics::Scale(0.6, 0.6, 1.0);
-                                    snprintf(textBufferXXX, 256, "Object \"%s\": Avg Update %.1f mcs (Total %.1f mcs, Count %d)", list->ObjectName, list->AverageTime * 1000.0, list->AverageTime * list->AverageItemCount * 1000.0, (int)list->AverageItemCount);
+                                    // snprintf(textBufferXXX, 1024, "Object \"%s\": Avg Update %.1f mcs (Total %.1f mcs, Count %d)", list->ObjectName, list->AverageUpdateTime * 1000.0, list->AverageUpdateTime * list->AverageUpdateItemCount * 1000.0, (int)list->AverageUpdateItemCount);
+                                    snprintf(textBufferXXX, 1024, "Object \"%s\": Avg Render %.1f mcs (Total %.1f mcs, Count %d)", list->ObjectName, list->AverageRenderTime * 1000.0, list->AverageRenderTime * list->AverageRenderItemCount * 1000.0, (int)list->AverageRenderItemCount);
                                     DEBUG_DrawText(textBufferXXX, 0.0, 0.0);
                                 Graphics::Restore();
 
@@ -658,23 +763,34 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                 }
             Graphics::Restore();
         }
+        MetricFPSCounterTime = Clock::GetTicks() - MetricFPSCounterTime;
 
         MetricPresentTime = Clock::GetTicks();
         Graphics::Present();
         MetricPresentTime = Clock::GetTicks() - MetricPresentTime;
 
+        MetricFrameTime = Clock::GetTicks() - FrameTimeStart;
+
         // HACK: MacOS V-Sync timing gets disabled if window is not visible
         if (!Graphics::VsyncEnabled || Application::Platform == Platforms::MacOSX) {
-            double clockEnd = Clock::End();
-            double frameDurationRemainder = 1000.0 / TargetFPS - clockEnd;
+            double frameTime = Clock::GetTicks() - FrameTimeStart;
+            double frameDurationRemainder = FrameTimeDesired - frameTime;
             if (frameDurationRemainder >= 0.0) {
-                double startTime = Clock::GetTicks();
-                Clock::Delay(frameDurationRemainder - Overdelay);
-                double delayTime = Clock::GetTicks() - startTime;
-                if (delayTime > frameDurationRemainder)
-                    Overdelay = delayTime - frameDurationRemainder;
+                // NOTE: Delay duration will always be more than requested wait time.
+                if (frameDurationRemainder > 1.0) {
+                    double delayStartTime = Clock::GetTicks();
 
-                while ((Clock::GetTicks() - startTime) <= frameDurationRemainder);
+                    Clock::Delay(frameDurationRemainder - 1.0);
+
+                    double delayTime = Clock::GetTicks() - delayStartTime;
+                    Overdelay = delayTime - (frameDurationRemainder - 1.0);
+                }
+
+                // frameDurationRemainder = floor(frameDurationRemainder);
+                // if (delayTime > frameDurationRemainder)
+                //     printf("delayTime: %.3f   frameDurationRemainder: %.3f\n", delayTime, frameDurationRemainder);
+
+                while ((Clock::GetTicks() - FrameTimeStart) < FrameTimeDesired);
             }
         }
         else {
@@ -683,8 +799,14 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
 
         BenchmarkFrameCount++;
         if (BenchmarkFrameCount == TargetFPS) {
-            FPS = 1000.f / Clock::End() * TargetFPS;
+            double measuredSecond = Clock::GetTicks() - BenchmarkTickStart;
+            FPS = 1000.0 / floor(measuredSecond) * TargetFPS;
             BenchmarkFrameCount = 0;
+        }
+
+        if (TakeSnapshot) {
+            TakeSnapshot = false;
+            Application::GetPerformanceSnapshot();
         }
     }
 
@@ -774,6 +896,7 @@ PUBLIC STATIC void Application::LoadSettings() {
     LogLevel = -1;
     #endif
     Application::Settings->GetInteger("dev", "logLevel", &LogLevel);
+    Application::Settings->GetBool("dev", "trackMemory", &Memory::IsTracking);
     Log::SetLogLevel(LogLevel);
 
     Application::Settings->GetBool("display", "vsync", &Graphics::VsyncEnabled);

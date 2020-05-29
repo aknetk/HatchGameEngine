@@ -17,6 +17,7 @@ template <typename T> class HashMap {
 public:
     int Count = 0;
     int Capacity = 0;
+    int CapacityMask = 0;
     int ChainLength = 16;
     HashMapElement<T>* Data = NULL;
 
@@ -29,6 +30,7 @@ public:
 
         Count = 0;
         Capacity = capacity;
+        CapacityMask = Capacity - 1;
 
         Data = (HashMapElement<T>*)Memory::TrackedCalloc("HashMap::Data", Capacity, sizeof(HashMapElement<T>));
     	if (!Data) {
@@ -57,13 +59,14 @@ public:
         index += (index << 7);
         index ^= (index >> 12);
         index = (index >> 3) * 0x9E3779B1U;
-        index = index & (Capacity - 1); // index = index % Capacity;
+        index = index & CapacityMask; // index = index % Capacity;
         return index;
     }
     int    Resize() {
         Capacity <<= 1;
-        HashMapElement<T>* oldData = Data;
+        CapacityMask = Capacity - 1;
 
+        HashMapElement<T>* oldData = Data;
         const char* oldTrack = Memory::GetName(oldData);
 
         Data = (HashMapElement<T>*)Memory::TrackedCalloc(oldTrack, Capacity, sizeof(HashMapElement<T>));
@@ -85,7 +88,7 @@ public:
                     }
             		if (Data[index].Used && Data[index].Key == oldData[i].Key)
             			break;
-            		index = (index + 1) & (Capacity - 1); // index = (index + 1) % Capacity;
+            		index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
             	}
 
                 Data[index].Key = oldData[i].Key;
@@ -119,7 +122,7 @@ public:
         		if (Data[index].Used && Data[index].Key == hash)
         			break;
 
-        		index = (index + 1) & (Capacity - 1); // index = (index + 1) % Capacity;
+        		index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
         	}
         }
         while (index == 0xFFFFFFFFU);
@@ -143,7 +146,7 @@ public:
                 return Data[index].Data;
             }
 
-            index = (index + 1) & (Capacity - 1); // index = (index + 1) % Capacity;
+            index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
         }
 
         return T { 0 };
@@ -167,7 +170,7 @@ public:
                 return true;
             }
 
-            index = (index + 1) & (Capacity - 1); // index = (index + 1) % Capacity;
+            index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
         }
 
         return false;
@@ -190,7 +193,7 @@ public:
                 return true;
             }
 
-            index = (index + 1) & (Capacity - 1); // index = (index + 1) % Capacity;
+            index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
         }
         return false;
     }

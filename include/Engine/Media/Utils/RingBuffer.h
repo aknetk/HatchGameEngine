@@ -1,11 +1,12 @@
-#ifndef RINGBUFFER_H
-#define RINGBUFFER_H
+#ifndef ENGINE_MEDIA_UTILS_RINGBUFFER_H
+#define ENGINE_MEDIA_UTILS_RINGBUFFER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -30,4 +31,4 @@ public:
     int    GetFree();
 };
 
-#endif /* RINGBUFFER_H */
+#endif /* ENGINE_MEDIA_UTILS_RINGBUFFER_H */

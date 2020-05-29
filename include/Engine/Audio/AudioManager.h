@@ -1,11 +1,12 @@
-#ifndef AUDIOMANAGER_H
-#define AUDIOMANAGER_H
+#ifndef ENGINE_AUDIO_AUDIOMANAGER_H
+#define ENGINE_AUDIO_AUDIOMANAGER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -21,6 +22,7 @@ public:
     static bool              AudioEnabled;
     static deque<StackNode*> MusicStack;
     static StackNode*        SoundArray;
+    static int               SoundArrayLength;
     static double            FadeOutTimer;
     static double            FadeOutTimerMax;
     static float             MasterVolume;
@@ -62,4 +64,4 @@ public:
     static void   Dispose();
 };
 
-#endif /* AUDIOMANAGER_H */
+#endif /* ENGINE_AUDIO_AUDIOMANAGER_H */

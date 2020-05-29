@@ -1,11 +1,12 @@
-#ifndef CRC32_H
-#define CRC32_H
+#ifndef ENGINE_HASHING_CRC32_H
+#define ENGINE_HASHING_CRC32_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -18,4 +19,4 @@ public:
     static Uint32 EncryptData(void* data, Uint32 size, Uint32 crc);
 };
 
-#endif /* CRC32_H */
+#endif /* ENGINE_HASHING_CRC32_H */

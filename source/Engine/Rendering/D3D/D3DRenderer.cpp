@@ -286,7 +286,7 @@ Uint32      D3D_D3DFORMATToPixelFormat(D3DFORMAT format) {
     return SDL_PIXELFORMAT_UNKNOWN;
 }
 int         D3D_SetError(const char* error, HRESULT result) {
-    Log::Print(Log::LOG_ERROR, error, D3D_GetResultString(result));
+    Log::Print(Log::LOG_ERROR, "D3D: %s (%s)", error, D3D_GetResultString(result));
     exit(0);
     return 0;
 }
@@ -564,12 +564,6 @@ void        D3D_DrawTextureRaw(Texture* texture, float sx, float sy, float sw, f
     if (Graphics::TextureBlend)
         color = D3D_BlendColorsAsHex;
 
-    Vertex vertices[4];
-    // vertices[0] = Vertex { 0.0f, 0.0f, 0.0f, color, minu, minv };
-    // vertices[1] = Vertex { 1.0f, 0.0f, 0.0f, color, maxu, minv };
-    // vertices[2] = Vertex { 1.0f, 1.0f, 0.0f, color, maxu, maxv };
-    // vertices[3] = Vertex { 0.0f, 1.0f, 0.0f, color, minu, maxv };
-
     float minx = x;
     float maxx = x + w;
     float miny = y;
@@ -578,16 +572,23 @@ void        D3D_DrawTextureRaw(Texture* texture, float sx, float sy, float sw, f
     // NOTE: We do this because Direct3D9's origin for render targets is top-left,
     //    instead of the usual bottom-left.
     if (texture->Access == SDL_TEXTUREACCESS_TARGET) {
-        miny = y + h;
-        maxy = y;
-        if (Graphics::CurrentRenderTarget != NULL)
-            flipY = !flipY;
+        // miny = y + h;
+        // maxy = y;
+        // if (Graphics::CurrentRenderTarget != NULL)
+        //     flipY = !flipY;
+        maxv = (sy) / texture->Height;
+        minv = (sy + sh) / texture->Height;
     }
 
-    vertices[0] = Vertex { minx, miny, 0.0f, color, minu, minv };
-    vertices[1] = Vertex { maxx, miny, 0.0f, color, maxu, minv };
-    vertices[2] = Vertex { maxx, maxy, 0.0f, color, maxu, maxv };
-    vertices[3] = Vertex { minx, maxy, 0.0f, color, minu, maxv };
+    Vertex vertices[4];
+    // vertices[0] = Vertex { minx, miny, 0.0f, color, minu, minv };
+    // vertices[1] = Vertex { maxx, miny, 0.0f, color, maxu, minv };
+    // vertices[2] = Vertex { maxx, maxy, 0.0f, color, maxu, maxv };
+    // vertices[3] = Vertex { minx, maxy, 0.0f, color, minu, maxv };
+    vertices[0] = Vertex { 0.0f, 0.0f, 0.0f, color, minu, minv };
+    vertices[1] = Vertex { 1.0f, 0.0f, 0.0f, color, maxu, minv };
+    vertices[2] = Vertex { 1.0f, 1.0f, 0.0f, color, maxu, maxv };
+    vertices[3] = Vertex { 0.0f, 1.0f, 0.0f, color, minu, maxv };
 
     if (D3D_PixelPerfectScale) {
         Point points[4];
@@ -602,12 +603,18 @@ void        D3D_DrawTextureRaw(Texture* texture, float sx, float sy, float sw, f
     // NOTE: This is not necessary in D3D10 and onwards
     float fx = flipX ? -1.0f : 1.0f;
     float fy = flipY ? -1.0f : 1.0f;
-    for (int i = 0; i < 4; i++) {
-        vertices[i].x -= 0.5f * fx;
-        vertices[i].y -= 0.5f * fy;
-    }
-
-    int index = 0;
+    // if (Graphics::CurrentRenderTarget) {
+    //     for (int i = 0; i < 4; i++) {
+    //         vertices[i].x -= 0.5f * fx;
+    //         vertices[i].y += 0.5f * fy; // NOTE: Note the plus here, instead of minus
+    //     }
+    // }
+    // else {
+    //     for (int i = 0; i < 4; i++) {
+    //         vertices[i].x -= 0.5f * fx;
+    //         vertices[i].y -= 0.5f * fy;
+    //     }
+    // }
 
     D3D_SetBlendMode();
     D3D_BindTexture(texture, 0);
@@ -620,10 +627,21 @@ void        D3D_DrawTextureRaw(Texture* texture, float sx, float sy, float sw, f
     }
 
     D3DMATRIX matrix;
-    if (D3D_PixelPerfectScale)
+    if (D3D_PixelPerfectScale) {
         memcpy(&matrix.m, D3D_MatrixIdentity->Values, sizeof(float) * 16);
-    else
-        memcpy(&matrix.m, Graphics::ModelViewMatrix.top()->Values, sizeof(float) * 16);
+    }
+    else {
+        // memcpy(&matrix.m, Graphics::ModelViewMatrix.top()->Values, sizeof(float) * 16);
+        Graphics::Save();
+        Graphics::Translate(x, y, 0.0f);
+        if (texture->Access != SDL_TEXTUREACCESS_TARGET)
+            Graphics::Translate(-0.5f * fx, 0.5f * fy, 0.0f);
+        else
+            Graphics::Translate(-0.5f * fx, -0.5f * fy, 0.0f);
+        Graphics::Scale(w, h, 1.0f);
+            memcpy(&matrix.m, Graphics::ModelViewMatrix.top()->Values, sizeof(float) * 16);
+        Graphics::Restore();
+    }
     IDirect3DDevice9_SetTransform(renderData->Device, D3DTS_VIEW, &matrix);
 
     result = IDirect3DDevice9_DrawPrimitiveUP(renderData->Device, D3DPT_TRIANGLEFAN, 2, vertices, sizeof(*vertices));
@@ -666,6 +684,8 @@ PUBLIC STATIC void     D3DRenderer::Init() {
         Log::Print(Log::LOG_ERROR, "Unable to create Direct3D interface.");
         return;
     }
+
+    Log::Print(Log::LOG_INFO, "Renderer: Direct3D 9");
 
     D3DCAPS9 caps;
     HRESULT result;
@@ -724,10 +744,8 @@ PUBLIC STATIC void     D3DRenderer::Init() {
             pparams.Windowed,
             pparams.MultiSampleType, NULL))) {
             pparams.SwapEffect = D3DSWAPEFFECT_DISCARD;
-            Log::Print(Log::LOG_INFO, "Multisample: true");
         }
         else if (FAILED(result)) {
-            Log::Print(Log::LOG_INFO, "Multisample: false");
             pparams.MultiSampleType = D3DMULTISAMPLE_NONE;
             Graphics::MultisamplingEnabled = 0;
         }
@@ -826,54 +844,55 @@ PUBLIC STATIC Uint32   D3DRenderer::GetWindowFlags() {
     return 0;
 }
 PUBLIC STATIC void     D3DRenderer::SetGraphicsFunctions() {
-    Graphics::Internal_Init = D3DRenderer::Init;
-    Graphics::Internal_GetWindowFlags = D3DRenderer::GetWindowFlags;
-    Graphics::Internal_Dispose = D3DRenderer::Dispose;
+    Graphics::Internal.Init = D3DRenderer::Init;
+    Graphics::Internal.GetWindowFlags = D3DRenderer::GetWindowFlags;
+    Graphics::Internal.Dispose = D3DRenderer::Dispose;
 
     // Texture management functions
-    Graphics::Internal_CreateTexture = D3DRenderer::CreateTexture;
-    Graphics::Internal_LockTexture = D3DRenderer::LockTexture;
-    Graphics::Internal_UpdateTexture = D3DRenderer::UpdateTexture;
-    Graphics::Internal_UnlockTexture = D3DRenderer::UnlockTexture;
-    Graphics::Internal_DisposeTexture = D3DRenderer::DisposeTexture;
+    Graphics::Internal.CreateTexture = D3DRenderer::CreateTexture;
+    Graphics::Internal.LockTexture = D3DRenderer::LockTexture;
+    Graphics::Internal.UpdateTexture = D3DRenderer::UpdateTexture;
+    Graphics::Internal.UnlockTexture = D3DRenderer::UnlockTexture;
+    Graphics::Internal.DisposeTexture = D3DRenderer::DisposeTexture;
 
     // Viewport and view-related functions
-    Graphics::Internal_SetRenderTarget = D3DRenderer::SetRenderTarget;
-    Graphics::Internal_UpdateWindowSize = D3DRenderer::UpdateWindowSize;
-    Graphics::Internal_UpdateViewport = D3DRenderer::UpdateViewport;
-    Graphics::Internal_UpdateClipRect = D3DRenderer::UpdateClipRect;
-    Graphics::Internal_UpdateOrtho = D3DRenderer::UpdateOrtho;
-    Graphics::Internal_UpdatePerspective = D3DRenderer::UpdatePerspective;
-    Graphics::Internal_UpdateProjectionMatrix = D3DRenderer::UpdateProjectionMatrix;
+    Graphics::Internal.SetRenderTarget = D3DRenderer::SetRenderTarget;
+    Graphics::Internal.UpdateWindowSize = D3DRenderer::UpdateWindowSize;
+    Graphics::Internal.UpdateViewport = D3DRenderer::UpdateViewport;
+    Graphics::Internal.UpdateClipRect = D3DRenderer::UpdateClipRect;
+    Graphics::Internal.UpdateOrtho = D3DRenderer::UpdateOrtho;
+    Graphics::Internal.UpdatePerspective = D3DRenderer::UpdatePerspective;
+    Graphics::Internal.UpdateProjectionMatrix = D3DRenderer::UpdateProjectionMatrix;
 
     // Shader-related functions
-    Graphics::Internal_UseShader = D3DRenderer::UseShader;
-    Graphics::Internal_SetUniformF = D3DRenderer::SetUniformF;
-    Graphics::Internal_SetUniformI = D3DRenderer::SetUniformI;
-    Graphics::Internal_SetUniformTexture = D3DRenderer::SetUniformTexture;
+    Graphics::Internal.UseShader = D3DRenderer::UseShader;
+    Graphics::Internal.SetUniformF = D3DRenderer::SetUniformF;
+    Graphics::Internal.SetUniformI = D3DRenderer::SetUniformI;
+    Graphics::Internal.SetUniformTexture = D3DRenderer::SetUniformTexture;
 
     // These guys
-    Graphics::Internal_Clear = D3DRenderer::Clear;
-    Graphics::Internal_Present = D3DRenderer::Present;
+    Graphics::Internal.Clear = D3DRenderer::Clear;
+    Graphics::Internal.Present = D3DRenderer::Present;
 
     // Draw mode setting functions
-    Graphics::Internal_SetBlendColor = D3DRenderer::SetBlendColor;
-    Graphics::Internal_SetBlendMode = D3DRenderer::SetBlendMode;
-    Graphics::Internal_SetLineWidth = D3DRenderer::SetLineWidth;
+    Graphics::Internal.SetBlendColor = D3DRenderer::SetBlendColor;
+    Graphics::Internal.SetBlendMode = D3DRenderer::SetBlendMode;
+    Graphics::Internal.SetLineWidth = D3DRenderer::SetLineWidth;
 
     // Primitive drawing functions
-    Graphics::Internal_StrokeLine = D3DRenderer::StrokeLine;
-    Graphics::Internal_StrokeCircle = D3DRenderer::StrokeCircle;
-    Graphics::Internal_StrokeEllipse = D3DRenderer::StrokeEllipse;
-    Graphics::Internal_StrokeRectangle = D3DRenderer::StrokeRectangle;
-    Graphics::Internal_FillCircle = D3DRenderer::FillCircle;
-    Graphics::Internal_FillEllipse = D3DRenderer::FillEllipse;
-    Graphics::Internal_FillTriangle = D3DRenderer::FillTriangle;
-    Graphics::Internal_FillRectangle = D3DRenderer::FillRectangle;
+    Graphics::Internal.StrokeLine = D3DRenderer::StrokeLine;
+    Graphics::Internal.StrokeCircle = D3DRenderer::StrokeCircle;
+    Graphics::Internal.StrokeEllipse = D3DRenderer::StrokeEllipse;
+    Graphics::Internal.StrokeRectangle = D3DRenderer::StrokeRectangle;
+    Graphics::Internal.FillCircle = D3DRenderer::FillCircle;
+    Graphics::Internal.FillEllipse = D3DRenderer::FillEllipse;
+    Graphics::Internal.FillTriangle = D3DRenderer::FillTriangle;
+    Graphics::Internal.FillRectangle = D3DRenderer::FillRectangle;
 
     // Texture drawing functions
-    Graphics::Internal_DrawTexture = D3DRenderer::DrawTexture;
-    Graphics::Internal_DrawSprite = D3DRenderer::DrawSprite;
+    Graphics::Internal.DrawTexture = D3DRenderer::DrawTexture;
+    Graphics::Internal.DrawSprite = D3DRenderer::DrawSprite;
+    Graphics::Internal.DrawSpritePart = D3DRenderer::DrawSpritePart;
 }
 PUBLIC STATIC void     D3DRenderer::Dispose() {
     Memory::Free(D3D_BufferCircleFill);
@@ -1254,20 +1273,16 @@ PUBLIC STATIC void     D3DRenderer::FillCircle(float x, float y, float rad) {
     Graphics::Restore();
 
     D3D_EndDrawShape(D3D_BufferCircleFill, D3DPT_TRIANGLEFAN, 360);
-
-    // if (count == 2 ||
-    //     points[0].x != points[count-1].x || points[0].y != points[count-1].y) {
-    //     vertices[0].x = points[count-1].x;
-    //     vertices[0].y = points[count-1].y;
-    //     result = IDirect3DDevice9_DrawPrimitiveUP(data->Device, D3DPT_POINTLIST, 1, vertices, sizeof(*vertices));
-    // }
 }
 PUBLIC STATIC void     D3DRenderer::FillEllipse(float x, float y, float w, float h) {
     D3D_BeginDrawShape(D3D_BufferCircleFill, 362);
 
+    w *= 0.5f;
+    h *= 0.5f;
+
     Graphics::Save();
-    Graphics::Translate(x + w / 2, y + h / 2, 0.0f);
-    Graphics::Scale(w / 2, h / 2, 1.0f);
+    Graphics::Translate(x + w, y + h, 0.0f);
+    Graphics::Scale(w, h, 1.0f);
         D3DMATRIX matrix;
         memcpy(&matrix.m, Graphics::ModelViewMatrix.top()->Values, sizeof(float) * 16);
         IDirect3DDevice9_SetTransform(renderData->Device, D3DTS_VIEW, &matrix);
@@ -1293,7 +1308,6 @@ PUBLIC STATIC void     D3DRenderer::FillRectangle(float x, float y, float w, flo
     D3D_BeginDrawShape(D3D_BufferSquareFill, 4);
 
     Graphics::Save();
-    // Graphics::Translate(0.5f, 0.5f, 0.0f);
     Graphics::Translate(x, y, 0.0f);
     Graphics::Scale(w, h, 1.0f);
         D3DMATRIX matrix;
@@ -1325,6 +1339,34 @@ PUBLIC STATIC void     D3DRenderer::DrawSprite(ISprite* sprite, int animation, i
     Graphics::Translate(x, y, 0.0f);
     Graphics::Scale(fX, fY, 1.0f);
         D3D_DrawTextureRaw(sprite->Spritesheets[animframe.SheetNumber], animframe.X, animframe.Y, animframe.Width, animframe.Height, animframe.OffsetX, animframe.OffsetY, animframe.Width, animframe.Height, flipX, flipY);
+    Graphics::Restore();
+}
+PUBLIC STATIC void     D3DRenderer::DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY) {
+    if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
+
+	AnimFrame animframe = sprite->Animations[animation].Frames[frame];
+    if (sx == animframe.Width)
+        return;
+    if (sy == animframe.Height)
+        return;
+
+	float fX = flipX ? -1.0 : 1.0;
+	float fY = flipY ? -1.0 : 1.0;
+    if (sw >= animframe.Width - sx)
+        sw  = animframe.Width - sx;
+    if (sh >= animframe.Height - sy)
+        sh  = animframe.Height - sy;
+
+    UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderTexturedShape);
+    Graphics::Save();
+    Graphics::Translate(x, y, 0.0f);
+    Graphics::Scale(fX, fY, 1.0f);
+        D3D_DrawTextureRaw(sprite->Spritesheets[animframe.SheetNumber],
+            animframe.X + sx, animframe.Y + sy,
+            sw, sh,
+            sx + animframe.OffsetX, sy + animframe.OffsetY,
+            sw, sh,
+            flipX, flipY);
     Graphics::Restore();
 }
 

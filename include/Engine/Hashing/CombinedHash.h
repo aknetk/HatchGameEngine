@@ -1,11 +1,12 @@
-#ifndef COMBINEDHASH_H
-#define COMBINEDHASH_H
+#ifndef ENGINE_HASHING_COMBINEDHASH_H
+#define ENGINE_HASHING_COMBINEDHASH_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -17,4 +18,4 @@ public:
     static Uint32 EncryptData(const char* message, size_t len);
 };
 
-#endif /* COMBINEDHASH_H */
+#endif /* ENGINE_HASHING_COMBINEDHASH_H */

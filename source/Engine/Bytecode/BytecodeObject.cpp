@@ -42,21 +42,26 @@ PUBLIC void BytecodeObject::Link(ObjInstance* instance) {
     LINK_INT(Sprite);
     LINK_INT(CurrentAnimation);
     LINK_INT(CurrentFrame);
+    LINK_INT(CurrentFrameCount);
     LINK_DEC(CurrentFrameTimeLeft);
     LINK_DEC(AnimationSpeedMult);
+    LINK_INT(AnimationSpeedAdd);
     LINK_INT(AutoAnimate);
 
     LINK_INT(OnScreen);
     LINK_DEC(OnScreenHitboxW);
     LINK_DEC(OnScreenHitboxH);
+    LINK_INT(ViewRenderFlag);
 
     LINK_DEC(HitboxW);
     LINK_DEC(HitboxH);
     LINK_DEC(HitboxOffX);
     LINK_DEC(HitboxOffY);
+    LINK_INT(FlipFlag);
 
     LINK_BOOL(Active);
     LINK_BOOL(Pauseable);
+    LINK_BOOL(Interactable);
 }
 
 #undef LINK
@@ -89,33 +94,104 @@ PUBLIC bool BytecodeObject::RunFunction(const char* f) {
 
     return false;
 }
+PUBLIC bool BytecodeObject::RunCreateFunction(int flag) {
+    // NOTE:
+    // If the function doesn't exist, this is not an error VM side,
+    // treat whatever we call from C++ as a virtual-like function.
+    const char* f = "Create";
+    Uint32 hash = FNV1A::EncryptString(f);
+    if (!Instance->Class->Methods->Exists(hash))
+        return true;
+
+    ObjFunction* func = AS_FUNCTION(Instance->Class->Methods->Get(hash));
+
+    VMThread* thread = BytecodeObjectManager::Threads + 0;
+
+    VMValue* StackTop = thread->StackTop;
+
+    if (func->Arity == 1) {
+        thread->Push(OBJECT_VAL(Instance));
+        thread->Push(INTEGER_VAL(flag));
+        thread->RunInvoke(hash, func->Arity);
+    }
+    else {
+        thread->Push(OBJECT_VAL(Instance));
+        thread->RunInvoke(hash, 0);
+    }
+
+    int stackChange = thread->StackTop - StackTop;
+    if (stackChange) {
+        // printf("BytecodeObject::RunFunction(%s) Stack Change: %d\n", f, stackChange);
+        // BytecodeObjectManager::PrintStack();
+    }
+    thread->StackTop = StackTop;
+
+    // NOTE: The ObjInstance* value is left on the stack after this.
+    // BytecodeObjectManager::ResetStack();
+    // BytecodeObjectManager::PrintStack();
+
+    return false;
+}
 
 // Events called from C++
-PUBLIC void BytecodeObject::Create() {
+PUBLIC void BytecodeObject::GameStart() {
+    if (!Instance) return;
+
+    RunFunction("GameStart");
+}
+PUBLIC void BytecodeObject::Create(int flag) {
     if (!Instance) return;
 
     // Set defaults
     Active = true;
+    Pauseable = true;
+
     Priority = 0;
-    PriorityOld = 0;
     PriorityListIndex = -1;
+    PriorityOld = 0;
+
     Sprite = -1;
     CurrentAnimation = -1;
     CurrentFrame = -1;
-    CurrentFrameTimeLeft = 0;
-    AnimationSpeedMult = 1.0f;
-    // X = 0.0f;
-    // Y = 0.0f;
-    XSpeed = 0;
-    YSpeed = 0;
-    Angle = 0;
-    // Timer = 0;
-    Pauseable = true;
+    CurrentFrameTimeLeft = 0.0;
+    AnimationSpeedMult = 1.0;
+    AnimationSpeedAdd = 0;
+    AutoAnimate = true;
 
-    RunFunction("Create");
+    XSpeed = 0.0f;
+    YSpeed = 0.0f;
+    GroundSpeed = 0.0f;
+    Gravity = 0.0f;
+    Ground = false;
+
+    Angle = 0;
+    AngleMode = 0;
+    Rotation = 0.0;
+    AutoPhysics = false;
+
+    OnScreen = true;
+    OnScreenHitboxW = 0.0f;
+    OnScreenHitboxH = 0.0f;
+
+    HitboxW = 0.0f;
+    HitboxH = 0.0f;
+    HitboxOffX = 0.0f;
+    HitboxOffY = 0.0f;
+    FlipFlag = 0;
+
+    Persistent = false;
+    Interactable = true;
+
+    RunCreateFunction(flag);
     if (Sprite >= 0 && CurrentAnimation < 0) {
         SetAnimation(0, 0);
     }
+}
+PUBLIC void BytecodeObject::UpdateEarly() {
+    if (!Active) return;
+    if (!Instance) return;
+
+    RunFunction("UpdateEarly");
 }
 PUBLIC void BytecodeObject::Update() {
     if (!Active) return;
@@ -209,11 +285,11 @@ PUBLIC STATIC VMValue BytecodeObject::VM_ResetAnimation(int argCount, VMValue* a
     int frame = AS_INTEGER(args[2]);
 
     ISprite* sprite = Scene::SpriteList[self->Sprite]->AsSprite;
-    if (!(animation < sprite->Animations.size())) {
+    if (!(animation >= 0 && (Uint32)animation < sprite->Animations.size())) {
         BytecodeObjectManager::Threads[threadID].ThrowError(false, "Animation %d is not in bounds of sprite.", animation);
         return NULL_VAL;
     }
-    if (!(frame < sprite->Animations[animation].Frames.size())) {
+    if (!(frame >= 0 && (Uint32)frame < sprite->Animations[animation].Frames.size())) {
         BytecodeObjectManager::Threads[threadID].ThrowError(false, "Frame %d is not in bounds of animation %d.", frame, animation);
         return NULL_VAL;
     }

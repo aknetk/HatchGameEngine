@@ -14,7 +14,11 @@
 #define GROW_CAPACITY(val) ((val) < 8 ? 8 : val * 2)
 
 static Obj*       AllocateObject(size_t size, ObjType type) {
-    Obj* object = (Obj*)Memory::TrackedMalloc("AllocateObject", size);
+    // Only do this when allocating more memory
+    GarbageCollector::GarbageSize += size;
+    // BytecodeObjectManager::RequestGarbageCollection();
+
+    Obj* object = (Obj*)Memory::Malloc(size);
     object->Type = type;
     object->IsDark = false;
     object->Next = GarbageCollector::RootObject;
@@ -118,6 +122,7 @@ ObjClass*         NewClass(Uint32 hash) {
     klass->Name = NULL;
     klass->Hash = hash;
     klass->Methods = new Table(NULL, 4);
+    klass->Extended = false;
     return klass;
 }
 ObjInstance*      NewInstance(ObjClass* klass) {

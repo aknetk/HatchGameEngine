@@ -1,11 +1,12 @@
-#ifndef SCENELAYER_H
-#define SCENELAYER_H
+#ifndef ENGINE_SCENE_SCENELAYER_H
+#define ENGINE_SCENE_SCENELAYER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class ScrollingInfo;
 
@@ -30,11 +31,15 @@ public:
     Uint16*        TileOffsetY = NULL;
     Sint8*         Deform = NULL;
     int            Flags = 0x0000;
+    int            DrawGroup = 0;
     int            ScrollInfoCount = 0;
     ScrollingInfo* ScrollInfos = NULL;
+    int            ScrollInfosSplitIndexesCount = 0;
+    Uint16*        ScrollInfosSplitIndexes = NULL;
     Uint8*         ScrollIndexes = NULL;
     Uint32         BufferID = 0;
     int            VertexCount = 0;
+    void*          TileBatches = NULL;
     enum {
     FLAGS_COLLIDEABLE = 1,
     FLAGS_NO_REPEAT_X = 2,
@@ -46,4 +51,4 @@ public:
     void    Dispose();
 };
 
-#endif /* SCENELAYER_H */
+#endif /* ENGINE_SCENE_SCENELAYER_H */

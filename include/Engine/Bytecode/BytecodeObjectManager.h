@@ -1,11 +1,12 @@
-#ifndef BYTECODEOBJECTMANAGER_H
-#define BYTECODEOBJECTMANAGER_H
+#ifndef ENGINE_BYTECODE_BYTECODEOBJECTMANAGER_H
+#define ENGINE_BYTECODE_BYTECODEOBJECTMANAGER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class BytecodeObject;
 
@@ -58,10 +59,10 @@ public:
     static void    GlobalConstDecimal(ObjClass* klass, const char* name, float value);
     static void    LinkStandardLibrary();
     static void    LinkExtensions();
-    static void    RunFromIBC(Uint8* head);
+    static void    RunFromIBC(Uint8* head, size_t size);
     static void    SetCurrentObjectHash(Uint32 hash);
     static Entity* SpawnFunction();
     static void*   GetSpawnFunction(Uint32 objectNameHash, char* objectName);
 };
 
-#endif /* BYTECODEOBJECTMANAGER_H */
+#endif /* ENGINE_BYTECODE_BYTECODEOBJECTMANAGER_H */

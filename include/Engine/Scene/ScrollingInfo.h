@@ -1,11 +1,12 @@
-#ifndef SCROLLINGINFO_H
-#define SCROLLINGINFO_H
+#ifndef ENGINE_SCENE_SCROLLINGINFO_H
+#define ENGINE_SCENE_SCROLLINGINFO_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 
@@ -18,4 +19,4 @@ public:
 
 };
 
-#endif /* SCROLLINGINFO_H */
+#endif /* ENGINE_SCENE_SCROLLINGINFO_H */

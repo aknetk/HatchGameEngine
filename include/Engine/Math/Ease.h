@@ -1,11 +1,12 @@
-#ifndef EASE_H
-#define EASE_H
+#ifndef ENGINE_MATH_EASE_H
+#define ENGINE_MATH_EASE_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -45,4 +46,4 @@ public:
     static float Triangle(float t);
 };
 
-#endif /* EASE_H */
+#endif /* ENGINE_MATH_EASE_H */

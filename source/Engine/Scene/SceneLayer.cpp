@@ -30,10 +30,13 @@ public:
 
     int            ScrollInfoCount = 0;
     ScrollingInfo* ScrollInfos = NULL;
+    int            ScrollInfosSplitIndexesCount = 0;
+    Uint16*        ScrollInfosSplitIndexes = NULL;
     Uint8*         ScrollIndexes = NULL;
 
     Uint32         BufferID = 0;
     int            VertexCount = 0;
+    void*          TileBatches = NULL;
 
     enum {
         FLAGS_COLLIDEABLE = 1,
@@ -56,11 +59,14 @@ PUBLIC         SceneLayer::SceneLayer(int w, int h) {
     TilesBackup = (Uint32*)Memory::TrackedCalloc("SceneLayer::TilesBackup", w * h, sizeof(Uint32));
     // TileOffsetY = (Uint16*)Memory::Calloc(w, sizeof(Uint16));
     Deform = (Sint8*)Memory::Malloc(h * 16 * sizeof(Sint8));
-    ScrollIndexes = (Uint8*)Memory::Malloc(h * 16 * sizeof(Uint8));
+    ScrollIndexes = (Uint8*)Memory::Calloc(h * 16, sizeof(Uint8));
+    // memset(ScrollIndexes, 0xFF, h * 16 * sizeof(Uint8));
 }
 PUBLIC void    SceneLayer::Dispose() {
     if (ScrollInfos)
         Memory::Free(ScrollInfos);
+    if (ScrollInfosSplitIndexes)
+        Memory::Free(ScrollInfosSplitIndexes);
 
     // BUG: Somehow Tiles & TilesBackup can be NULL?
     Memory::Free(Tiles);

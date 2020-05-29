@@ -1,11 +1,12 @@
-#ifndef D3DSHADER_H
-#define D3DSHADER_H
+#ifndef ENGINE_RENDERING_D3D_D3DSHADER_H
+#define ENGINE_RENDERING_D3D_D3DSHADER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -42,4 +43,4 @@ public:
     static bool CheckD3DError(int line);
 };
 
-#endif /* D3DSHADER_H */
+#endif /* ENGINE_RENDERING_D3D_D3DSHADER_H */

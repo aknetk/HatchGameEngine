@@ -1,11 +1,12 @@
-#ifndef MD5_H
-#define MD5_H
+#ifndef ENGINE_HASHING_MD5_H
+#define ENGINE_HASHING_MD5_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -20,4 +21,4 @@ public:
     static Uint8* EncryptData(Uint8* dest, void* data, Uint32 size);
 };
 
-#endif /* MD5_H */
+#endif /* ENGINE_HASHING_MD5_H */

@@ -1,11 +1,12 @@
-#ifndef INPUTMANAGER_H
-#define INPUTMANAGER_H
+#ifndef ENGINE_INPUTMANAGER_H
+#define ENGINE_INPUTMANAGER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -42,4 +43,4 @@ public:
     static void  Dispose();
 };
 
-#endif /* INPUTMANAGER_H */
+#endif /* ENGINE_INPUTMANAGER_H */

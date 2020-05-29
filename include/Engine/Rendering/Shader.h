@@ -1,11 +1,12 @@
-#ifndef SHADER_H
-#define SHADER_H
+#ifndef ENGINE_RENDERING_SHADER_H
+#define ENGINE_RENDERING_SHADER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -15,4 +16,4 @@ public:
     static Shader* New();
 };
 
-#endif /* SHADER_H */
+#endif /* ENGINE_RENDERING_SHADER_H */

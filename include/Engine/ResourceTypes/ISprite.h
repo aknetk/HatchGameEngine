@@ -1,11 +1,12 @@
-#ifndef ISPRITE_H
-#define ISPRITE_H
+#ifndef ENGINE_RESOURCETYPES_ISPRITE_H
+#define ENGINE_RESOURCETYPES_ISPRITE_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Texture;
 
@@ -40,4 +41,4 @@ public:
     ~ISprite();
 };
 
-#endif /* ISPRITE_H */
+#endif /* ENGINE_RESOURCETYPES_ISPRITE_H */

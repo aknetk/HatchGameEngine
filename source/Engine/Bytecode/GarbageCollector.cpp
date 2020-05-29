@@ -7,7 +7,11 @@ public:
     static vector<Obj*> GrayList;
     static Obj*         RootObject;
 
-    static bool Print;
+    static size_t       NextGC;
+    static size_t       GarbageSize;
+    static double       MaxTimeAlotted;
+
+    static bool         Print;
 };
 #endif
 
@@ -16,13 +20,20 @@ public:
 #include <Engine/Bytecode/BytecodeObject.h>
 #include <Engine/Bytecode/BytecodeObjectManager.h>
 #include <Engine/Bytecode/Compiler.h>
+#include <Engine/Diagnostics/Clock.h>
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Scene.h>
+
+#define GC_HEAP_GROW_FACTOR 2
 
 vector<Obj*> GarbageCollector::GrayList;
 Obj*         GarbageCollector::RootObject;
 
-bool GarbageCollector::Print = false;
+size_t       GarbageCollector::NextGC = 1024;
+size_t       GarbageCollector::GarbageSize = 0;
+double       GarbageCollector::MaxTimeAlotted = 1.0; // 1ms
+
+bool         GarbageCollector::Print = false;
 
 PUBLIC STATIC void GarbageCollector::Collect() {
     GrayList.clear();
@@ -88,6 +99,8 @@ PUBLIC STATIC void GarbageCollector::Collect() {
             object = &(*object)->Next;
         }
     }
+
+    GarbageCollector::NextGC = GarbageCollector::GarbageSize * GC_HEAP_GROW_FACTOR;
 }
 
 PUBLIC STATIC void GarbageCollector::GrayValue(VMValue value) {

@@ -1,11 +1,12 @@
-#ifndef MATRIX4X4_H
-#define MATRIX4X4_H
+#ifndef ENGINE_MATH_MATRIX4X4_H
+#define ENGINE_MATH_MATRIX4X4_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 
@@ -28,4 +29,4 @@ public:
     static void       Print(Matrix4x4* out);
 };
 
-#endif /* MATRIX4X4_H */
+#endif /* ENGINE_MATH_MATRIX4X4_H */

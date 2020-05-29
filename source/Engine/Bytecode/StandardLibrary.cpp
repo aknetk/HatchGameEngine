@@ -29,6 +29,7 @@ public:
 #include <Engine/Math/Ease.h>
 #include <Engine/Math/Math.h>
 #include <Engine/Network/HTTP.h>
+#include <Engine/Network/WebSocketClient.h>
 #include <Engine/Rendering/GL/GLRenderer.h>
 #include <Engine/Rendering/GL/GLShader.h>
 #include <Engine/ResourceTypes/ResourceType.h>
@@ -204,6 +205,13 @@ PUBLIC STATIC void      StandardLibrary::CheckAtLeastArgCount(int argCount, int 
 using namespace LOCAL;
 
 // #region Array
+/***
+ * Array.Create
+ * \desc Creates an array.
+ * \param size (Integer): Size of the array.
+ * \return A reference value to the array.
+ * \ns Array
+ */
 VMValue Array_Create(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
@@ -219,6 +227,13 @@ VMValue Array_Create(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Array.Length
+ * \desc Gets the length of an array.
+ * \param array (Array): Array to get the length of.
+ * \return Length of the array.
+ * \ns Array
+ */
 VMValue Array_Length(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
@@ -230,6 +245,13 @@ VMValue Array_Length(int argCount, VMValue* args, Uint32 threadID) {
     }
     return INTEGER_VAL(0);
 }
+/***
+ * Array.Push
+ * \desc Adds a value to the end of an array.
+ * \param array (Array): Array to get the length of.
+ * \param value (Value): Value to add to the array.
+ * \ns Array
+ */
 VMValue Array_Push(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
 
@@ -240,6 +262,13 @@ VMValue Array_Push(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Array.Pop
+ * \desc Gets the value at the end of an array, and removes it.
+ * \param array (Array): Array to get the length of.
+ * \return The value from the end of the array.
+ * \ns Array
+ */
 VMValue Array_Pop(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
@@ -252,28 +281,49 @@ VMValue Array_Pop(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Array.Insert
+ * \desc Inserts a value at an index of an array.
+ * \param array (Array): Array to insert value.
+ * \param index (Integer): Index to insert value.
+ * \param value (Value): Value to insert.
+ * \ns Array
+ */
 VMValue Array_Insert(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
 
     if (BytecodeObjectManager::Lock()) {
         ObjArray* array = GetArray(args, 0, threadID);
-        int       posit = GetInteger(args, 1, threadID);
-        array->Values->insert(array->Values->begin() + posit, args[2]);
+        int       index = GetInteger(args, 1, threadID);
+        array->Values->insert(array->Values->begin() + index, args[2]);
         BytecodeObjectManager::Unlock();
     }
     return NULL_VAL;
 }
+/***
+ * Array.Erase
+ * \desc Erases a value at an index of an array.
+ * \param array (Array): Array to erase value.
+ * \param index (Integer): Index to erase value.
+ * \ns Array
+ */
 VMValue Array_Erase(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
 
     if (BytecodeObjectManager::Lock()) {
         ObjArray* array = GetArray(args, 0, threadID);
-        int       posit = GetInteger(args, 1, threadID);
-        array->Values->erase(array->Values->begin() + posit);
+        int       index = GetInteger(args, 1, threadID);
+        array->Values->erase(array->Values->begin() + index);
         BytecodeObjectManager::Unlock();
     }
     return NULL_VAL;
 }
+/***
+ * Array.Clear
+ * \desc Clears an array
+ * \param array (Array): Array to clear.
+ * \ns Array
+ */
 VMValue Array_Clear(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
@@ -287,6 +337,12 @@ VMValue Array_Clear(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Date
+/***
+ * Date.GetEpoch
+ * \desc Gets the amount of seconds from 1 January 1970, 0:00 UTC
+ * \return The amount of seconds from epoch
+ * \ns Date
+ */
 VMValue Date_GetEpoch(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     return INTEGER_VAL((int)time(NULL));
@@ -400,7 +456,11 @@ VMValue Draw_Sprite(int argCount, VMValue* args, Uint32 threadID) {
 VMValue Draw_Image(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
 
-    Image* image = Scene::ImageList[GetInteger(args, 0, threadID)]->AsImage;
+	int index = GetInteger(args, 0, threadID);
+	if (index < 0)
+		return NULL_VAL;
+
+    Image* image = Scene::ImageList[index]->AsImage;
     float x = GetDecimal(args, 1, threadID);
     float y = GetDecimal(args, 2, threadID);
 
@@ -410,7 +470,11 @@ VMValue Draw_Image(int argCount, VMValue* args, Uint32 threadID) {
 VMValue Draw_ImagePart(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(7);
 
-    Image* image = Scene::ImageList[GetInteger(args, 0, threadID)]->AsImage;
+	int index = GetInteger(args, 0, threadID);
+	if (index < 0)
+		return NULL_VAL;
+
+	Image* image = Scene::ImageList[index]->AsImage;
     float sx = GetDecimal(args, 1, threadID);
     float sy = GetDecimal(args, 2, threadID);
     float sw = GetDecimal(args, 3, threadID);
@@ -424,7 +488,11 @@ VMValue Draw_ImagePart(int argCount, VMValue* args, Uint32 threadID) {
 VMValue Draw_ImageSized(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(5);
 
-    Image* image = Scene::ImageList[GetInteger(args, 0, threadID)]->AsImage;
+	int index = GetInteger(args, 0, threadID);
+	if (index < 0)
+		return NULL_VAL;
+
+	Image* image = Scene::ImageList[index]->AsImage;
     float x = GetDecimal(args, 1, threadID);
     float y = GetDecimal(args, 2, threadID);
     float w = GetDecimal(args, 3, threadID);
@@ -436,7 +504,11 @@ VMValue Draw_ImageSized(int argCount, VMValue* args, Uint32 threadID) {
 VMValue Draw_ImagePartSized(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(9);
 
-    Image* image = Scene::ImageList[GetInteger(args, 0, threadID)]->AsImage;
+	int index = GetInteger(args, 0, threadID);
+	if (index < 0)
+		return NULL_VAL;
+
+	Image* image = Scene::ImageList[index]->AsImage;
     float sx = GetDecimal(args, 1, threadID);
     float sy = GetDecimal(args, 2, threadID);
     float sw = GetDecimal(args, 3, threadID);
@@ -513,8 +585,6 @@ VMValue Draw_Tile(int argCount, VMValue* args, Uint32 threadID) {
     int y = (int)GetDecimal(args, 2, threadID) + 8;
     int flipX = GetInteger(args, 3, threadID);
     int flipY = GetInteger(args, 4, threadID);
-
-    id -= 1;
 
     if (Scene::TileSprite) {
         // Graphics::SetBlendColor(1.0, 1.0, 1.0, 1.0);
@@ -605,7 +675,7 @@ VMValue Draw_MeasureText(int argCount, VMValue* args, Uint32 threadID) {
             goto __MEASURE_Y;
         }
 
-        x += sprite->Animations[0].Frames[*i].ID * textAdvance;
+        x += sprite->Animations[0].Frames[*i].Advance * textAdvance;
 
         if (maxW < x)
             maxW = x;
@@ -629,7 +699,7 @@ VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
 
     ISprite* sprite = GetSprite(args, 0, threadID);
     char*    text   = GetString(args, 1, threadID);
-    float    max_w = GetDecimal(args, 2, threadID);
+    float    max_w  = GetDecimal(args, 2, threadID);
     int      maxLines = 0x7FFFFFFF;
     if (argCount > 3)
         maxLines = GetInteger(args, 3, threadID);
@@ -647,12 +717,12 @@ VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
         if (((*i == ' ' || *i == 0) && i != wordstart) || *i == '\n') {
             float testWidth = 0.0f;
             for (char* o = linestart; o < i; o++) {
-                testWidth += sprite->Animations[0].Frames[*o].ID * textAdvance;
+                testWidth += sprite->Animations[0].Frames[*o].Advance * textAdvance;
             }
             if ((testWidth > max_w && word > 0) || *i == '\n') {
                 x = 0.0f;
                 for (char* o = linestart; o < wordstart - 1; o++) {
-                    x += sprite->Animations[0].Frames[*o].ID * textAdvance;
+                    x += sprite->Animations[0].Frames[*o].Advance * textAdvance;
 
                     if (maxW < x)
                         maxW = x;
@@ -675,7 +745,10 @@ VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
         if (!*i)
             break;
     }
+
+    x = 0.0f;
     for (char* o = linestart; *o; o++) {
+        x += sprite->Animations[0].Frames[*o].Advance * textAdvance;
         if (maxW < x)
             maxW = x;
         if (maxH < y + (sprite->Animations[0].Frames[*o].Height + sprite->Animations[0].Frames[*o].OffsetY))
@@ -683,7 +756,6 @@ VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
     }
 
     FINISH:
-
     if (BytecodeObjectManager::Lock()) {
         ObjArray* array = NewArray();
         array->Values->push_back(DECIMAL_VAL(maxW));
@@ -728,7 +800,7 @@ VMValue Draw_Text(int argCount, VMValue* args, Uint32 threadID) {
             x = 0.0f;
             continue;
         }
-        x += sprite->Animations[0].Frames[l].ID * textAdvance;
+        x += sprite->Animations[0].Frames[l].Advance * textAdvance;
     }
     lineWidths[line++] = x;
 
@@ -750,8 +822,9 @@ VMValue Draw_Text(int argCount, VMValue* args, Uint32 threadID) {
             line++;
             continue;
         }
+
         Graphics::DrawSprite(sprite, 0, l, x - lineWidths[line] * textAlign, y - sprite->Animations[0].AnimationSpeed * textBaseline, 0, 0);
-        x += sprite->Animations[0].Frames[l].ID * textAdvance;
+        x += sprite->Animations[0].Frames[l].Advance * textAdvance;
     }
 
     free(lineWidths);
@@ -784,11 +857,22 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
             float testWidth = 0.0f;
             for (char* o = linestart, lm; o < i; o++) {
                 lm = _Text_GetLetter(*o);
-                testWidth += sprite->Animations[0].Frames[lm].ID * textAdvance;
+                testWidth += sprite->Animations[0].Frames[lm].Advance * textAdvance;
             }
 
             if ((testWidth > max_w && word > 0) || l == '\n') {
-                x = basex;
+                float lineWidth = 0.0f;
+                for (char* o = linestart, lm; o < wordstart - 1; o++) {
+                    lm = _Text_GetLetter(*o);
+                    if (lineBack) {
+                        lineWidth -= sprite->Animations[0].Frames[lm].OffsetX;
+                        lineBack = false;
+                    }
+                    lineWidth += sprite->Animations[0].Frames[lm].Advance * textAdvance;
+                }
+                lineBack = true;
+
+                x = basex - lineWidth * textAlign;
                 for (char* o = linestart, lm; o < wordstart - 1; o++) {
                     lm = _Text_GetLetter(*o);
                     if (lineBack) {
@@ -796,11 +880,12 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
                         lineBack = false;
                     }
                     Graphics::DrawSprite(sprite, 0, lm, x, y - sprite->Animations[0].AnimationSpeed * textBaseline, 0, 0);
-                    x += sprite->Animations[0].Frames[lm].ID * textAdvance;
+                    x += sprite->Animations[0].Frames[lm].Advance * textAdvance;
                 }
 
                 if (lineNo == maxLines)
-                    goto FINISH;
+                    return NULL_VAL;
+
                 lineNo++;
 
                 linestart = wordstart;
@@ -815,7 +900,18 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
             break;
     }
 
-    x = basex;
+    float lineWidth = 0.0f;
+    for (char* o = linestart, l; *o; o++) {
+        l = _Text_GetLetter(*o);
+        if (lineBack) {
+            lineWidth -= sprite->Animations[0].Frames[l].OffsetX;
+            lineBack = false;
+        }
+        lineWidth += sprite->Animations[0].Frames[l].Advance * textAdvance;
+    }
+    lineBack = true;
+
+    x = basex - lineWidth * textAlign;
     for (char* o = linestart, l; *o; o++) {
         l = _Text_GetLetter(*o);
         if (lineBack) {
@@ -823,10 +919,10 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
             lineBack = false;
         }
         Graphics::DrawSprite(sprite, 0, l, x, y - sprite->Animations[0].AnimationSpeed * textBaseline, 0, 0);
-        x += sprite->Animations[0].Frames[l].ID * textAdvance;
+        x += sprite->Animations[0].Frames[l].Advance * textAdvance;
     }
 
-    FINISH:
+    // FINISH:
 
     return NULL_VAL;
 }
@@ -839,37 +935,37 @@ VMValue Draw_TextEllipsis(int argCount, VMValue* args, Uint32 threadID) {
     float    y = GetDecimal(args, 3, threadID);
     float    maxwidth = GetDecimal(args, 4, threadID);
 
-    float    elpisswidth = sprite->Animations[0].Frames['.'].ID * 3;
+    float    elpisswidth = sprite->Animations[0].Frames['.'].Advance * 3;
 
     int t;
     size_t textlen = strlen(text);
     float textwidth = 0.0f;
     for (size_t i = 0; i < textlen; i++) {
         t = (int)text[i];
-        textwidth += sprite->Animations[0].Frames[t].ID;
+        textwidth += sprite->Animations[0].Frames[t].Advance;
     }
     // If smaller than or equal to maxwidth, just draw normally.
     if (textwidth <= maxwidth) {
         for (size_t i = 0; i < textlen; i++) {
             t = (int)text[i];
             Graphics::DrawSprite(sprite, 0, t, x, y, 0, 0);
-            x += sprite->Animations[0].Frames[t].ID;
+            x += sprite->Animations[0].Frames[t].Advance;
         }
     }
     else {
         for (size_t i = 0; i < textlen; i++) {
             t = (int)text[i];
-            if (x + sprite->Animations[0].Frames[t].ID + elpisswidth > maxwidth) {
+            if (x + sprite->Animations[0].Frames[t].Advance + elpisswidth > maxwidth) {
                 Graphics::DrawSprite(sprite, 0, '.', x, y, 0, 0);
-                x += sprite->Animations[0].Frames['.'].ID;
+                x += sprite->Animations[0].Frames['.'].Advance;
                 Graphics::DrawSprite(sprite, 0, '.', x, y, 0, 0);
-                x += sprite->Animations[0].Frames['.'].ID;
+                x += sprite->Animations[0].Frames['.'].Advance;
                 Graphics::DrawSprite(sprite, 0, '.', x, y, 0, 0);
-                x += sprite->Animations[0].Frames['.'].ID;
+                x += sprite->Animations[0].Frames['.'].Advance;
                 break;
             }
             Graphics::DrawSprite(sprite, 0, t, x, y, 0, 0);
-            x += sprite->Animations[0].Frames[t].ID;
+            x += sprite->Animations[0].Frames[t].Advance;
         }
     }
     // Graphics::DrawSprite(sprite, 0, t, x, y, 0, 0);
@@ -988,6 +1084,16 @@ VMValue Draw_TriangleStroke(int argCount, VMValue* args, Uint32 threadID) {
 VMValue Draw_RectangleStroke(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     Graphics::StrokeRectangle(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID));
+    return NULL_VAL;
+}
+VMValue Draw_UseFillSmoothing(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    Graphics::SmoothFill = !!GetInteger(args, 0, threadID);
+    return NULL_VAL;
+}
+VMValue Draw_UseStrokeSmoothing(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    Graphics::SmoothStroke = !!GetInteger(args, 0, threadID);
     return NULL_VAL;
 }
 
@@ -1304,11 +1410,12 @@ VMValue Input_GetControllerName(int argCount, VMValue* args, Uint32 threadID) {
 
 // #region Instance
 VMValue Instance_Create(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_ARGCOUNT(3);
+    CHECK_AT_LEAST_ARGCOUNT(3);
 
     char* objectName = GetString(args, 0, threadID);
     float x = GetDecimal(args, 1, threadID);
     float y = GetDecimal(args, 2, threadID);
+    int flag = argCount == 4 ? GetInteger(args, 3, threadID) : 0;
 
     ObjectList* objectList = NULL;
     if (!Scene::ObjectLists->Exists(objectName)) {
@@ -1337,7 +1444,7 @@ VMValue Instance_Create(int argCount, VMValue* args, Uint32 threadID) {
 
     ObjInstance* instance = obj->Instance;
 
-    obj->Create();
+    obj->Create(flag);
 
 
     return OBJECT_VAL(instance);
@@ -1346,7 +1453,7 @@ VMValue Instance_GetNth(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
 
     char* objectName = GetString(args, 0, threadID);
-    float n = GetInteger(args, 1, threadID);
+    int n = GetInteger(args, 1, threadID);
 
     if (!Scene::ObjectLists->Exists(objectName)) {
         return NULL_VAL;
@@ -1372,6 +1479,24 @@ VMValue Instance_GetCount(int argCount, VMValue* args, Uint32 threadID) {
 
     ObjectList* objectList = Scene::ObjectLists->Get(objectName);
     return INTEGER_VAL(objectList->Count());
+}
+VMValue Instance_GetNextInstance(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+
+    Entity* self = (Entity*)AS_INSTANCE(args[0])->EntityPtr;
+    int     n    = GetInteger(args, 1, threadID);
+
+    Entity* object = self;
+    for (int i = 0; i <= n; i++) {
+        object = object->NextEntity;
+        if (!object)
+            return NULL_VAL;
+    }
+
+    if (object)
+        return OBJECT_VAL(((BytecodeObject*)object)->Instance);
+
+    return NULL_VAL;
 }
 // #endregion
 
@@ -1408,8 +1533,8 @@ static int _JSON_FillMap(ObjMap* map, const char* text, jsmntok_t* t, size_t cou
                     else {
                         bool isNumeric = true;
                         bool hasDot = false;
-                        for (const char* c = text + value->start; c < text + value->end; c++) {
-                            isNumeric &= (*c >= '0' && *c <= '9') || (isNumeric && *c == '.' && c > text + value->start && !hasDot);
+                        for (const char* cStart = text + value->start, *c = cStart; c < text + value->end; c++) {
+                            isNumeric &= (c == cStart && *cStart == '-') || (*c >= '0' && *c <= '9') || (isNumeric && *c == '.' && c > text + value->start && !hasDot);
                             hasDot |= (*c == '.');
                         }
                         if (isNumeric) {
@@ -1508,8 +1633,8 @@ static int _JSON_FillArray(ObjArray* arr, const char* text, jsmntok_t* t, size_t
                 else {
                     bool isNumeric = true;
                     bool hasDot = false;
-                    for (const char* c = text + value->start; c < text + value->end; c++) {
-                        isNumeric &= (*c >= '0' && *c <= '9') || (isNumeric && *c == '.' && c > text + value->start && !hasDot);
+                    for (const char* cStart = text + value->start, *c = cStart; c < text + value->end; c++) {
+                        isNumeric &= (c == cStart && *cStart == '-') || (*c >= '0' && *c <= '9') || (isNumeric && *c == '.' && c > text + value->start && !hasDot);
                         hasDot |= (*c == '.');
                     }
                     if (isNumeric) {
@@ -1698,8 +1823,12 @@ VMValue Math_Round(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(std::round(GetDecimal(args, 0, threadID)));
 }
-VMValue Math_Pow(int argCount, VMValue* args, Uint32 threadID) {
+VMValue Math_Sqrt(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
+    return DECIMAL_VAL(sqrt(GetDecimal(args, 0, threadID)));
+}
+VMValue Math_Pow(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
     return DECIMAL_VAL(pow(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID)));
 }
 VMValue Math_Exp(int argCount, VMValue* args, Uint32 threadID) {
@@ -1902,7 +2031,7 @@ VMValue Resources_LoadFont(int argCount, VMValue* args, Uint32 threadID) {
     ResourceStream* stream = ResourceStream::New(filename);
     if (!stream)
         return INTEGER_VAL(-1);
-    resource->AsSprite = FontFace::SpriteFromFont(stream, pixel_sz, NULL);
+    resource->AsSprite = FontFace::SpriteFromFont(stream, pixel_sz, filename);
     stream->Close();
 
     return INTEGER_VAL((int)index);
@@ -1945,7 +2074,7 @@ VMValue Resources_LoadShader(int argCount, VMValue* args, Uint32 threadID) {
         MemoryStream* streamMV = MemoryStream::New(sourceV, lenV);
         MemoryStream* streamMF = MemoryStream::New(sourceF, lenF);
 
-        if (Graphics::Internal_Init == GLRenderer::Init) {
+        if (Graphics::Internal.Init == GLRenderer::Init) {
             shader = new GLShader(streamMV, streamMF);
         }
         else {
@@ -2097,6 +2226,16 @@ VMValue Resources_LoadVideo(int argCount, VMValue* args, Uint32 threadID) {
     #endif
     return INTEGER_VAL(-1);
 }
+VMValue Resources_FileExists(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    char*  filename = GetString(args, 0, threadID);
+    Stream* reader = ResourceStream::New(filename);
+    if (reader) {
+        reader->Close();
+        return INTEGER_VAL(true);
+    }
+    return INTEGER_VAL(false);
+}
 
 VMValue Resources_UnloadImage(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
@@ -2126,12 +2265,7 @@ VMValue Resources_UnloadImage(int argCount, VMValue* args, Uint32 threadID) {
 #define TILE_COLLB_MASK 0x0C000000U
 #define TILE_COLLC_MASK 0x03000000U
 #define TILE_IDENT_MASK 0x00FFFFFFU
-#define CHECK_TILE_LAYER_POS_BOUNDS() if (layer < 0 || \
-    layer >= (int)Scene::Layers.size() || \
-    x < 0 || \
-    y < 0 || \
-    x >= Scene::Layers[layer].Width || \
-    y >= Scene::Layers[layer].Height) return NULL_VAL;
+#define CHECK_TILE_LAYER_POS_BOUNDS() if (layer < 0 || layer >= (int)Scene::Layers.size() || x < 0 || y < 0 || x >= Scene::Layers[layer].Width || y >= Scene::Layers[layer].Height) return NULL_VAL;
 
 VMValue Scene_Load(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
@@ -2242,12 +2376,12 @@ VMValue Scene_SetTile(int argCount, VMValue* args, Uint32 threadID) {
     int collA = TILE_COLLA_MASK, collB = TILE_COLLB_MASK;
     if (argCount == 7) {
         collA = collB = GetInteger(args, 6, threadID);
-        collA <<= 28;
-        collB <<= 26;
+        // collA <<= 28;
+        // collB <<= 26;
     }
     else if (argCount == 8) {
-        collA = GetInteger(args, 6, threadID) << 28;
-        collB = GetInteger(args, 7, threadID) << 26;
+        collA = GetInteger(args, 6, threadID);
+        collB = GetInteger(args, 7, threadID);
     }
 
     CHECK_TILE_LAYER_POS_BOUNDS();
@@ -2262,6 +2396,8 @@ VMValue Scene_SetTile(int argCount, VMValue* args, Uint32 threadID) {
 
     *tile |= collA;
     *tile |= collB;
+
+    Scene::UpdateTileBatch(layer, x / 8, y / 8);
 
     Scene::AnyLayerTileChange = true;
 
@@ -2301,6 +2437,22 @@ VMValue Scene_SetLayerVisible(int argCount, VMValue* args, Uint32 threadID) {
     //         return INTEGER_VAL((int)i);
     // }
     Scene::Layers[index].Visible = visible;
+    return NULL_VAL;
+}
+VMValue Scene_SetLayerOffsetPosition(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(3);
+    int index = GetInteger(args, 0, threadID);
+    int offsetX = (int)GetDecimal(args, 1, threadID);
+    int offsetY = (int)GetDecimal(args, 2, threadID);
+    Scene::Layers[index].OffsetX = offsetX;
+    Scene::Layers[index].OffsetY = offsetY;
+    return NULL_VAL;
+}
+VMValue Scene_SetLayerDrawGroup(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    int index = GetInteger(args, 0, threadID);
+    int drawg = GetInteger(args, 1, threadID);
+    Scene::Layers[index].DrawGroup = drawg % Scene::PriorityPerLayer;
     return NULL_VAL;
 }
 VMValue Scene_IsPaused(int argCount, VMValue* args, Uint32 threadID) {
@@ -2344,7 +2496,7 @@ VMValue Shader_SetUniformF(int argCount, VMValue* args, Uint32 threadID) {
     for (int i = 1; i < argCount; i++) {
         values[i - 1] = GetDecimal(args, i, threadID);
     }
-    Graphics::Internal_SetUniformF(arg1, argCount - 1, values);
+    Graphics::Internal.SetUniformF(arg1, argCount - 1, values);
     free(values);
     return NULL_VAL;
 }
@@ -2369,12 +2521,115 @@ VMValue Shader_SetUniformTexture(int argCount, VMValue* args, Uint32 threadID) {
     int   slot = GetInteger(args, 2, threadID);
     Texture* texture = Graphics::TextureMap->Get(texture_index);
 
-    Graphics::Internal_SetUniformTexture(texture, uniform_index, slot);
+    Graphics::Internal.SetUniformTexture(texture, uniform_index, slot);
     return NULL_VAL;
 }
 VMValue Shader_Unset(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     Graphics::UseShader(NULL);
+    return NULL_VAL;
+}
+// #endregion
+
+// #region SocketClient
+WebSocketClient* client = NULL;
+VMValue SocketClient_Open(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    char* url = GetString(args, 0, threadID);
+
+    client = WebSocketClient::New(url);
+    if (!client)
+        return INTEGER_VAL(false);
+
+    return INTEGER_VAL(true);
+}
+VMValue SocketClient_Close(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(0);
+    if (!client)
+        return NULL_VAL;
+
+    client->Close();
+    client = NULL;
+
+    return NULL_VAL;
+}
+VMValue SocketClient_IsOpen(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(0);
+    if (!client || client->readyState != WebSocketClient::OPEN)
+        return INTEGER_VAL(false);
+
+    return INTEGER_VAL(true);
+}
+VMValue SocketClient_Poll(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int timeout = GetInteger(args, 0, threadID);
+
+    if (!client)
+        return INTEGER_VAL(false);
+
+    client->Poll(timeout);
+    return INTEGER_VAL(true);
+}
+VMValue SocketClient_BytesToRead(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(0);
+    if (!client)
+        return INTEGER_VAL(0);
+
+    return INTEGER_VAL((int)client->BytesToRead());
+}
+VMValue SocketClient_ReadDecimal(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(0);
+    if (!client)
+        return NULL_VAL;
+
+    return DECIMAL_VAL(client->ReadFloat());
+}
+VMValue SocketClient_ReadInteger(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(0);
+    if (!client)
+        return NULL_VAL;
+
+    return INTEGER_VAL(client->ReadSint32());
+}
+VMValue SocketClient_ReadString(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(0);
+    if (!client)
+        return NULL_VAL;
+
+    if (BytecodeObjectManager::Lock()) {
+        char* str = client->ReadString();
+        ObjString* objStr = TakeString(str, strlen(str));
+
+        BytecodeObjectManager::Unlock();
+        return OBJECT_VAL(objStr);
+    }
+    return NULL_VAL;
+}
+VMValue SocketClient_WriteDecimal(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    float value = GetDecimal(args, 0, threadID);
+    if (!client)
+        return NULL_VAL;
+
+    client->SendBinary(&value, sizeof(value));
+    return NULL_VAL;
+}
+VMValue SocketClient_WriteInteger(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int value = GetInteger(args, 0, threadID);
+    if (!client)
+        return NULL_VAL;
+
+    client->SendBinary(&value, sizeof(value));
+    return NULL_VAL;
+}
+VMValue SocketClient_WriteString(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    char* value = GetString(args, 0, threadID);
+    if (!client)
+        return NULL_VAL;
+
+    client->SendText(value);
     return NULL_VAL;
 }
 // #endregion
@@ -2428,6 +2683,39 @@ VMValue Sound_ResumeAll(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     AudioManager::AudioUnpauseAll();
     return NULL_VAL;
+}
+// #endregion
+
+// #region Sprite
+VMValue Sprite_GetAnimationCount(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
+    return INTEGER_VAL((int)sprite->Animations.size());
+}
+VMValue Sprite_GetFrameLoopIndex(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
+    int animation = GetInteger(args, 1, threadID);
+    return INTEGER_VAL(sprite->Animations[animation].FrameToLoop);
+}
+VMValue Sprite_GetFrameCount(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
+    int animation = GetInteger(args, 1, threadID);
+    return INTEGER_VAL((int)sprite->Animations[animation].Frames.size());
+}
+VMValue Sprite_GetFrameDuration(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(3);
+    ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
+    int animation = GetInteger(args, 1, threadID);
+    int frame = GetInteger(args, 2, threadID);
+    return INTEGER_VAL(sprite->Animations[animation].Frames[frame].Duration);
+}
+VMValue Sprite_GetFrameSpeed(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
+    int animation = GetInteger(args, 1, threadID);
+    return INTEGER_VAL(sprite->Animations[animation].AnimationSpeed);
 }
 // #endregion
 
@@ -2489,12 +2777,44 @@ VMValue String_Substring(int argCount, VMValue* args, Uint32 threadID) {
     int length = GetInteger(args, 2, threadID);
 
     int strln = strlen(string);
-    if (length > strln - index)
+    if (length > strln - index || length == -1)
         length = strln - index;
 
     VMValue obj = NULL_VAL;
     if (BytecodeObjectManager::Lock()) {
         obj = OBJECT_VAL(CopyString(string + index, length));
+        BytecodeObjectManager::Unlock();
+    }
+    return obj;
+}
+VMValue String_ToUpperCase(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    char* string = GetString(args, 0, threadID);
+
+    VMValue obj = NULL_VAL;
+    if (BytecodeObjectManager::Lock()) {
+        ObjString* objStr = CopyString(string, strlen(string));
+        for (char* a = objStr->Chars; *a; a++) {
+            if (*a >= 'a' && *a <= 'z')
+                *a += 'A' - 'a';
+        }
+        obj = OBJECT_VAL(objStr);
+        BytecodeObjectManager::Unlock();
+    }
+    return obj;
+}
+VMValue String_ToLowerCase(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    char* string = GetString(args, 0, threadID);
+
+    VMValue obj = NULL_VAL;
+    if (BytecodeObjectManager::Lock()) {
+        ObjString* objStr = CopyString(string, strlen(string));
+        for (char* a = objStr->Chars; *a; a++) {
+            if (*a >= 'A' && *a <= 'Z')
+                *a += 'a' - 'A';
+        }
+        obj = OBJECT_VAL(objStr);
         BytecodeObjectManager::Unlock();
     }
     return obj;
@@ -2615,7 +2935,7 @@ VMValue TileInfo_IsEmptySpace(int argCount, VMValue* args, Uint32 threadID) {
 
 // #region Thread
 struct _Thread_Bundle {
-    ObjBoundMethod Callback;
+    ObjFunction    Callback;
     int            ArgCount;
     int            ThreadIndex;
 };
@@ -2627,6 +2947,13 @@ int     _Thread_RunEvent(void* op) {
     VMValue*  args = (VMValue*)(bundle + 1);
     VMThread* thread = BytecodeObjectManager::Threads + bundle->ThreadIndex;
     VMValue   callbackVal = OBJECT_VAL(&bundle->Callback);
+
+    // if (bundle->Callback.Method == NULL) {
+    //     Log::Print(Log::LOG_ERROR, "No callback.");
+    //     BytecodeObjectManager::ThreadCount--;
+    //     free(bundle);
+    //     return 0;
+    // }
 
     thread->Push(callbackVal);
     for (int i = 0; i < bundle->ArgCount; i++) {
@@ -2643,9 +2970,19 @@ int     _Thread_RunEvent(void* op) {
 VMValue Thread_RunEvent(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(1);
 
-    ObjBoundMethod* callback = NULL;
+    ObjFunction* callback = NULL;
     if (IS_BOUND_METHOD(args[0])) {
-        callback = GetBoundMethod(args, 0, threadID);
+        callback = GetBoundMethod(args, 0, threadID)->Method;
+    }
+    else if (IS_FUNCTION(args[0])) {
+        callback = AS_FUNCTION(args[0]);
+    }
+
+    if (callback == NULL) {
+        Compiler::PrintValue(args[0]);
+        printf("\n");
+        Log::Print(Log::LOG_ERROR, "No callback.");
+        return NULL_VAL;
     }
 
     int subArgCount = argCount - 1;
@@ -3047,12 +3384,35 @@ VMValue Window_SetSize(int argCount, VMValue* args, Uint32 threadID) {
 VMValue Window_SetFullscreen(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
-    SDL_SetWindowFullscreen(Application::Window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    SDL_SetWindowFullscreen(Application::Window, GetInteger(args, 0, threadID) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 
     int window_w, window_h;
     SDL_GetWindowSize(Application::Window, &window_w, &window_h);
 
     Graphics::Resize(window_w, window_h);
+    return NULL_VAL;
+}
+VMValue Window_SetBorderless(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    SDL_SetWindowBordered(Application::Window, (SDL_bool)!GetInteger(args, 0, threadID));
+    return NULL_VAL;
+}
+VMValue Window_SetPosition(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    SDL_SetWindowPosition(Application::Window, GetInteger(args, 0, threadID), GetInteger(args, 1, threadID));
+    return NULL_VAL;
+}
+VMValue Window_SetPositionCentered(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(0);
+    SDL_SetWindowPosition(Application::Window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    return NULL_VAL;
+}
+VMValue Window_SetTitle(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    char* string = GetString(args, 0, threadID);
+    memset(Application::WindowTitle, 0, sizeof(Application::WindowTitle));
+    sprintf(Application::WindowTitle, "%s", string);
+    SDL_SetWindowTitle(Application::Window, Application::WindowTitle);
     return NULL_VAL;
 }
 VMValue Window_GetWidth(int argCount, VMValue* args, Uint32 threadID) {
@@ -3162,6 +3522,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Draw, EllipseStroke);
     DEF_NATIVE(Draw, TriangleStroke);
     DEF_NATIVE(Draw, RectangleStroke);
+    DEF_NATIVE(Draw, UseFillSmoothing);
+    DEF_NATIVE(Draw, UseStrokeSmoothing);
     DEF_NATIVE(Draw, SetClip);
     DEF_NATIVE(Draw, ClearClip);
     DEF_NATIVE(Draw, Save);
@@ -3273,6 +3635,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Instance, Create);
     DEF_NATIVE(Instance, GetNth);
     DEF_NATIVE(Instance, GetCount);
+    DEF_NATIVE(Instance, GetNextInstance);
     // #endregion
 
     // #region JSON
@@ -3299,6 +3662,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Math, Floor);
     DEF_NATIVE(Math, Ceil);
     DEF_NATIVE(Math, Round);
+    DEF_NATIVE(Math, Sqrt);
     DEF_NATIVE(Math, Pow);
     DEF_NATIVE(Math, Exp);
     // #endregion
@@ -3331,6 +3695,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Resources, LoadMusic);
     DEF_NATIVE(Resources, LoadSound);
     DEF_NATIVE(Resources, LoadVideo);
+    DEF_NATIVE(Resources, FileExists);
 
     DEF_NATIVE(Resources, UnloadImage);
 
@@ -3356,6 +3721,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Scene, SetTileCollisionSides);
     DEF_NATIVE(Scene, SetPaused);
     DEF_NATIVE(Scene, SetLayerVisible);
+    DEF_NATIVE(Scene, SetLayerOffsetPosition);
+    DEF_NATIVE(Scene, SetLayerDrawGroup);
     DEF_NATIVE(Scene, IsPaused);
     // #endregion
 
@@ -3371,6 +3738,21 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Shader, Unset);
     // #endregion
 
+    // #region SocketClient
+    INIT_CLASS(SocketClient);
+    DEF_NATIVE(SocketClient, Open);
+    DEF_NATIVE(SocketClient, Close);
+    DEF_NATIVE(SocketClient, IsOpen);
+    DEF_NATIVE(SocketClient, Poll);
+    DEF_NATIVE(SocketClient, BytesToRead);
+    DEF_NATIVE(SocketClient, ReadDecimal);
+    DEF_NATIVE(SocketClient, ReadInteger);
+    DEF_NATIVE(SocketClient, ReadString);
+    DEF_NATIVE(SocketClient, WriteDecimal);
+    DEF_NATIVE(SocketClient, WriteInteger);
+    DEF_NATIVE(SocketClient, WriteString);
+    // #endregion
+
     // #region Sound
     INIT_CLASS(Sound);
     DEF_NATIVE(Sound, Play);
@@ -3383,6 +3765,15 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Sound, ResumeAll);
     // #endregion
 
+    // #region Sprite
+    INIT_CLASS(Sprite);
+    DEF_NATIVE(Sprite, GetAnimationCount);
+    DEF_NATIVE(Sprite, GetFrameLoopIndex);
+    DEF_NATIVE(Sprite, GetFrameCount);
+    DEF_NATIVE(Sprite, GetFrameDuration);
+    DEF_NATIVE(Sprite, GetFrameSpeed);
+    // #endregion
+
     // #region String
     INIT_CLASS(String);
     DEF_NATIVE(String, Split);
@@ -3392,6 +3783,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(String, IndexOf);
     DEF_NATIVE(String, Contains);
     DEF_NATIVE(String, Substring);
+    DEF_NATIVE(String, ToUpperCase);
+    DEF_NATIVE(String, ToLowerCase);
     DEF_NATIVE(String, LastIndexOf);
     DEF_NATIVE(String, ParseInteger);
     DEF_NATIVE(String, ParseDecimal);
@@ -3485,6 +3878,10 @@ PUBLIC STATIC void StandardLibrary::Link() {
     INIT_CLASS(Window);
     DEF_NATIVE(Window, SetSize);
     DEF_NATIVE(Window, SetFullscreen);
+    DEF_NATIVE(Window, SetBorderless);
+    DEF_NATIVE(Window, SetPosition);
+    DEF_NATIVE(Window, SetPositionCentered);
+    DEF_NATIVE(Window, SetTitle);
     DEF_NATIVE(Window, GetWidth);
     DEF_NATIVE(Window, GetHeight);
     // #endregion
@@ -3532,6 +3929,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
         CONST_KEY(X);
         CONST_KEY(Y);
         CONST_KEY(Z);
+
         CONST_KEY(1);
         CONST_KEY(2);
         CONST_KEY(3);
@@ -3542,18 +3940,82 @@ PUBLIC STATIC void StandardLibrary::Link() {
         CONST_KEY(8);
         CONST_KEY(9);
         CONST_KEY(0);
+
         CONST_KEY(RETURN);
         CONST_KEY(ESCAPE);
         CONST_KEY(BACKSPACE);
         CONST_KEY(TAB);
         CONST_KEY(SPACE);
+
         CONST_KEY(MINUS);
         CONST_KEY(EQUALS);
+        CONST_KEY(LEFTBRACKET);
+        CONST_KEY(RIGHTBRACKET);
+        CONST_KEY(BACKSLASH);
+        CONST_KEY(SEMICOLON);
+        CONST_KEY(APOSTROPHE);
+        CONST_KEY(GRAVE);
+        CONST_KEY(COMMA);
+        CONST_KEY(PERIOD);
+        CONST_KEY(SLASH);
 
+        CONST_KEY(CAPSLOCK);
+
+        CONST_KEY(SEMICOLON);
+
+        CONST_KEY(F1);
+        CONST_KEY(F2);
+        CONST_KEY(F3);
+        CONST_KEY(F4);
+        CONST_KEY(F5);
+        CONST_KEY(F6);
+        CONST_KEY(F7);
+        CONST_KEY(F8);
+        CONST_KEY(F9);
+        CONST_KEY(F10);
+        CONST_KEY(F11);
+        CONST_KEY(F12);
+
+        CONST_KEY(PRINTSCREEN);
+        CONST_KEY(SCROLLLOCK);
+        CONST_KEY(PAUSE);
+        CONST_KEY(INSERT);
+        CONST_KEY(HOME);
+        CONST_KEY(PAGEUP);
+        CONST_KEY(DELETE);
+        CONST_KEY(END);
+        CONST_KEY(PAGEDOWN);
         CONST_KEY(RIGHT);
         CONST_KEY(LEFT);
         CONST_KEY(DOWN);
         CONST_KEY(UP);
+
+        CONST_KEY(NUMLOCKCLEAR);
+        CONST_KEY(KP_DIVIDE);
+        CONST_KEY(KP_MULTIPLY);
+        CONST_KEY(KP_MINUS);
+        CONST_KEY(KP_PLUS);
+        CONST_KEY(KP_ENTER);
+        CONST_KEY(KP_1);
+        CONST_KEY(KP_2);
+        CONST_KEY(KP_3);
+        CONST_KEY(KP_4);
+        CONST_KEY(KP_5);
+        CONST_KEY(KP_6);
+        CONST_KEY(KP_7);
+        CONST_KEY(KP_8);
+        CONST_KEY(KP_9);
+        CONST_KEY(KP_0);
+        CONST_KEY(KP_PERIOD);
+
+        CONST_KEY(LCTRL);
+        CONST_KEY(LSHIFT);
+        CONST_KEY(LALT);
+        CONST_KEY(LGUI);
+        CONST_KEY(RCTRL);
+        CONST_KEY(RSHIFT);
+        CONST_KEY(RALT);
+        CONST_KEY(RGUI);
     }
     #undef  CONST_KEY
 }

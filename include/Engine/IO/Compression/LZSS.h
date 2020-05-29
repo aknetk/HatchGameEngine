@@ -1,11 +1,12 @@
-#ifndef LZSS_H
-#define LZSS_H
+#ifndef ENGINE_IO_COMPRESSION_LZSS_H
+#define ENGINE_IO_COMPRESSION_LZSS_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -15,4 +16,4 @@ public:
     static bool Decompress(uint8_t* in, size_t in_sz, uint8_t* out, size_t out_sz);
 };
 
-#endif /* LZSS_H */
+#endif /* ENGINE_IO_COMPRESSION_LZSS_H */

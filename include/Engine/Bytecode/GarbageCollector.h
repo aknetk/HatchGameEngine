@@ -1,11 +1,12 @@
-#ifndef GARBAGECOLLECTOR_H
-#define GARBAGECOLLECTOR_H
+#ifndef ENGINE_BYTECODE_GARBAGECOLLECTOR_H
+#define ENGINE_BYTECODE_GARBAGECOLLECTOR_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Bytecode/Types.h>
@@ -15,7 +16,10 @@ class GarbageCollector {
 public:
     static vector<Obj*> GrayList;
     static Obj*         RootObject;
-    static bool Print;
+    static size_t       NextGC;
+    static size_t       GarbageSize;
+    static double       MaxTimeAlotted;
+    static bool         Print;
 
     static void Collect();
     static void GrayValue(VMValue value);
@@ -27,4 +31,4 @@ public:
     static void RemoveWhiteHashMap(void* pointer);
 };
 
-#endif /* GARBAGECOLLECTOR_H */
+#endif /* ENGINE_BYTECODE_GARBAGECOLLECTOR_H */

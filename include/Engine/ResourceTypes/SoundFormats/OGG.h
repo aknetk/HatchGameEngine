@@ -1,11 +1,12 @@
-#ifndef OGG_H
-#define OGG_H
+#ifndef ENGINE_RESOURCETYPES_SOUNDFORMATS_OGG_H
+#define ENGINE_RESOURCETYPES_SOUNDFORMATS_OGG_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -28,8 +29,8 @@ private:
 
 public:
     static SoundFormat* Load(const char* filename);
-           int          LoadSamples(int count);
+           int          LoadSamples(size_t count);
            void         Dispose();
 };
 
-#endif /* OGG_H */
+#endif /* ENGINE_RESOURCETYPES_SOUNDFORMATS_OGG_H */

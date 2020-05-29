@@ -174,7 +174,7 @@ PUBLIC STATIC void          Directory::GetDirectories(vector<char*>* files, cons
             FindClose(hFind);
         }
     #elif MACOSX || LINUX || SWITCH || IOS || ANDROID
-        char fullpath[128];
+        char fullpath[512];
         DIR* dir = opendir(path);
         if (dir) {
             int i;

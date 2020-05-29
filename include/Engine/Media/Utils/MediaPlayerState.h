@@ -1,11 +1,12 @@
-#ifndef MEDIAPLAYERSTATE_H
-#define MEDIAPLAYERSTATE_H
+#ifndef ENGINE_MEDIA_UTILS_MEDIAPLAYERSTATE_H
+#define ENGINE_MEDIA_UTILS_MEDIAPLAYERSTATE_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -25,4 +26,4 @@ public:
     static bool   AttachmentIsFont(void* p);
 };
 
-#endif /* MEDIAPLAYERSTATE_H */
+#endif /* ENGINE_MEDIA_UTILS_MEDIAPLAYERSTATE_H */

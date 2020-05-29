@@ -26,10 +26,10 @@ public:
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Memory.h>
 
-PUBLIC VIRTUAL int    SoundFormat::LoadSamples(int count) {
+PUBLIC VIRTUAL int    SoundFormat::LoadSamples(size_t count) {
     return 0;
 }
-PUBLIC VIRTUAL int    SoundFormat::GetSamples(Uint8* buffer, int count) {
+PUBLIC VIRTUAL int    SoundFormat::GetSamples(Uint8* buffer, size_t count) {
     if ((size_t)SampleIndex >= Samples.size()) {
         if (LoadSamples(count) == 0) // If we've reached end of file
             return 0;

@@ -1,11 +1,12 @@
-#ifndef IMAGE_H
-#define IMAGE_H
+#ifndef ENGINE_RESOURCETYPES_IMAGE_H
+#define ENGINE_RESOURCETYPES_IMAGE_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Texture;
 
@@ -23,4 +24,4 @@ public:
     static Texture* LoadTextureFromResource(const char* filename);
 };
 
-#endif /* IMAGE_H */
+#endif /* ENGINE_RESOURCETYPES_IMAGE_H */

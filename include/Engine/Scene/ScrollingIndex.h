@@ -1,11 +1,12 @@
-#ifndef SCROLLINGINDEX_H
-#define SCROLLINGINDEX_H
+#ifndef ENGINE_SCENE_SCROLLINGINDEX_H
+#define ENGINE_SCENE_SCROLLINGINDEX_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 
@@ -17,4 +18,4 @@ public:
 
 };
 
-#endif /* SCROLLINGINDEX_H */
+#endif /* ENGINE_SCENE_SCROLLINGINDEX_H */

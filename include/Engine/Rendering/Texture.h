@@ -1,11 +1,12 @@
-#ifndef TEXTURE_H
-#define TEXTURE_H
+#ifndef ENGINE_RENDERING_TEXTURE_H
+#define ENGINE_RENDERING_TEXTURE_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Texture;
 class Texture;
@@ -29,4 +30,4 @@ public:
     static Texture* New(Uint32 format, Uint32 access, Uint32 width, Uint32 height);
 };
 
-#endif /* TEXTURE_H */
+#endif /* ENGINE_RENDERING_TEXTURE_H */

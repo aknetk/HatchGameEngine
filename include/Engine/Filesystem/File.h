@@ -1,11 +1,12 @@
-#ifndef FILE_H
-#define FILE_H
+#ifndef ENGINE_FILESYSTEM_FILE_H
+#define ENGINE_FILESYSTEM_FILE_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -17,4 +18,4 @@ public:
     static bool   WriteAllBytes(const char* path, const char* bytes, size_t len);
 };
 
-#endif /* FILE_H */
+#endif /* ENGINE_FILESYSTEM_FILE_H */

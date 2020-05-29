@@ -1,11 +1,12 @@
-#ifndef VIEW_H
-#define VIEW_H
+#ifndef ENGINE_SCENE_VIEW_H
+#define ENGINE_SCENE_VIEW_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Texture;
 class Matrix4x4;
@@ -37,4 +38,4 @@ public:
 
 };
 
-#endif /* VIEW_H */
+#endif /* ENGINE_SCENE_VIEW_H */

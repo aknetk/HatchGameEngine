@@ -1,11 +1,12 @@
-#ifndef MEMORYSTREAM_H
-#define MEMORYSTREAM_H
+#ifndef ENGINE_IO_MEMORYSTREAM_H
+#define ENGINE_IO_MEMORYSTREAM_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -32,4 +33,4 @@ public:
            size_t        WriteBytes(void* data, size_t n);
 };
 
-#endif /* MEMORYSTREAM_H */
+#endif /* ENGINE_IO_MEMORYSTREAM_H */

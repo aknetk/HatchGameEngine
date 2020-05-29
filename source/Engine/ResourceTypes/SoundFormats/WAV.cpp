@@ -105,7 +105,7 @@ PUBLIC STATIC SoundFormat* WAV::Load(const char* filename) {
     return wav;
 }
 
-PUBLIC        int          WAV::LoadSamples(int count) {
+PUBLIC        int          WAV::LoadSamples(size_t count) {
     int read,
         bytesForSample = 0,
         total = 0;

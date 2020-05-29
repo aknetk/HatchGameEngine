@@ -1,11 +1,12 @@
-#ifndef MEDIASOURCE_H
-#define MEDIASOURCE_H
+#ifndef ENGINE_MEDIA_MEDIASOURCE_H
+#define ENGINE_MEDIA_MEDIASOURCE_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Stream;
 
@@ -32,4 +33,4 @@ public:
            void         Close();
 };
 
-#endif /* MEDIASOURCE_H */
+#endif /* ENGINE_MEDIA_MEDIASOURCE_H */

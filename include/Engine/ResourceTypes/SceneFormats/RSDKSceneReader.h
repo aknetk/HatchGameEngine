@@ -1,11 +1,12 @@
-#ifndef RSDKSCENEREADER_H
-#define RSDKSCENEREADER_H
+#ifndef ENGINE_RESOURCETYPES_SCENEFORMATS_RSDKSCENEREADER_H
+#define ENGINE_RESOURCETYPES_SCENEFORMATS_RSDKSCENEREADER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/IO/Stream.h>
@@ -17,4 +18,4 @@ public:
     static bool Read(const char* filename, const char* parentFolder);
 };
 
-#endif /* RSDKSCENEREADER_H */
+#endif /* ENGINE_RESOURCETYPES_SCENEFORMATS_RSDKSCENEREADER_H */

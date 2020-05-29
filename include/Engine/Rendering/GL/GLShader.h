@@ -1,11 +1,12 @@
-#ifndef GLSHADER_H
-#define GLSHADER_H
+#ifndef ENGINE_RENDERING_GL_GLSHADER_H
+#define ENGINE_RENDERING_GL_GLSHADER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Matrix4x4;
 class Matrix4x4;
@@ -48,4 +49,4 @@ public:
     static bool CheckGLError(int line);
 };
 
-#endif /* GLSHADER_H */
+#endif /* ENGINE_RENDERING_GL_GLSHADER_H */

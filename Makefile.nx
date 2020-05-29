@@ -27,7 +27,7 @@ INCLUDES	:= source include
 
 EXEFS_SRC   := exefs
 
-APP_TITLE 	:= Binj
+APP_TITLE 	:= HatchGameEngine
 APP_AUTHOR 	:= aknetk
 APP_VERSION	:= 0.1
 ICON       	:= meta/iconBINJ.jpg

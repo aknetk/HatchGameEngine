@@ -1,11 +1,12 @@
-#ifndef VIDEODECODER_H
-#define VIDEODECODER_H
+#ifndef ENGINE_MEDIA_DECODERS_VIDEODECODER_H
+#define ENGINE_MEDIA_DECODERS_VIDEODECODER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -33,4 +34,4 @@ public:
            int            GetVideoDecoderData(Texture* texture);
 };
 
-#endif /* VIDEODECODER_H */
+#endif /* ENGINE_MEDIA_DECODERS_VIDEODECODER_H */

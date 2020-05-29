@@ -44,7 +44,7 @@ PUBLIC STATIC void   ResourceManager::PrefixResourcePath(char* out, const char* 
     #elif defined(SWITCH_ROMFS)
         sprintf(out, "romfs:/%s", path);
     #elif defined(ANDROID)
-        sprintf(out, "%s", path);
+        sprintf(out, "Resources/%s", path);
     #else
         sprintf(out, "Resources/%s", path);
     #endif

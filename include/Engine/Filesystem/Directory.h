@@ -1,11 +1,12 @@
-#ifndef DIRECTORY_H
-#define DIRECTORY_H
+#ifndef ENGINE_FILESYSTEM_DIRECTORY_H
+#define ENGINE_FILESYSTEM_DIRECTORY_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -21,4 +22,4 @@ public:
     static vector<char*> GetDirectories(const char* path, const char* searchPattern, bool allDirs);
 };
 
-#endif /* DIRECTORY_H */
+#endif /* ENGINE_FILESYSTEM_DIRECTORY_H */

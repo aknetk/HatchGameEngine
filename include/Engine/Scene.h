@@ -1,11 +1,12 @@
-#ifndef SCENE_H
-#define SCENE_H
+#ifndef ENGINE_SCENE_H
+#define ENGINE_SCENE_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Entity;
 
@@ -24,10 +25,7 @@ class Entity;
 class Scene {
 public:
     static Uint32                BackgroundColor;
-    static int                   FadeTimer;
-    static int                   FadeTimerMax;
-    static int                   FadeMax;
-    static bool                  FadeIn;
+    static int                   ShowTileCollisionFlag;
     static HashMap<ObjectList*>* ObjectLists;
     static HashMap<ObjectList*>* ObjectRegistries;
     static int                   StaticObjectCount;
@@ -54,7 +52,7 @@ public:
     static vector<ResourceType*> ImageList;
     static vector<ResourceType*> SoundList;
     static vector<ResourceType*> MusicList;
-    static vector<GLShader*> ShaderList;
+    static vector<GLShader*>     ShaderList;
     static vector<ResourceType*> ModelList;
     static vector<ResourceType*> MediaList;
     static int                   Frame;
@@ -73,16 +71,20 @@ public:
     static void AddDynamic(ObjectList* objectList, Entity* obj);
     static void OnEvent(Uint32 event);
     static void Init();
+    static void Update();
+    static void Render();
+    static void AfterScene();
     static void Restart();
     static void LoadScene(const char* filename);
     static void LoadTileCollisions(const char* filename);
     static void SaveTileCollisions();
-    static void Update();
-    static void Render();
-    static void AfterScene();
+    static void DisposeInScope(Uint32 scope);
     static void Dispose();
     static void Exit();
+    static void UpdateTileBatchAll();
+    static void UpdateTileBatch(int l, int batchx, int batchy);
+    static void SetTile(int layer, int x, int y, int tileID, int flip_x, int flip_y, int collA, int collB);
     static int  CollisionAt(int x, int y, int collisionField, int collideSide, int* angle);
 };
 
-#endif /* SCENE_H */
+#endif /* ENGINE_SCENE_H */

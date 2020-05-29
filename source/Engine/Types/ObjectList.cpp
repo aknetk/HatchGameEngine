@@ -14,8 +14,10 @@ public:
     vector<Entity*> List;
 
     char ObjectName[256];
-    double AverageTime = 0.0;
-    double AverageItemCount = 0;
+    double AverageUpdateTime = 0.0;
+    double AverageUpdateItemCount = 0;
+    double AverageRenderTime = 0.0;
+    double AverageRenderItemCount = 0;
 
     Entity* (*SpawnFunction)() = NULL;
 };
@@ -89,8 +91,10 @@ PUBLIC void    ObjectList::Clear() {
     EntityFirst = NULL;
     EntityLast = NULL;
 
-    AverageTime = 0.0;
-    AverageItemCount = 0;
+    AverageUpdateTime = 0.0;
+    AverageUpdateItemCount = 0;
+    AverageRenderTime = 0.0;
+    AverageRenderItemCount = 0;
 }
 
 // ObjectList functions

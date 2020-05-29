@@ -1,11 +1,12 @@
-#ifndef BYTECODEOBJECT_H
-#define BYTECODEOBJECT_H
+#ifndef ENGINE_BYTECODE_BYTECODEOBJECT_H
+#define ENGINE_BYTECODE_BYTECODEOBJECT_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Types/Entity.h>
@@ -18,8 +19,12 @@ public:
 
     void Link(ObjInstance* instance);
     bool RunFunction(const char* f);
-    void Create();
+    bool RunCreateFunction(int flag);
+    void GameStart();
+    void Create(int flag);
+    void UpdateEarly();
     void Update();
+    void UpdateLate();
     void RenderEarly();
     void Render(int CamX, int CamY);
     void RenderLate();
@@ -33,8 +38,12 @@ public:
     static VMValue VM_ApplyMotion(int argCount, VMValue* args, Uint32 threadID);
     static VMValue VM_InView(int argCount, VMValue* args, Uint32 threadID);
     static VMValue VM_CollidedWithObject(int argCount, VMValue* args, Uint32 threadID);
+    static VMValue VM_GetHitboxFromSprite(int argCount, VMValue* args, Uint32 threadID);
+    static VMValue VM_CollideWithObject(int argCount, VMValue* args, Uint32 threadID);
+    static VMValue VM_SolidCollideWithObject(int argCount, VMValue* args, Uint32 threadID);
+    static VMValue VM_TopSolidCollideWithObject(int argCount, VMValue* args, Uint32 threadID);
     static VMValue VM_PropertyExists(int argCount, VMValue* args, Uint32 threadID);
     static VMValue VM_PropertyGet(int argCount, VMValue* args, Uint32 threadID);
 };
 
-#endif /* BYTECODEOBJECT_H */
+#endif /* ENGINE_BYTECODE_BYTECODEOBJECT_H */

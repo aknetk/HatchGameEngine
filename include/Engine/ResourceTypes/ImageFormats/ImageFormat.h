@@ -1,11 +1,12 @@
-#ifndef IMAGEFORMAT_H
-#define IMAGEFORMAT_H
+#ifndef ENGINE_RESOURCETYPES_IMAGEFORMATS_IMAGEFORMAT_H
+#define ENGINE_RESOURCETYPES_IMAGEFORMATS_IMAGEFORMAT_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -22,4 +23,4 @@ public:
     virtual      ~ImageFormat();
 };
 
-#endif /* IMAGEFORMAT_H */
+#endif /* ENGINE_RESOURCETYPES_IMAGEFORMATS_IMAGEFORMAT_H */

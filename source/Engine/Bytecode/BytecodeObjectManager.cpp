@@ -31,6 +31,7 @@ public:
 #include <Engine/Bytecode/BytecodeObject.h>
 #include <Engine/Bytecode/GarbageCollector.h>
 #include <Engine/Bytecode/StandardLibrary.h>
+#include <Engine/Bytecode/SourceFileMap.h>
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Filesystem/File.h>
 #include <Engine/Hashing/CombinedHash.h>
@@ -68,7 +69,17 @@ PUBLIC STATIC bool    BytecodeObjectManager::ThrowError(bool fatal, const char* 
 }
 
 PUBLIC STATIC void    BytecodeObjectManager::RequestGarbageCollection() {
-    ForceGarbageCollection();
+    #ifdef DEBUG_STRESS_GC
+        ForceGarbageCollection();
+    #endif
+    if (GarbageCollector::GarbageSize > GarbageCollector::NextGC) {
+        size_t startSize = GarbageCollector::GarbageSize;
+
+        ForceGarbageCollection();
+
+        // startSize = GarbageCollector::GarbageSize - startSize;
+        // Log::Print(Log::LOG_INFO, "Freed garbage from %u to %u (%d), next GC at %d", (Uint32)startSize, (Uint32)GarbageCollector::GarbageSize, GarbageCollector::GarbageSize - startSize, GarbageCollector::NextGC);
+    }
 }
 PUBLIC STATIC void    BytecodeObjectManager::ForceGarbageCollection() {
     if (BytecodeObjectManager::Lock()) {
@@ -99,6 +110,8 @@ PUBLIC STATIC void    BytecodeObjectManager::Init() {
         Tokens = new HashMap<char*>(NULL, 64);
 
     GarbageCollector::RootObject = NULL;
+    GarbageCollector::NextGC = 1024 * 1024;
+
     GlobalLock = SDL_CreateMutex();
 
     memset(Threads, 0x00, sizeof(Threads));
@@ -116,6 +129,7 @@ PUBLIC STATIC void    BytecodeObjectManager::Dispose() {
         Globals->ForAll(RemoveNonGlobalableValue);
     }
 
+    Threads[0].FrameCount = 0;
     Threads[0].ResetStack();
     ForceGarbageCollection();
 
@@ -159,9 +173,6 @@ PUBLIC STATIC void    BytecodeObjectManager::Dispose() {
     }
 
     SDL_DestroyMutex(GlobalLock);
-
-    ResetStack();
-    Threads[0].FrameCount = 0;
 }
 PUBLIC STATIC void    BytecodeObjectManager::RemoveGlobalableValue(Uint32 hash, VMValue value) {
     if (IS_OBJECT(value)) {
@@ -202,6 +213,8 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValu
 
                 klass->Methods->ForAll(FreeGlobalValue);
                 delete klass->Methods;
+
+                GarbageCollector::GarbageSize -= sizeof(ObjClass);
                 Memory::Free(klass);
                 break;
             }
@@ -213,10 +226,12 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValu
                 for (size_t i = 0; i < function->Chunk.Constants->size(); i++)
                     FreeValue((*function->Chunk.Constants)[i]);
 
+                GarbageCollector::GarbageSize -= sizeof(ObjFunction);
                 Memory::Free(function);
                 break;
             }
             case OBJ_NATIVE: {
+                GarbageCollector::GarbageSize -= sizeof(ObjNative);
                 Memory::Free(AS_OBJECT(value));
                 break;
             }
@@ -399,9 +414,11 @@ PUBLIC STATIC VMValue BytecodeObjectManager::DelinkValue(VMValue val) {
 
 PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
     if (IS_OBJECT(value)) {
+        Obj* objectPointer = AS_OBJECT(value);
         switch (OBJECT_TYPE(value)) {
             case OBJ_BOUND_METHOD: {
-                Memory::Free(AS_OBJECT(value));
+                GarbageCollector::GarbageSize -= sizeof(ObjBoundMethod);
+                Memory::Free(objectPointer);
                 break;
             }
             case OBJ_INSTANCE: {
@@ -411,6 +428,8 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
                 // to free them.
 
                 delete instance->Fields;
+
+                GarbageCollector::GarbageSize -= sizeof(ObjInstance);
                 Memory::Free(instance);
                 break;
             }
@@ -420,6 +439,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
                     Memory::Free(string->Chars);
                 string->Chars = NULL;
 
+                GarbageCollector::GarbageSize -= sizeof(ObjString);
                 Memory::Free(string);
                 break;
             }
@@ -431,6 +451,8 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
 
                 array->Values->clear();
                 delete array->Values;
+
+                GarbageCollector::GarbageSize -= sizeof(ObjArray);
                 Memory::Free(array);
                 break;
             }
@@ -447,6 +469,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
                 map->Values->Clear();
                 delete map->Values;
                 //
+                GarbageCollector::GarbageSize -= sizeof(ObjMap);
                 Memory::Free(map);
                 break;
             }
@@ -562,8 +585,10 @@ PUBLIC STATIC void    BytecodeObjectManager::LinkExtensions() {
 // #endregion
 
 // #region ObjectFuncs
-PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(Uint8* head) {
+PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(Uint8* head, size_t size) {
     FunctionList.clear();
+
+    Uint8* headEnd = head + size;
 
     if (memcmp(Compiler::Magic, head, 4) != 0) {
         printf("Incorrect magic!\n");
@@ -690,68 +715,79 @@ PUBLIC STATIC Entity* BytecodeObjectManager::SpawnFunction() {
 }
 PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameHash, char* objectName) {
     Uint8* bytecode;
-
     if (*objectName == 0)
         return NULL;
 
     memset(CurrentObjectName, 0, 256);
     strncpy(CurrentObjectName, objectName, 255);
 
+    if (!SourceFileMap::ClassMap->Exists(objectName))
+        return NULL;
+
     // On first load:
-    if (!Sources->Exists(objectNameHash)) {
-        char filename[64];
-        sprintf(filename, "Objects/%08X.ibc", objectNameHash);
+    vector<Uint32>* filenameHashList = SourceFileMap::ClassMap->Get(objectName);
+    for (size_t fn = 0; fn < filenameHashList->size(); fn++) {
+        Uint32 filenameHash = (*filenameHashList)[fn];
+        // Uint32 filenameHash = objectNameHash;
 
-        if (!ResourceManager::ResourceExists(filename)) {
-            Log::Print(Log::LOG_WARN, "Object \"%s\" does not exist!", objectName);
-            return NULL;
+        if (!Sources->Exists(filenameHash)) {
+            char filename[64];
+            sprintf(filename, "Objects/%08X.ibc", filenameHash);
+
+            if (!ResourceManager::ResourceExists(filename)) {
+                Log::Print(Log::LOG_WARN, "Object \"%s\" does not exist!", objectName);
+                return NULL;
+            }
+
+            ResourceStream* stream = ResourceStream::New(filename);
+            if (!stream) {
+                // Object doesn't exist?
+                return NULL;
+            }
+
+            size_t size = stream->Length();
+            bytecode = (Uint8*)Memory::Malloc(size + 1); bytecode[size] = 0;
+            stream->ReadBytes(bytecode, size);
+            stream->Close();
+
+            Sources->Put(filenameHash, bytecode);
+
+            // Load the object class
+            #if defined(MACOSX) || defined(LINUX) || defined(UBUNTU)
+            Log::Print(Log::LOG_VERBOSE, "Loading the object \x1b[1;93m%s\x1b[m class...", objectName);
+            #else
+            Log::Print(Log::LOG_VERBOSE, "Loading the object %s class...", objectName);
+            #endif
+
+            RunFromIBC(bytecode, size);
+
+            // Set native functions for that new object class
+            // Log::Print(Log::LOG_VERBOSE, "Setting native functions for that new object class...");
+            ObjClass* klass = AS_CLASS(Globals->Get(objectName));
+            if (!klass) {
+                Log::Print(Log::LOG_ERROR, "Could not find class of: %s", objectName);
+                return NULL;
+            }
+            if (klass->Extended == 0) {
+                BytecodeObjectManager::DefineNative(klass, "InView", BytecodeObject::VM_InView);
+                BytecodeObjectManager::DefineNative(klass, "Animate", BytecodeObject::VM_Animate);
+                BytecodeObjectManager::DefineNative(klass, "SetAnimation", BytecodeObject::VM_SetAnimation);
+                BytecodeObjectManager::DefineNative(klass, "ResetAnimation", BytecodeObject::VM_ResetAnimation);
+                BytecodeObjectManager::DefineNative(klass, "GetHitboxFromSprite", BytecodeObject::VM_GetHitboxFromSprite);
+                BytecodeObjectManager::DefineNative(klass, "AddToRegistry", BytecodeObject::VM_AddToRegistry);
+                BytecodeObjectManager::DefineNative(klass, "RemoveFromRegistry", BytecodeObject::VM_RemoveFromRegistry);
+                BytecodeObjectManager::DefineNative(klass, "CollidedWithObject", BytecodeObject::VM_CollidedWithObject);
+                BytecodeObjectManager::DefineNative(klass, "CollideWithObject", BytecodeObject::VM_CollideWithObject);
+                BytecodeObjectManager::DefineNative(klass, "SolidCollideWithObject", BytecodeObject::VM_SolidCollideWithObject);
+                BytecodeObjectManager::DefineNative(klass, "TopSolidCollideWithObject", BytecodeObject::VM_TopSolidCollideWithObject);
+                BytecodeObjectManager::DefineNative(klass, "PropertyGet", BytecodeObject::VM_PropertyGet);
+                BytecodeObjectManager::DefineNative(klass, "PropertyExists", BytecodeObject::VM_PropertyExists);
+            }
         }
-
-        ResourceStream* stream = ResourceStream::New(filename);
-        if (!stream) {
-            // Object doesn't exist?
-            return NULL;
-        }
-
-        size_t size = stream->Length();
-        bytecode = (Uint8*)Memory::Malloc(size + 1); bytecode[size] = 0;
-        stream->ReadBytes(bytecode, size);
-        stream->Close();
-
-        Sources->Put(objectNameHash, bytecode);
-
-        // Load the object class
-        #if defined(MACOSX) || defined(LINUX) || defined(UBUNTU)
-        Log::Print(Log::LOG_VERBOSE, "Loading the object \x1b[1;93m%s\x1b[m class...", objectName);
-        #else
-        Log::Print(Log::LOG_VERBOSE, "Loading the object %s class...", objectName);
-        #endif
-        RunFromIBC(bytecode);
-
-        // Set native functions for that new object class
-        // Log::Print(Log::LOG_VERBOSE, "Setting native functions for that new object class...");
-        ObjClass* klass = AS_CLASS(Globals->Get(objectName));
-        if (!klass) {
-            Log::Print(Log::LOG_ERROR, "Could not find class of: %s", objectName);
-            return NULL;
-        }
-        BytecodeObjectManager::DefineNative(klass, "InView", BytecodeObject::VM_InView);
-        BytecodeObjectManager::DefineNative(klass, "Animate", BytecodeObject::VM_Animate);
-        BytecodeObjectManager::DefineNative(klass, "SetAnimation", BytecodeObject::VM_SetAnimation);
-        BytecodeObjectManager::DefineNative(klass, "ResetAnimation", BytecodeObject::VM_ResetAnimation);
-        BytecodeObjectManager::DefineNative(klass, "GetHitboxFromSprite", BytecodeObject::VM_GetHitboxFromSprite);
-        BytecodeObjectManager::DefineNative(klass, "AddToRegistry", BytecodeObject::VM_AddToRegistry);
-        BytecodeObjectManager::DefineNative(klass, "RemoveFromRegistry", BytecodeObject::VM_RemoveFromRegistry);
-        BytecodeObjectManager::DefineNative(klass, "CollidedWithObject", BytecodeObject::VM_CollidedWithObject);
-        BytecodeObjectManager::DefineNative(klass, "CollideWithObject", BytecodeObject::VM_CollideWithObject);
-        BytecodeObjectManager::DefineNative(klass, "SolidCollideWithObject", BytecodeObject::VM_SolidCollideWithObject);
-        BytecodeObjectManager::DefineNative(klass, "TopSolidCollideWithObject", BytecodeObject::VM_TopSolidCollideWithObject);
-        BytecodeObjectManager::DefineNative(klass, "PropertyGet", BytecodeObject::VM_PropertyGet);
-        BytecodeObjectManager::DefineNative(klass, "PropertyExists", BytecodeObject::VM_PropertyExists);
     }
-    else {
-        bytecode = Sources->Get(objectNameHash);
-    }
+    // else {
+    //     bytecode = Sources->Get(objectNameHash);
+    // }
 
     BytecodeObjectManager::SetCurrentObjectHash(Globals->HashFunction(objectName));
     return (void*)BytecodeObjectManager::SpawnFunction;

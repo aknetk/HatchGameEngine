@@ -1,11 +1,12 @@
-#ifndef VMTHREAD_H
-#define VMTHREAD_H
+#ifndef ENGINE_BYTECODE_VMTHREAD_H
+#define ENGINE_BYTECODE_VMTHREAD_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -86,4 +87,4 @@ public:
     VMValue Values_BitwiseNOT();
 };
 
-#endif /* VMTHREAD_H */
+#endif /* ENGINE_BYTECODE_VMTHREAD_H */

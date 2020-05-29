@@ -177,6 +177,7 @@ struct ObjClass {
     ObjString* Name;
     Uint32     Hash;
     Table*     Methods;
+    Uint8      Extended;
 };
 struct ObjInstance {
     Obj       Object;

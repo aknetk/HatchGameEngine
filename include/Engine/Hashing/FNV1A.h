@@ -1,11 +1,12 @@
-#ifndef FNV1A_H
-#define FNV1A_H
+#ifndef ENGINE_HASHING_FNV1A_H
+#define ENGINE_HASHING_FNV1A_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -18,4 +19,4 @@ public:
     static Uint32 EncryptData(const void* data, Uint32 size, Uint32 hash);
 };
 
-#endif /* FNV1A_H */
+#endif /* ENGINE_HASHING_FNV1A_H */

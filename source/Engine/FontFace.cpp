@@ -177,8 +177,8 @@ PUBLIC STATIC ISprite* FontFace::SpriteFromFont(Stream* stream, int pixelSize, c
         if (FT_Load_Char(face, c, FT_LOAD_RENDER))
             continue;
 
-        boxes[c].Width = face->glyph->bitmap.width;
-        boxes[c].Height = face->glyph->bitmap.rows;
+        boxes[c].Width = face->glyph->bitmap.width + 1;
+        boxes[c].Height = face->glyph->bitmap.rows + 1;
     }
 
     FT_Package* package = PackBoxes(boxes, 0x100, 256, 256);
@@ -196,37 +196,44 @@ PUBLIC STATIC ISprite* FontFace::SpriteFromFont(Stream* stream, int pixelSize, c
         offsetBaseline = face->glyph->bitmap_top;
     }
 
-    // Add preliminary chars
-    sprite->AddAnimation("Font", offsetBaseline & 0xFFFF, pixelSize, 0x100);
-    for (Uint32 c = 0; c < ' '; c++) {
-        sprite->AddFrame(0, 0, 0, 1, 1, 0, 0, 0);
-    }
+	for (Uint32 c = ' '; c < 0x100; c++) {
+		if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+			continue;
+		}
 
-    for (Uint32 c = ' '; c < 0x100; c++) {
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
-            Log::Print(Log::LOG_ERROR, "FREETYTPE: Failed to load Glyph %X (%c)", c, c);
-            sprite->AddFrame(0, 0, 0, 1, 1, 0, 0, 0);
-            continue;
-        }
-
-        Uint8* buf = face->glyph->bitmap.buffer;
-        char*  pixel_start = (char*)(pixelData + boxes[c].X + boxes[c].Y * package->Width) + 3;
-        for (Uint32 py = 0; py < face->glyph->bitmap.rows; py++) {
-            for (char* pixel_a = pixel_start; pixel_a < pixel_start + face->glyph->bitmap.width * 4; pixel_a += 4) {
-                // Set alpha
-                *pixel_a = *buf++;
-            }
-            pixel_start += pixelStride;
-        }
-
-        sprite->AddFrame(0, boxes[c].X, boxes[c].Y, face->glyph->bitmap.width, face->glyph->bitmap.rows, face->glyph->bitmap_left + offsetSlightX, -face->glyph->bitmap_top + offsetBaseline, face->glyph->advance.x >> 6);
-    }
+		Uint8* buf = face->glyph->bitmap.buffer;
+		char*  pixel_start = (char*)(pixelData + boxes[c].X + boxes[c].Y * package->Width) + 3;
+		for (Uint32 py = 0; py < face->glyph->bitmap.rows; py++) {
+			for (char* pixel_a = pixel_start; pixel_a < pixel_start + face->glyph->bitmap.width * 4; pixel_a += 4) {
+				// Set alpha
+				*pixel_a = *buf++;
+			}
+			pixel_start += pixelStride;
+		}
+	}
 
     sprite->Spritesheets[0] = Graphics::CreateTextureFromPixels(package->Width, package->Height, pixelData, package->Width * sizeof(Uint32));
     sprite->SpritesheetsBorrowed[0] = false;
     sprite->SpritesheetCount = 1;
 
-    if (filename) {
+	// Add preliminary chars
+	sprite->AddAnimation("Font", offsetBaseline & 0xFFFF, pixelSize, 0x100);
+	for (Uint32 c = 0; c < ' '; c++) {
+		sprite->AddFrame(0, 0, 0, 1, 1, 0, 0, 0);
+	}
+
+	for (Uint32 c = ' '; c < 0x100; c++) {
+		if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+			Log::Print(Log::LOG_ERROR, "FREETYTPE: Failed to load Glyph %X (%c)", c, c);
+			sprite->AddFrame(0, 0, 0, 1, 1, 0, 0, 0);
+			continue;
+		}
+
+		sprite->AddFrame(0, boxes[c].X, boxes[c].Y, face->glyph->bitmap.width, face->glyph->bitmap.rows, face->glyph->bitmap_left + offsetSlightX, -face->glyph->bitmap_top + offsetBaseline, 0);
+        sprite->Animations.back().Frames.back().Advance = face->glyph->advance.x >> 6;
+	}
+
+    if (filename && false) {
         char testFilename[256];
         sprintf(testFilename, "%s_%d.bmp", filename, pixelSize);
         for (char* i = testFilename; *i; i++) {

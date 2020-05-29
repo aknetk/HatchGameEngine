@@ -1,11 +1,12 @@
-#ifndef RESOURCESTREAM_H
-#define RESOURCESTREAM_H
+#ifndef ENGINE_IO_RESOURCESTREAM_H
+#define ENGINE_IO_RESOURCESTREAM_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -28,4 +29,4 @@ public:
            size_t          WriteBytes(void* data, size_t n);
 };
 
-#endif /* RESOURCESTREAM_H */
+#endif /* ENGINE_IO_RESOURCESTREAM_H */

@@ -1,11 +1,12 @@
-#ifndef JPEG_H
-#define JPEG_H
+#ifndef ENGINE_RESOURCETYPES_IMAGEFORMATS_JPEG_H
+#define ENGINE_RESOURCETYPES_IMAGEFORMATS_JPEG_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -20,4 +21,4 @@ public:
                    ~JPEG();
 };
 
-#endif /* JPEG_H */
+#endif /* ENGINE_RESOURCETYPES_IMAGEFORMATS_JPEG_H */

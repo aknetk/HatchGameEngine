@@ -1,11 +1,12 @@
-#ifndef FONTFACE_H
-#define FONTFACE_H
+#ifndef ENGINE_FONTFACE_H
+#define ENGINE_FONTFACE_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -19,4 +20,4 @@ public:
     static ISprite* SpriteFromFont(Stream* stream, int pixelSize, char* filename);
 };
 
-#endif /* FONTFACE_H */
+#endif /* ENGINE_FONTFACE_H */

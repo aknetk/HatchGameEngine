@@ -1,11 +1,12 @@
-#ifndef TILECONFIG_H
-#define TILECONFIG_H
+#ifndef ENGINE_SCENE_TILECONFIG_H
+#define ENGINE_SCENE_TILECONFIG_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 
@@ -18,4 +19,4 @@ public:
 
 };
 
-#endif /* TILECONFIG_H */
+#endif /* ENGINE_SCENE_TILECONFIG_H */

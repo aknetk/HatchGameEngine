@@ -17,6 +17,7 @@ struct AnimFrame {
     int           SheetNumber;
     int           Duration;
     int           ID;
+    int           Advance;
 
     int           BoxCount;
     CollisionBox* Boxes = NULL;

@@ -1,11 +1,12 @@
-#ifndef MATH_H
-#define MATH_H
+#ifndef ENGINE_MATH_IMATH_H
+#define ENGINE_MATH_IMATH_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -37,4 +38,4 @@ public:
     static char* ToString(int a);
 };
 
-#endif /* MATH_H */
+#endif /* ENGINE_MATH_IMATH_H */

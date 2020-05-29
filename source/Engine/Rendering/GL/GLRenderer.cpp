@@ -59,6 +59,12 @@ struct   GL_Vec2 {
     float x;
     float y;
 };
+struct   GL_AnimFrameVert {
+    float x;
+    float y;
+    float u;
+    float v;
+};
 struct   GL_TextureData {
     GLuint TextureID;
     GLuint TextureU;
@@ -177,29 +183,29 @@ void   GL_MakeShapeBuffers() {
     verticesSquareFill[1] = GL_Vec2 { 1.0f, 0.0f };
     verticesSquareFill[2] = GL_Vec2 { 0.0f, 1.0f };
     verticesSquareFill[3] = GL_Vec2 { 1.0f, 1.0f };
-    glGenBuffers(1, &GLRenderer::BufferSquareFill);
-    glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferSquareFill);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesSquareFill), verticesSquareFill, GL_STATIC_DRAW);
+    glGenBuffers(1, &GLRenderer::BufferSquareFill); CHECK_GL();
+    glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferSquareFill); CHECK_GL();
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesSquareFill), verticesSquareFill, GL_STATIC_DRAW); CHECK_GL();
 
     // Filled Circle
     verticesCircleFill[0] = GL_Vec3 { 0.0f, 0.0f, 0.0f };
     for (int i = 0; i < 361; i++) {
         verticesCircleFill[i + 1] = GL_Vec3 { (float)cos(i * M_PI / 180.0f), (float)sin(i * M_PI / 180.0f), 0.0f };
     }
-    glGenBuffers(1, &GLRenderer::BufferCircleFill);
-    glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferCircleFill);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesCircleFill), verticesCircleFill, GL_STATIC_DRAW);
+    glGenBuffers(1, &GLRenderer::BufferCircleFill); CHECK_GL();
+    glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferCircleFill); CHECK_GL();
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesCircleFill), verticesCircleFill, GL_STATIC_DRAW); CHECK_GL();
 
     // Stroke Circle
     for (int i = 0; i < 361; i++) {
         verticesCircleStroke[i] = GL_Vec3 { (float)cos(i * M_PI / 180.0f), (float)sin(i * M_PI / 180.0f), 0.0f };
     }
-    glGenBuffers(1, &GLRenderer::BufferCircleStroke);
-    glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferCircleStroke);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesCircleStroke), verticesCircleStroke, GL_STATIC_DRAW);
+    glGenBuffers(1, &GLRenderer::BufferCircleStroke); CHECK_GL();
+    glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferCircleStroke); CHECK_GL();
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesCircleStroke), verticesCircleStroke, GL_STATIC_DRAW); CHECK_GL();
 
     // Reset buffer
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0); CHECK_GL();
 }
 void   GL_Predraw(Texture* texture) {
     // Use appropriate shader if changed
@@ -223,8 +229,13 @@ void   GL_Predraw(Texture* texture) {
         else {
             GLRenderer::UseShader(GLRenderer::ShaderTexturedShape);
         }
+
+        glEnableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord); CHECK_GL();
     }
     else {
+        if (GLRenderer::CurrentShader == GLRenderer::ShaderTexturedShape || GLRenderer::CurrentShader == GLRenderer::ShaderTexturedShapeYUV)
+            glDisableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord); CHECK_GL();
+
         GLRenderer::UseShader(GLRenderer::ShaderShape);
     }
 
@@ -267,49 +278,61 @@ void   GL_Predraw(Texture* texture) {
         glUniformMatrix4fv(GLRenderer::CurrentShader->LocModelViewMatrix, 1, false, GLRenderer::CurrentShader->CachedModelViewMatrix->Values); CHECK_GL();
     }
 }
+void   GL_DrawTextureBuffered(Texture* texture, GLuint buffer, int flip) {
+    GL_Predraw(texture);
+
+    if (!Graphics::TextureBlend) {
+        GLRenderer::CurrentShader->CachedBlendColors[0] =
+        GLRenderer::CurrentShader->CachedBlendColors[1] =
+        GLRenderer::CurrentShader->CachedBlendColors[2] =
+        GLRenderer::CurrentShader->CachedBlendColors[3] = 1.0;
+        glUniform4f(GLRenderer::CurrentShader->LocColor, 1.0, 1.0, 1.0, 1.0); CHECK_GL();
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, sizeof(GL_AnimFrameVert), 0);
+    glVertexAttribPointer(GLRenderer::CurrentShader->LocTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(GL_AnimFrameVert), (char*)NULL + 8);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, flip << 2, 4);
+}
 void   GL_DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h) {
-    // Graphics::Save();
-    //     Graphics::Translate(x, y, 0.0f);
-    //     Graphics::Scale(w, h, 1.0f);
+    GL_Predraw(texture);
 
-        GL_Predraw(texture);
+    if (!Graphics::TextureBlend) {
+        GLRenderer::CurrentShader->CachedBlendColors[0] =
+        GLRenderer::CurrentShader->CachedBlendColors[1] =
+        GLRenderer::CurrentShader->CachedBlendColors[2] =
+        GLRenderer::CurrentShader->CachedBlendColors[3] = 1.0;
+        glUniform4f(GLRenderer::CurrentShader->LocColor, 1.0, 1.0, 1.0, 1.0);
+    }
 
-        if (!Graphics::TextureBlend) {
-            GLRenderer::CurrentShader->CachedBlendColors[0] =
-            GLRenderer::CurrentShader->CachedBlendColors[1] =
-            GLRenderer::CurrentShader->CachedBlendColors[2] =
-            GLRenderer::CurrentShader->CachedBlendColors[3] = 1.0;
-            glUniform4f(GLRenderer::CurrentShader->LocColor, 1.0, 1.0, 1.0, 1.0);
+    // glEnableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
+        GL_Vec2 v[4];
+        v[0] = GL_Vec2 { x, y };
+        v[1] = GL_Vec2 { x + w, y };
+        v[2] = GL_Vec2 { x, y + h };
+        v[3] = GL_Vec2 { x + w, y + h };
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, v);
+        // glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferSquareFill);
+        // glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+        GL_Vec2 v2[4];
+        if (sx >= 0.0) {
+            v2[0] = GL_Vec2 { (sx) / texture->Width     , (sy) / texture->Height };
+            v2[1] = GL_Vec2 { (sx + sw) / texture->Width, (sy) / texture->Height };
+            v2[2] = GL_Vec2 { (sx) / texture->Width     , (sy + sh) / texture->Height };
+            v2[3] = GL_Vec2 { (sx + sw) / texture->Width, (sy + sh) / texture->Height };
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glVertexAttribPointer(GLRenderer::CurrentShader->LocTexCoord, 2, GL_FLOAT, GL_FALSE, 0, v2);
+        }
+        else {
+            glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferSquareFill);
+            glVertexAttribPointer(GLRenderer::CurrentShader->LocTexCoord, 2, GL_FLOAT, GL_FALSE, 0, 0); // LocPosition
         }
 
-        glEnableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
-            GL_Vec2 v[4];
-            v[0] = GL_Vec2 { x, y };
-            v[1] = GL_Vec2 { x + w, y };
-            v[2] = GL_Vec2 { x, y + h };
-            v[3] = GL_Vec2 { x + w, y + h };
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, v);
-            // glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferSquareFill);
-            // glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-            GL_Vec2 v2[4];
-            if (sx >= 0.0) {
-                v2[0] = GL_Vec2 { (sx) / texture->Width     , (sy) / texture->Height };
-                v2[1] = GL_Vec2 { (sx + sw) / texture->Width, (sy) / texture->Height };
-                v2[2] = GL_Vec2 { (sx) / texture->Width     , (sy + sh) / texture->Height };
-                v2[3] = GL_Vec2 { (sx + sw) / texture->Width, (sy + sh) / texture->Height };
-                glBindBuffer(GL_ARRAY_BUFFER, 0);
-                glVertexAttribPointer(GLRenderer::CurrentShader->LocTexCoord, 2, GL_FLOAT, GL_FALSE, 0, v2);
-            }
-            else {
-                glBindBuffer(GL_ARRAY_BUFFER, GLRenderer::BufferSquareFill);
-                glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, 0);
-            }
-
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glDisableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
-    // Graphics::Restore();
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    // glDisableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
 }
 GLenum GL_GetBlendFactorFromHatchEnum(int factor) {
     switch (factor) {
@@ -342,6 +365,8 @@ PUBLIC STATIC void     GLRenderer::Init() {
     Graphics::SupportsBatching = true;
     Graphics::PreferredPixelFormat = SDL_PIXELFORMAT_ABGR8888;
 
+    Log::Print(Log::LOG_INFO, "Renderer: OpenGL");
+
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 
@@ -370,12 +395,11 @@ PUBLIC STATIC void     GLRenderer::Init() {
     #endif
 
     if (Graphics::VsyncEnabled) {
-        if (SDL_GL_SetSwapInterval(1) < 0) {
-            Log::Print(Log::LOG_WARN, "Could not enable V-Sync: %s", SDL_GetError());
-            Graphics::VsyncEnabled = false;
-        }
-        else {
-            Graphics::VsyncEnabled = true;
+        if (SDL_GL_SetSwapInterval(-1) < 0) {
+            if (SDL_GL_SetSwapInterval(1) < 0) {
+                Log::Print(Log::LOG_WARN, "Could not enable V-Sync: %s", SDL_GetError());
+                Graphics::VsyncEnabled = false;
+            }
         }
     }
 
@@ -396,6 +420,10 @@ PUBLIC STATIC void     GLRenderer::Init() {
     Log::Print(Log::LOG_INFO, "GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
     Log::Print(Log::LOG_INFO, "Graphics Card: %s %s", glGetString(GL_VENDOR), glGetString(GL_RENDERER));
     Log::Print(Log::LOG_INFO, "Drawable Size: %d x %d", w, h);
+
+    if (Application::Platform == Platforms::Android) {
+        UseDepthTesting = false;
+    }
 
     // Enable/Disable GL features
     glEnable(GL_BLEND); CHECK_GL();
@@ -430,58 +458,67 @@ PUBLIC STATIC void     GLRenderer::Init() {
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &DefaultFramebuffer); CHECK_GL();
 }
 PUBLIC STATIC Uint32   GLRenderer::GetWindowFlags() {
+    #ifdef GL_SUPPORTS_MULTISAMPLING
+    if (Graphics::MultisamplingEnabled) {
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, Graphics::MultisamplingEnabled);
+    }
+    #endif
+
     return SDL_WINDOW_OPENGL;
 }
 PUBLIC STATIC void     GLRenderer::SetGraphicsFunctions() {
-    Graphics::Internal_Init = GLRenderer::Init;
-    Graphics::Internal_GetWindowFlags = GLRenderer::GetWindowFlags;
-    Graphics::Internal_Dispose = GLRenderer::Dispose;
+    Graphics::Internal.Init = GLRenderer::Init;
+    Graphics::Internal.GetWindowFlags = GLRenderer::GetWindowFlags;
+    Graphics::Internal.Dispose = GLRenderer::Dispose;
 
     // Texture management functions
-    Graphics::Internal_CreateTexture = GLRenderer::CreateTexture;
-    Graphics::Internal_LockTexture = GLRenderer::LockTexture;
-    Graphics::Internal_UpdateTexture = GLRenderer::UpdateTexture;
-    Graphics::Internal_UpdateYUVTexture = GLRenderer::UpdateTextureYUV;
-    Graphics::Internal_UnlockTexture = GLRenderer::UnlockTexture;
-    Graphics::Internal_DisposeTexture = GLRenderer::DisposeTexture;
+    Graphics::Internal.CreateTexture = GLRenderer::CreateTexture;
+    Graphics::Internal.LockTexture = GLRenderer::LockTexture;
+    Graphics::Internal.UpdateTexture = GLRenderer::UpdateTexture;
+    Graphics::Internal.UpdateYUVTexture = GLRenderer::UpdateTextureYUV;
+    Graphics::Internal.UnlockTexture = GLRenderer::UnlockTexture;
+    Graphics::Internal.DisposeTexture = GLRenderer::DisposeTexture;
 
     // Viewport and view-related functions
-    Graphics::Internal_SetRenderTarget = GLRenderer::SetRenderTarget;
-    Graphics::Internal_UpdateWindowSize = GLRenderer::UpdateWindowSize;
-    Graphics::Internal_UpdateViewport = GLRenderer::UpdateViewport;
-    Graphics::Internal_UpdateClipRect = GLRenderer::UpdateClipRect;
-    Graphics::Internal_UpdateOrtho = GLRenderer::UpdateOrtho;
-    Graphics::Internal_UpdatePerspective = GLRenderer::UpdatePerspective;
-    Graphics::Internal_UpdateProjectionMatrix = GLRenderer::UpdateProjectionMatrix;
+    Graphics::Internal.SetRenderTarget = GLRenderer::SetRenderTarget;
+    Graphics::Internal.UpdateWindowSize = GLRenderer::UpdateWindowSize;
+    Graphics::Internal.UpdateViewport = GLRenderer::UpdateViewport;
+    Graphics::Internal.UpdateClipRect = GLRenderer::UpdateClipRect;
+    Graphics::Internal.UpdateOrtho = GLRenderer::UpdateOrtho;
+    Graphics::Internal.UpdatePerspective = GLRenderer::UpdatePerspective;
+    Graphics::Internal.UpdateProjectionMatrix = GLRenderer::UpdateProjectionMatrix;
 
     // Shader-related functions
-    Graphics::Internal_UseShader = GLRenderer::UseShader;
-    Graphics::Internal_SetUniformF = GLRenderer::SetUniformF;
-    Graphics::Internal_SetUniformI = GLRenderer::SetUniformI;
-    Graphics::Internal_SetUniformTexture = GLRenderer::SetUniformTexture;
+    Graphics::Internal.UseShader = GLRenderer::UseShader;
+    Graphics::Internal.SetUniformF = GLRenderer::SetUniformF;
+    Graphics::Internal.SetUniformI = GLRenderer::SetUniformI;
+    Graphics::Internal.SetUniformTexture = GLRenderer::SetUniformTexture;
 
     // These guys
-    Graphics::Internal_Clear = GLRenderer::Clear;
-    Graphics::Internal_Present = GLRenderer::Present;
+    Graphics::Internal.Clear = GLRenderer::Clear;
+    Graphics::Internal.Present = GLRenderer::Present;
 
     // Draw mode setting functions
-    Graphics::Internal_SetBlendColor = GLRenderer::SetBlendColor;
-    Graphics::Internal_SetBlendMode = GLRenderer::SetBlendMode;
-    Graphics::Internal_SetLineWidth = GLRenderer::SetLineWidth;
+    Graphics::Internal.SetBlendColor = GLRenderer::SetBlendColor;
+    Graphics::Internal.SetBlendMode = GLRenderer::SetBlendMode;
+    Graphics::Internal.SetLineWidth = GLRenderer::SetLineWidth;
 
     // Primitive drawing functions
-    Graphics::Internal_StrokeLine = GLRenderer::StrokeLine;
-    Graphics::Internal_StrokeCircle = GLRenderer::StrokeCircle;
-    Graphics::Internal_StrokeEllipse = GLRenderer::StrokeEllipse;
-    Graphics::Internal_StrokeRectangle = GLRenderer::StrokeRectangle;
-    Graphics::Internal_FillCircle = GLRenderer::FillCircle;
-    Graphics::Internal_FillEllipse = GLRenderer::FillEllipse;
-    Graphics::Internal_FillTriangle = GLRenderer::FillTriangle;
-    Graphics::Internal_FillRectangle = GLRenderer::FillRectangle;
+    Graphics::Internal.StrokeLine = GLRenderer::StrokeLine;
+    Graphics::Internal.StrokeCircle = GLRenderer::StrokeCircle;
+    Graphics::Internal.StrokeEllipse = GLRenderer::StrokeEllipse;
+    Graphics::Internal.StrokeRectangle = GLRenderer::StrokeRectangle;
+    Graphics::Internal.FillCircle = GLRenderer::FillCircle;
+    Graphics::Internal.FillEllipse = GLRenderer::FillEllipse;
+    Graphics::Internal.FillTriangle = GLRenderer::FillTriangle;
+    Graphics::Internal.FillRectangle = GLRenderer::FillRectangle;
 
     // Texture drawing functions
-    Graphics::Internal_DrawTexture = GLRenderer::DrawTexture;
-    Graphics::Internal_DrawSprite = GLRenderer::DrawSprite;
+    Graphics::Internal.DrawTexture = GLRenderer::DrawTexture;
+    Graphics::Internal.DrawSprite = GLRenderer::DrawSprite;
+    Graphics::Internal.DrawSpritePart = GLRenderer::DrawSpritePart;
+    Graphics::Internal.MakeFrameBufferID = GLRenderer::MakeFrameBufferID;
 }
 PUBLIC STATIC void     GLRenderer::Dispose() {
     glDeleteBuffers(1, &BufferCircleFill);
@@ -908,7 +945,9 @@ PUBLIC STATIC void     GLRenderer::StrokeRectangle(float x, float y, float w, fl
 }
 PUBLIC STATIC void     GLRenderer::FillCircle(float x, float y, float rad) {
     #ifdef GL_SUPPORTS_SMOOTHING
-        // glEnable(GL_POLYGON_SMOOTH); CHECK_GL();
+        if (Graphics::SmoothFill) {
+            glEnable(GL_POLYGON_SMOOTH); CHECK_GL();
+        }
     #endif
 
     Graphics::Save();
@@ -922,12 +961,16 @@ PUBLIC STATIC void     GLRenderer::FillCircle(float x, float y, float rad) {
     Graphics::Restore();
 
     #ifdef GL_SUPPORTS_SMOOTHING
-        // glDisable(GL_POLYGON_SMOOTH); CHECK_GL();
+        if (Graphics::SmoothFill) {
+            glDisable(GL_POLYGON_SMOOTH); CHECK_GL();
+        }
     #endif
 }
 PUBLIC STATIC void     GLRenderer::FillEllipse(float x, float y, float w, float h) {
     #ifdef GL_SUPPORTS_SMOOTHING
-        // glEnable(GL_POLYGON_SMOOTH); CHECK_GL();
+        if (Graphics::SmoothFill) {
+            glEnable(GL_POLYGON_SMOOTH); CHECK_GL();
+        }
     #endif
 
     Graphics::Save();
@@ -941,12 +984,16 @@ PUBLIC STATIC void     GLRenderer::FillEllipse(float x, float y, float w, float 
     Graphics::Restore();
 
     #ifdef GL_SUPPORTS_SMOOTHING
-        // glDisable(GL_POLYGON_SMOOTH); CHECK_GL();
+        if (Graphics::SmoothFill) {
+            glDisable(GL_POLYGON_SMOOTH); CHECK_GL();
+        }
     #endif
 }
 PUBLIC STATIC void     GLRenderer::FillTriangle(float x1, float y1, float x2, float y2, float x3, float y3) {
     #ifdef GL_SUPPORTS_SMOOTHING
-        glEnable(GL_POLYGON_SMOOTH); CHECK_GL();
+        if (Graphics::SmoothFill) {
+            glEnable(GL_POLYGON_SMOOTH); CHECK_GL();
+        }
     #endif
 
     GL_Vec2 v[3];
@@ -960,12 +1007,16 @@ PUBLIC STATIC void     GLRenderer::FillTriangle(float x1, float y1, float x2, fl
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     #ifdef GL_SUPPORTS_SMOOTHING
-        glDisable(GL_POLYGON_SMOOTH); CHECK_GL();
+        if (Graphics::SmoothFill) {
+            glDisable(GL_POLYGON_SMOOTH); CHECK_GL();
+        }
     #endif
 }
 PUBLIC STATIC void     GLRenderer::FillRectangle(float x, float y, float w, float h) {
     #ifdef GL_SUPPORTS_SMOOTHING
-        // glEnable(GL_POLYGON_SMOOTH); CHECK_GL();
+        if (Graphics::SmoothFill) {
+            glEnable(GL_POLYGON_SMOOTH); CHECK_GL();
+        }
     #endif
 
     Graphics::Save();
@@ -987,7 +1038,9 @@ PUBLIC STATIC void     GLRenderer::FillRectangle(float x, float y, float w, floa
     Graphics::Restore();
 
     #ifdef GL_SUPPORTS_SMOOTHING
-        // glDisable(GL_POLYGON_SMOOTH); CHECK_GL();
+        if (Graphics::SmoothFill) {
+            glDisable(GL_POLYGON_SMOOTH); CHECK_GL();
+        }
     #endif
 }
 PUBLIC STATIC Uint32   GLRenderer::CreateTexturedShapeBuffer(float* data, int vertexCount) {
@@ -1001,14 +1054,14 @@ PUBLIC STATIC Uint32   GLRenderer::CreateTexturedShapeBuffer(float* data, int ve
 PUBLIC STATIC void     GLRenderer::DrawTexturedShapeBuffer(Texture* texture, Uint32 bufferID, int vertexCount) {
     GL_Predraw(texture);
 
-    glEnableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
+    // glEnableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
 
         glBindBuffer(GL_ARRAY_BUFFER, bufferID);
         glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (GLvoid*)0);
         glVertexAttribPointer(GLRenderer::CurrentShader->LocTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (GLvoid*)12);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
 
-    glDisableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
+    // glDisableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
 }
 
 // Texture drawing functions
@@ -1016,11 +1069,85 @@ PUBLIC STATIC void     GLRenderer::DrawTexture(Texture* texture, float sx, float
     GL_DrawTexture(texture, sx, sy, sw, sh, x, y, w, h);
 }
 PUBLIC STATIC void     GLRenderer::DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY) {
-	if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
+    if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
 
-	AnimFrame animframe = sprite->Animations[animation].Frames[frame];
+    // /*
+    AnimFrame animframe = sprite->Animations[animation].Frames[frame];
+    Graphics::Save();
+        Graphics::Translate(x, y, 0.0f);
+        GL_DrawTextureBuffered(sprite->Spritesheets[animframe.SheetNumber], animframe.ID, ((int)flipY << 1) | (int)flipX);
+    Graphics::Restore();
+    //*/
 
-	float fX = flipX ? -1.0 : 1.0;
-	float fY = flipY ? -1.0 : 1.0;
-	GLRenderer::DrawTexture(sprite->Spritesheets[animframe.SheetNumber], animframe.X, animframe.Y, animframe.Width, animframe.Height, x + fX * animframe.OffsetX, y + fY * animframe.OffsetY, fX * animframe.Width, fY * animframe.Height);
+    // AnimFrame animframe = sprite->Animations[animation].Frames[frame];
+    // float fX = flipX ? -1.0 : 1.0;
+    // float fY = flipY ? -1.0 : 1.0;
+    // float sw  = animframe.Width;
+    // float sh  = animframe.Height;
+    //
+    // GLRenderer::DrawTexture(sprite->Spritesheets[animframe.SheetNumber],
+    //     animframe.X, animframe.Y, sw, sh,
+    //     x + fX * animframe.OffsetX,
+    //     y + fY * animframe.OffsetY, fX * sw, fY * sh);
+}
+PUBLIC STATIC void     GLRenderer::DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY) {
+    if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
+
+    AnimFrame animframe = sprite->Animations[animation].Frames[frame];
+    if (sx == animframe.Width)
+        return;
+    if (sy == animframe.Height)
+        return;
+
+    float fX = flipX ? -1.0 : 1.0;
+    float fY = flipY ? -1.0 : 1.0;
+    if (sw >= animframe.Width - sx)
+        sw  = animframe.Width - sx;
+    if (sh >= animframe.Height - sy)
+        sh  = animframe.Height - sy;
+
+    GLRenderer::DrawTexture(sprite->Spritesheets[animframe.SheetNumber],
+        animframe.X + sx, animframe.Y + sy,
+        sw, sh,
+        x + fX * (sx + animframe.OffsetX),
+        y + fY * (sy + animframe.OffsetY), fX * sw, fY * sh);
+}
+
+PUBLIC STATIC void     GLRenderer::MakeFrameBufferID(ISprite* sprite, AnimFrame* frame) {
+    frame->ID = 0;
+
+    float fX[4], fY[4];
+    fX[0] = 1.0;    fY[0] = 1.0;
+    fX[1] = -1.0;   fY[1] = 1.0;
+    fX[2] = 1.0;    fY[2] = -1.0;
+    fX[3] = -1.0;   fY[3] = -1.0;
+
+    GL_AnimFrameVert vertices[16];
+    GL_AnimFrameVert* vert = &vertices[0];
+
+    float texWidth = sprite->Spritesheets[frame->SheetNumber]->Width;
+    float texHeight = sprite->Spritesheets[frame->SheetNumber]->Height;
+
+    float ffU0 = frame->X / texWidth;
+    float ffV0 = frame->Y / texHeight;
+    float ffU1 = (frame->X + frame->Width) / texWidth;
+    float ffV1 = (frame->Y + frame->Height) / texHeight;
+
+    float _fX, _fY, ffX0, ffY0, ffX1, ffY1;
+    for (int f = 0; f < 4; f++) {
+        _fX = fX[f];
+        _fY = fY[f];
+        ffX0 = _fX * frame->OffsetX;
+        ffY0 = _fY * frame->OffsetY;
+        ffX1 = _fX * (frame->OffsetX + frame->Width);
+        ffY1 = _fY * (frame->OffsetY + frame->Height);
+        vert[0] = GL_AnimFrameVert { ffX0, ffY0, ffU0, ffV0 };
+        vert[1] = GL_AnimFrameVert { ffX1, ffY0, ffU1, ffV0 };
+        vert[2] = GL_AnimFrameVert { ffX0, ffY1, ffU0, ffV1 };
+        vert[3] = GL_AnimFrameVert { ffX1, ffY1, ffU1, ffV1 };
+        vert += 4;
+    }
+    glGenBuffers(1, (GLuint*)&frame->ID);
+    glBindBuffer(GL_ARRAY_BUFFER, frame->ID);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 }

@@ -194,7 +194,10 @@ PUBLIC void ISprite::AddFrame(int duration, int left, int top, int width, int he
     anfrm.OffsetY = pivotY;
     anfrm.SheetNumber = 0;
     anfrm.BoxCount = 0; // this->CollisionBoxCount;
-    // Graphics::MakeFrameBufferID(this, &anfrm);
+
+    // Possibly buffer the position in the renderer.
+    Graphics::MakeFrameBufferID(this, &anfrm);
+
     Animations.back().Frames.push_back(anfrm);
 }
 
@@ -300,6 +303,9 @@ PUBLIC bool ISprite::LoadAnimation(const char* filename) {
                     anfrm.Boxes[h].Bottom = reader->ReadInt16();
                 }
             }
+
+            // Possibly buffer the position in the renderer.
+            Graphics::MakeFrameBufferID(this, &anfrm);
 
             if (Print) Log::Print(Log::LOG_VERBOSE, "       (X: %d, Y: %d, W: %d, H: %d, OffX: %d, OffY: %d)", anfrm.X, anfrm.Y, anfrm.Width, anfrm.Height, anfrm.OffsetX, anfrm.OffsetY);
             an.Frames[i] = anfrm;

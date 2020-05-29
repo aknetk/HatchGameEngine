@@ -1,11 +1,12 @@
-#ifndef MEMORY_H
-#define MEMORY_H
+#ifndef ENGINE_DIAGNOSTICS_MEMORY_H
+#define ENGINE_DIAGNOSTICS_MEMORY_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -19,6 +20,7 @@ private:
 
 public:
     static size_t              MemoryUsage;
+    static bool                IsTracking;
 
     static void   Memset4(void* dst, Uint32 val, size_t dwords);
     static void*  Malloc(size_t size);
@@ -37,4 +39,4 @@ public:
     static void   PrintLeak();
 };
 
-#endif /* MEMORY_H */
+#endif /* ENGINE_DIAGNOSTICS_MEMORY_H */

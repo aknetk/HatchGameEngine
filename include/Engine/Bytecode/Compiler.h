@@ -1,11 +1,12 @@
-#ifndef COMPILER_H
-#define COMPILER_H
+#ifndef ENGINE_BYTECODE_COMPILER_H
+#define ENGINE_BYTECODE_COMPILER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Compiler;
 
@@ -27,6 +28,8 @@ public:
     Local           Locals[0x100];
     int             LocalCount = 0;
     int             ScopeDepth = 0;
+    vector<Uint32>  ClassHashList;
+    vector<Uint32>  ClassExtendedList;
 
     Token         MakeToken(int type);
     Token         MakeTokenRaw(int type, const char* message);
@@ -78,6 +81,8 @@ public:
     void  NamedVariable(Token name, bool canAssign);
     void  ScopeBegin();
     void  ScopeEnd();
+    void  ClearToScope(int depth);
+    void  PopToScope(int depth);
     void  AddLocal(Token name);
     int   ResolveLocal(Token* name);
     Uint8 GetArgumentList();
@@ -133,12 +138,14 @@ public:
     int           CodePointer();
     void          EmitByte(Uint8 byte);
     void          EmitBytes(Uint8 byte1, Uint8 byte2);
+    void          EmitUint16(Uint16 value);
     void          EmitUint32(Uint32 value);
     void          EmitConstant(VMValue value);
     void          EmitLoop(int loopStart);
     int           GetJump(int offset);
     int           GetPosition();
     int           EmitJump(Uint8 instruction);
+    int           EmitJump(Uint8 instruction, int jump);
     void          PatchJump(int offset);
     void          EmitStringHash(char* string);
     void          EmitStringHash(Token token);
@@ -176,4 +183,4 @@ public:
     static void   Dispose(bool freeTokens);
 };
 
-#endif /* COMPILER_H */
+#endif /* ENGINE_BYTECODE_COMPILER_H */

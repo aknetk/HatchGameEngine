@@ -1,11 +1,12 @@
-#ifndef XMLPARSER_H
-#define XMLPARSER_H
+#ifndef ENGINE_TEXTFORMATS_XML_XMLPARSER_H
+#define ENGINE_TEXTFORMATS_XML_XMLPARSER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -23,4 +24,4 @@ public:
     static void     Free(XMLNode* root);
 };
 
-#endif /* XMLPARSER_H */
+#endif /* ENGINE_TEXTFORMATS_XML_XMLPARSER_H */

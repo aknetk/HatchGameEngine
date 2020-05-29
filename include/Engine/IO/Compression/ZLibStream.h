@@ -1,11 +1,12 @@
-#ifndef ZLIBSTREAM_H
-#define ZLIBSTREAM_H
+#ifndef ENGINE_IO_COMPRESSION_ZLIBSTREAM_H
+#define ENGINE_IO_COMPRESSION_ZLIBSTREAM_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Stream;
 
@@ -34,4 +35,4 @@ public:
     static void        Decompress(void* dst, size_t dstLen, void* src, size_t srcLen);
 };
 
-#endif /* ZLIBSTREAM_H */
+#endif /* ENGINE_IO_COMPRESSION_ZLIBSTREAM_H */

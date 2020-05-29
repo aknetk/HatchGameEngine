@@ -1,11 +1,12 @@
-#ifndef LOG_H
-#define LOG_H
+#ifndef ENGINE_DIAGNOSTICS_LOG_H
+#define ENGINE_DIAGNOSTICS_LOG_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 
@@ -27,4 +28,4 @@ public:
     static void Print(int sev, const char* format, ...);
 };
 
-#endif /* LOG_H */
+#endif /* ENGINE_DIAGNOSTICS_LOG_H */

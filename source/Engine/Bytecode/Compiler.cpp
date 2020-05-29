@@ -18,6 +18,8 @@ public:
     Local           Locals[0x100];
     int             LocalCount = 0;
     int             ScopeDepth = 0;
+    vector<Uint32>  ClassHashList;
+    vector<Uint32>  ClassExtendedList;
 };
 #endif
 
@@ -38,6 +40,7 @@ ParseRule*           Compiler::Rules = NULL;
 vector<ObjFunction*> Compiler::Functions;
 HashMap<Token>*      Compiler::TokenMap = NULL;
 const char*          Compiler::Magic = "HTVM";
+bool                 Compiler::PrettyPrint = true;
 vector<ObjString*>   Strings;
 
 
@@ -493,6 +496,7 @@ PUBLIC VIRTUAL Token Compiler::ScanToken() {
         case '.': return MakeToken(TOKEN_DOT);
         case ':': return MakeToken(TOKEN_COLON);
         case '?': return MakeToken(TOKEN_TERNARY);
+        case '~': return MakeToken(TOKEN_BITWISE_NOT);
         // case '#': return MakeToken(TOKEN_HASH);
         // Two-char punctuations
         case '!': return MakeToken(MatchChar('=') ? TOKEN_NOT_EQUALS : TOKEN_LOGICAL_NOT);
@@ -856,11 +860,20 @@ PUBLIC void  Compiler::ScopeBegin() {
 }
 PUBLIC void  Compiler::ScopeEnd() {
     ScopeDepth--;
-
-    while (LocalCount > 0 && Locals[LocalCount - 1].Depth > ScopeDepth) {
+    ClearToScope(ScopeDepth);
+}
+PUBLIC void  Compiler::ClearToScope(int depth) {
+    while (LocalCount > 0 && Locals[LocalCount - 1].Depth > depth) {
         EmitByte(OP_POP); // pop locals
 
         LocalCount--;
+    }
+}
+PUBLIC void  Compiler::PopToScope(int depth) {
+    int lcl = LocalCount;
+    while (lcl > 0 && Locals[lcl - 1].Depth > depth) {
+        EmitByte(OP_POP); // pop locals
+        lcl--;
     }
 }
 PUBLIC void  Compiler::AddLocal(Token name) {
@@ -1237,6 +1250,8 @@ struct switch_case {
 stack<vector<int>*> BreakJumpListStack;
 stack<vector<int>*> ContinueJumpListStack;
 stack<vector<switch_case>*> SwitchJumpListStack;
+stack<int> BreakScopeStack;
+stack<int> ContinueScopeStack;
 stack<int> SwitchScopeStack;
 PUBLIC void Compiler::GetPrintStatement() {
     GetExpression();
@@ -1252,6 +1267,8 @@ PUBLIC void Compiler::GetContinueStatement() {
     if (ContinueJumpListStack.size() == 0) {
         Error("Can't continue outside of loop.");
     }
+
+    PopToScope(ContinueScopeStack.top());
 
     int jump = EmitJump(OP_JUMP);
     ContinueJumpListStack.top()->push_back(jump);
@@ -1348,22 +1365,6 @@ PUBLIC void Compiler::GetRepeatStatement() {
 }
 // TODO: Implement
 PUBLIC void Compiler::GetSwitchStatement() {
-    /*
-
-    switch (value) {
-        case 1:
-            oh = true;
-        case 0:
-        case 2:
-            thattoo = true;
-            break;
-        default:
-            guessnot = true;
-            break;
-    }
-
-    */
-
     Chunk* chunk = CurrentChunk();
 
     StartBreakJumpList();
@@ -1547,6 +1548,8 @@ PUBLIC void Compiler::GetBreakStatement() {
     if (BreakJumpListStack.size() == 0) {
         Error("Cannot break outside of loop or switch statement.");
     }
+
+    PopToScope(BreakScopeStack.top());
 
     int jump = EmitJump(OP_JUMP);
     BreakJumpListStack.top()->push_back(jump);
@@ -1838,6 +1841,18 @@ PUBLIC void Compiler::GetClassDeclaration() {
     // DefineVariable(nameConstant);
     EmitByte(OP_CLASS);
     EmitStringHash(className);
+
+    ClassHashList.push_back(GetHash(className));
+    // Check for class extension
+    if (MatchToken(TOKEN_PLUS)) {
+        EmitByte(true);
+        ClassExtendedList.push_back(1);
+    }
+    else {
+        EmitByte(false);
+        ClassExtendedList.push_back(0);
+    }
+
     DefineVariableToken(className);
 
     // ClassCompiler classCompiler;
@@ -2121,6 +2136,7 @@ PUBLIC void          Compiler::EmitReturn() {
 // Advanced Jumping
 PUBLIC void          Compiler::StartBreakJumpList() {
     BreakJumpListStack.push(new vector<int>());
+    BreakScopeStack.push(ScopeDepth);
 }
 PUBLIC void          Compiler::EndBreakJumpList() {
     vector<int>* top = BreakJumpListStack.top();
@@ -2130,9 +2146,11 @@ PUBLIC void          Compiler::EndBreakJumpList() {
     }
     delete top;
     BreakJumpListStack.pop();
+    BreakScopeStack.pop();
 }
 PUBLIC void          Compiler::StartContinueJumpList() {
     ContinueJumpListStack.push(new vector<int>());
+    ContinueScopeStack.push(ScopeDepth);
 }
 PUBLIC void          Compiler::EndContinueJumpList() {
     vector<int>* top = ContinueJumpListStack.top();
@@ -2142,6 +2160,7 @@ PUBLIC void          Compiler::EndContinueJumpList() {
     }
     delete top;
     ContinueJumpListStack.pop();
+    ContinueScopeStack.pop();
 }
 PUBLIC void          Compiler::StartSwitchJumpList() {
     SwitchJumpListStack.push(new vector<switch_case>());
@@ -2174,7 +2193,6 @@ PUBLIC Uint8         Compiler::MakeConstant(VMValue value) {
     return (Uint8)constant;
 }
 
-bool Compiler::PrettyPrint = true;
 int  justin_print(char** buffer, int* buf_start, const char *format, ...) {
     va_list args;
     va_list argsCopy;

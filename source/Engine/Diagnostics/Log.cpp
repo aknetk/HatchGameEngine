@@ -56,7 +56,6 @@ PUBLIC STATIC void Log::Init() {
     }
 
     if (WriteToFile && f) {
-        fprintf(f, "");
         fclose(f);
     }
 
@@ -136,6 +135,16 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
     #if WIN32
 		WORD wColor = (csbi.wAttributes & 0xF0) | 0x07;
         SetConsoleTextAttribute(hStdOut, wColor);
+
+        /*
+        // Sends to notepad
+        HWND notepad, edit;
+        notepad = FindWindow(NULL, "Untitled - Notepad");
+        edit = FindWindowEx(notepad, NULL, "EDIT", NULL);
+        SendMessage(edit, EM_REPLACESEL, TRUE, (LPARAM)severityText);
+        SendMessage(edit, EM_REPLACESEL, TRUE, (LPARAM)string);
+        SendMessage(edit, EM_REPLACESEL, TRUE, (LPARAM)"\r\n");
+        //*/
     #elif MACOSX || LINUX
         if (!WriteToFile)
             printf("%s", "\x1b[0m");

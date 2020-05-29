@@ -1,11 +1,12 @@
-#ifndef DECODER_H
-#define DECODER_H
+#ifndef ENGINE_MEDIA_DECODER_H
+#define ENGINE_MEDIA_DECODER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class PtrBuffer;
 
@@ -61,4 +62,4 @@ public:
            void      UnlockOutput();
 };
 
-#endif /* DECODER_H */
+#endif /* ENGINE_MEDIA_DECODER_H */

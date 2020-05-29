@@ -1,11 +1,12 @@
-#ifndef APPLICATION_H
-#define APPLICATION_H
+#ifndef ENGINE_APPLICATION_H
+#define ENGINE_APPLICATION_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -20,10 +21,13 @@ public:
     static INI*        Settings;
     static float       FPS;
     static bool        Running;
+    static bool        GameStart;
     static SDL_Window* Window;
+    static char        WindowTitle[256];
     static Platforms   Platform;
 
     static void Init(int argc, char* args[]);
+    static void GetPerformanceSnapshot();
     static void Run(int argc, char* args[]);
     static void Cleanup();
     static void LoadGameConfig();
@@ -31,4 +35,4 @@ public:
     static int  HandleAppEvents(void* data, SDL_Event* event);
 };
 
-#endif /* APPLICATION_H */
+#endif /* ENGINE_APPLICATION_H */

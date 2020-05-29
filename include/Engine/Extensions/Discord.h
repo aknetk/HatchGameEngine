@@ -1,11 +1,12 @@
-#ifndef DISCORD_H
-#define DISCORD_H
+#ifndef ENGINE_EXTENSIONS_DISCORD_H
+#define ENGINE_EXTENSIONS_DISCORD_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -24,4 +25,4 @@ public:
     static void Dispose();
 };
 
-#endif /* DISCORD_H */
+#endif /* ENGINE_EXTENSIONS_DISCORD_H */

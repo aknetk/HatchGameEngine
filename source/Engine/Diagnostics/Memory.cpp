@@ -9,20 +9,22 @@ private:
     static vector<const char*> TrackedMemoryNames;
 public:
     static size_t              MemoryUsage;
+    static bool                IsTracking;
 };
 #endif
 
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Memory.h>
 
-#if defined(SWITCH)
+// #if defined(SWITCH)
 #define NOTRACK
-#endif
+// #endif
 
 vector<void*>        Memory::TrackedMemory;
 vector<size_t>       Memory::TrackedSizes;
 vector<const char*>  Memory::TrackedMemoryNames;
 size_t               Memory::MemoryUsage = 0;
+bool                 Memory::IsTracking = false;
 
 PUBLIC STATIC void   Memory::Memset4(void* dst, Uint32 val, size_t dwords) {
     #if defined(__GNUC__) && defined(i386)
@@ -53,128 +55,145 @@ PUBLIC STATIC void   Memory::Memset4(void* dst, Uint32 val, size_t dwords) {
 
 PUBLIC STATIC void*  Memory::Malloc(size_t size) {
     void* mem = malloc(size);
-    #ifndef NOTRACK
-    if (mem) {
-        MemoryUsage += size;
+    if (Memory::IsTracking) {
+        if (mem) {
+            MemoryUsage += size;
 
-        TrackedMemory.push_back(mem);
-        TrackedSizes.push_back(size);
-        TrackedMemoryNames.push_back(NULL);
+            TrackedMemory.push_back(mem);
+            TrackedSizes.push_back(size);
+            TrackedMemoryNames.push_back(NULL);
+        }
+        else {
+            Log::Print(Log::LOG_ERROR, "Could not allocate memory for Malloc!");
+        }
     }
-    #endif
     return mem;
 }
 PUBLIC STATIC void*  Memory::Calloc(size_t count, size_t size) {
     void* mem = calloc(count, size);
-    #ifndef NOTRACK
-    if (mem) {
-        MemoryUsage += count * size;
+    if (Memory::IsTracking) {
+        if (mem) {
+            MemoryUsage += count * size;
 
-        TrackedMemory.push_back(mem);
-        TrackedSizes.push_back(count * size);
-        TrackedMemoryNames.push_back(NULL);
+            TrackedMemory.push_back(mem);
+            TrackedSizes.push_back(count * size);
+            TrackedMemoryNames.push_back(NULL);
+        }
+        else {
+            Log::Print(Log::LOG_ERROR, "Could not allocate memory for Calloc!");
+        }
     }
-    #endif
     return mem;
 }
 PUBLIC STATIC void*  Memory::Realloc(void* pointer, size_t size) {
     void* mem = realloc(pointer, size);
-    #ifndef NOTRACK
-    for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
-        if (TrackedMemory[i] == pointer) {
-            MemoryUsage += size - TrackedSizes[i];
+    if (Memory::IsTracking) {
+        if (mem) {
+            for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
+                if (TrackedMemory[i] == pointer) {
+                    MemoryUsage += size - TrackedSizes[i];
 
-            TrackedMemory[i] = mem;
-            TrackedSizes[i] = size;
-            return mem;
+                    TrackedMemory[i] = mem;
+                    TrackedSizes[i] = size;
+                    return mem;
+                }
+            }
+        }
+        else {
+            Log::Print(Log::LOG_ERROR, "Could not allocate memory for Realloc!");
         }
     }
-    #endif
     return mem;
 }
 // Tracking functions
 PUBLIC STATIC void*  Memory::TrackedMalloc(const char* identifier, size_t size) {
     void* mem = malloc(size);
-    #ifndef NOTRACK
-    if (mem) {
-        MemoryUsage += size;
+    if (Memory::IsTracking) {
+        if (mem) {
+            MemoryUsage += size;
 
-        TrackedMemory.push_back(mem);
-        TrackedSizes.push_back(size);
-        TrackedMemoryNames.push_back(identifier);
+            TrackedMemory.push_back(mem);
+            TrackedSizes.push_back(size);
+            TrackedMemoryNames.push_back(identifier);
+        }
+        else {
+            Log::Print(Log::LOG_ERROR, "Could not allocate memory for TrackedMalloc!");
+        }
     }
-    #endif
     return mem;
 }
 PUBLIC STATIC void*  Memory::TrackedCalloc(const char* identifier, size_t count, size_t size) {
     void* mem = calloc(count, size);
-    #ifndef NOTRACK
-    if (mem) {
-        MemoryUsage += count * size;
+    if (Memory::IsTracking) {
+        if (mem) {
+            MemoryUsage += count * size;
 
-        TrackedMemory.push_back(mem);
-        TrackedSizes.push_back(count * size);
-        TrackedMemoryNames.push_back(identifier);
+            TrackedMemory.push_back(mem);
+            TrackedSizes.push_back(count * size);
+            TrackedMemoryNames.push_back(identifier);
+        }
+        else {
+            Log::Print(Log::LOG_ERROR, "Could not allocate memory for TrackedCalloc!");
+        }
     }
-    #endif
     return mem;
 }
 PUBLIC STATIC void   Memory::Track(void* pointer, const char* identifier) {
-    #ifndef NOTRACK
-    for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
-        if (TrackedMemory[i] == pointer) {
-            TrackedMemoryNames[i] = identifier;
-            return;
+    if (Memory::IsTracking) {
+        for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
+            if (TrackedMemory[i] == pointer) {
+                TrackedMemoryNames[i] = identifier;
+                return;
+            }
         }
     }
-    #endif
 }
 PUBLIC STATIC void   Memory::Track(void* pointer, size_t size, const char* identifier) {
-    #ifndef NOTRACK
-    for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
-        if (TrackedMemory[i] == pointer) {
-            TrackedSizes[i] = size;
-            TrackedMemoryNames[i] = identifier;
-            return;
+    if (Memory::IsTracking) {
+        for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
+            if (TrackedMemory[i] == pointer) {
+                TrackedSizes[i] = size;
+                TrackedMemoryNames[i] = identifier;
+                return;
+            }
         }
-    }
 
-    TrackedMemory.push_back(pointer);
-    TrackedSizes.push_back(size);
-    TrackedMemoryNames.push_back(identifier);
-    #endif
+        TrackedMemory.push_back(pointer);
+        TrackedSizes.push_back(size);
+        TrackedMemoryNames.push_back(identifier);
+    }
 }
 PUBLIC STATIC void   Memory::TrackLast(const char* identifier) {
-    #ifndef NOTRACK
-    if (TrackedMemoryNames.size() == 0) return;
-    TrackedMemoryNames[TrackedMemoryNames.size() - 1] = identifier;
-    #endif
+    if (Memory::IsTracking) {
+        if (TrackedMemoryNames.size() == 0) return;
+        TrackedMemoryNames[TrackedMemoryNames.size() - 1] = identifier;
+    }
 }
 PUBLIC STATIC void   Memory::Free(void* pointer) {
-    #ifndef NOTRACK
-    #ifdef DEBUG
-    for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
-        if (TrackedMemory[i] == pointer) {
-            // 32-bit
-            size_t ptr_size = sizeof(void*);
-            if (ptr_size == 4) {
-                size_t* debug = (size_t*)TrackedMemory[i];
-                for (size_t d = 0, dSz = TrackedSizes[i] / ptr_size; d < dSz; d++) {
-                    debug[d] = 0xCDCDCDCDU;
+    if (Memory::IsTracking) {
+        #ifdef DEBUG
+        for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
+            if (TrackedMemory[i] == pointer) {
+                // 32-bit
+                size_t ptr_size = sizeof(void*);
+                if (ptr_size == 4) {
+                    size_t* debug = (size_t*)TrackedMemory[i];
+                    for (size_t d = 0, dSz = TrackedSizes[i] / ptr_size; d < dSz; d++) {
+                        debug[d] = 0xCDCDCDCDU;
+                    }
                 }
-            }
-            // 64-bit
-            else if (ptr_size == 8) {
-                size_t* debug = (size_t*)TrackedMemory[i];
-                for (size_t d = 0, dSz = TrackedSizes[i] / ptr_size; d < dSz; d++) {
-                    debug[d] = 0xCDCDCDCDCDCDCDCDU;
+                // 64-bit
+                else if (ptr_size == 8) {
+                    size_t* debug = (size_t*)TrackedMemory[i];
+                    for (size_t d = 0, dSz = TrackedSizes[i] / ptr_size; d < dSz; d++) {
+                        debug[d] = 0xCDCDCDCDCDCDCDCDU;
+                    }
                 }
+                break;
             }
-            break;
         }
+        #endif
     }
-    #endif
-    #endif
     Memory::Remove(pointer);
     if (!pointer) return;
 
@@ -182,29 +201,29 @@ PUBLIC STATIC void   Memory::Free(void* pointer) {
 }
 PUBLIC STATIC void   Memory::Remove(void* pointer) {
     if (!pointer) return;
-    #ifndef NOTRACK
-    for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
-        if (TrackedMemory[i] == pointer) {
-            MemoryUsage -= TrackedSizes[i];
-            // printf("TrackedSizes[i]: %zu\n", TrackedSizes[i]);
+    if (Memory::IsTracking) {
+        for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
+            if (TrackedMemory[i] == pointer) {
+                MemoryUsage -= TrackedSizes[i];
+                // printf("TrackedSizes[i]: %zu\n", TrackedSizes[i]);
 
-            TrackedMemoryNames.erase(TrackedMemoryNames.begin() + i);
-            TrackedMemory.erase(TrackedMemory.begin() + i);
-            TrackedSizes.erase(TrackedSizes.begin() + i);
-            return;
+                TrackedMemoryNames.erase(TrackedMemoryNames.begin() + i);
+                TrackedMemory.erase(TrackedMemory.begin() + i);
+                TrackedSizes.erase(TrackedSizes.begin() + i);
+                return;
+            }
         }
     }
-    #endif
 }
 
 PUBLIC STATIC const char* Memory::GetName(void* pointer) {
-    #ifndef NOTRACK
-    for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
-        if (TrackedMemory[i] == pointer) {
-            return TrackedMemoryNames[i];
+    if (Memory::IsTracking) {
+        for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
+            if (TrackedMemory[i] == pointer) {
+                return TrackedMemoryNames[i];
+            }
         }
     }
-    #endif
     return NULL;
 }
 

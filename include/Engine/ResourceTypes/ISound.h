@@ -1,11 +1,12 @@
-#ifndef ISOUND_H
-#define ISOUND_H
+#ifndef ENGINE_RESOURCETYPES_ISOUND_H
+#define ENGINE_RESOURCETYPES_ISOUND_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class SoundFormat;
 
@@ -34,4 +35,4 @@ public:
     void Dispose();
 };
 
-#endif /* ISOUND_H */
+#endif /* ENGINE_RESOURCETYPES_ISOUND_H */

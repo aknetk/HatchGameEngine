@@ -1,11 +1,12 @@
-#ifndef GLRENDERER_H
-#define GLRENDERER_H
+#ifndef ENGINE_RENDERING_GL_GLRENDERER_H
+#define ENGINE_RENDERING_GL_GLRENDERER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -67,6 +68,8 @@ public:
     static void     DrawTexturedShapeBuffer(Texture* texture, Uint32 bufferID, int vertexCount);
     static void     DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h);
     static void     DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY);
+    static void     DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY);
+    static void     MakeFrameBufferID(ISprite* sprite, AnimFrame* frame);
 };
 
-#endif /* GLRENDERER_H */
+#endif /* ENGINE_RENDERING_GL_GLRENDERER_H */

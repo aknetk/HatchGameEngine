@@ -1,26 +1,17 @@
-#ifndef CLOCK_H
-#define CLOCK_H
+#ifndef ENGINE_DIAGNOSTICS_CLOCK_H
+#define ENGINE_DIAGNOSTICS_CLOCK_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
-#include <stack>
-#include <ratio>
-#include <chrono>
-#include <thread>
 
 class Clock {
-private:
-    static chrono::steady_clock::time_point         StartTime;
-    static chrono::steady_clock::time_point         GameStartTime;
-    static stack<chrono::steady_clock::time_point>  ClockStack;
-
-
 public:
     static void   Init();
     static void   Start();
@@ -29,4 +20,4 @@ public:
     static void   Delay(double milliseconds);
 };
 
-#endif /* CLOCK_H */
+#endif /* ENGINE_DIAGNOSTICS_CLOCK_H */

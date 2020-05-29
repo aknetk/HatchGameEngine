@@ -1,11 +1,12 @@
-#ifndef SOURCEFILEMAP_H
-#define SOURCEFILEMAP_H
+#ifndef ENGINE_BYTECODE_SOURCEFILEMAP_H
+#define ENGINE_BYTECODE_SOURCEFILEMAP_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Hashing/CombinedHash.h>
@@ -13,12 +14,14 @@
 
 class SourceFileMap {
 public:
-    static bool             Initialized;
-    static HashMap<Uint32>* Checksums;
+    static bool                      Initialized;
+    static HashMap<Uint32>*          Checksums;
+    static HashMap<vector<Uint32>*>* ClassMap;
+    static Uint32                    DirectoryChecksum;
 
     static void CheckInit();
     static void CheckForUpdate();
     static void Dispose();
 };
 
-#endif /* SOURCEFILEMAP_H */
+#endif /* ENGINE_BYTECODE_SOURCEFILEMAP_H */

@@ -344,16 +344,18 @@ void     GetStart() {
     GetAttributes();
 
     if (_MatchToken(TOKEN_SLASH)) {
-        Token end = PrevToken();
-        end.Type = TOKEN_ENDTAG;
+        PrevToken();
+        // Token end = PrevToken();
+        // end.Type = TOKEN_ENDTAG;
         XMLCurrent = XMLCurrent->parent;
     }
     ConsumeToken(TOKEN_RIGHT_BRACE, "Missing '>' after start.");
 }
 void     GetEnd() {
     // Get instruction name
-    Token name = NextToken();
-    name.Type = TOKEN_ENDTAG;
+    NextToken();
+    // Token name = NextToken();
+    // name.Type = TOKEN_ENDTAG;
     XMLCurrent = XMLCurrent->parent;
 
     ConsumeToken(TOKEN_RIGHT_BRACE, "Missing '>' after end.");
@@ -368,8 +370,9 @@ void     GetComment() {
 }
 void     GetInstruction() {
     // Get instruction name
-    Token name = NextToken();
-    name.Type = TOKEN_INSTRUCTION;
+    NextToken();
+    // Token name = NextToken();
+    // name.Type = TOKEN_INSTRUCTION;
 
     GetAttributes();
 

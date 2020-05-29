@@ -1,11 +1,12 @@
-#ifndef INI_H
-#define INI_H
+#ifndef ENGINE_TEXTFORMATS_INI_H
+#define ENGINE_TEXTFORMATS_INI_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -31,4 +32,4 @@ public:
     void Dispose();
 };
 
-#endif /* INI_H */
+#endif /* ENGINE_TEXTFORMATS_INI_H */

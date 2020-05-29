@@ -1,0 +1,2 @@
+// F3
+adb shell input keyevent 133

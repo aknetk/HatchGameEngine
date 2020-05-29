@@ -106,7 +106,7 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
     return ogg;
 }
 
-PUBLIC        int          OGG::LoadSamples(int count) {
+PUBLIC        int          OGG::LoadSamples(size_t count) {
     int read,
         total = 0,
         bytesForSample = 0;

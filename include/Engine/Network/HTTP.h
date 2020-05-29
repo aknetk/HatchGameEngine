@@ -1,11 +1,12 @@
-#ifndef HTTP_H
-#define HTTP_H
+#ifndef ENGINE_NETWORK_HTTP_H
+#define ENGINE_NETWORK_HTTP_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -17,4 +18,4 @@ public:
     static bool GET(const char* url, Uint8** outBuf, size_t* outLen, ObjBoundMethod* callback);
 };
 
-#endif /* HTTP_H */
+#endif /* ENGINE_NETWORK_HTTP_H */

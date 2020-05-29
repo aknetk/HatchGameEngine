@@ -1,0 +1,11 @@
+
+
+
+OpenGL:
+- Cut down on state changes
+  - Less SetBlendColors
+  - Less matrix updates
+  - Combine textures
+  - Avoid shader changes
+- Make as many things textures as possible
+- Avoid framebuffers if necessary

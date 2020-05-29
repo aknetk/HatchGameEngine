@@ -53,6 +53,9 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
     Uint32 argumentHashes[0x10];
     int    argumentCount;
     int    entityCount;
+    int      maxObjSlots;
+    Entity** objSlots = NULL;
+    char*    objNames = NULL;
 
     // Load PropertyList and ObjectList and others
     // (use regular malloc and calloc as this is technically a hack outside the scope of the engine)
@@ -148,7 +151,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
 
     // Clear scene to defaults
     Scene::TileSize = 16;
-    Scene::EmptyTile = 0x3FF + 1;
+    Scene::EmptyTile = 0x3FF;
 
     if (r->ReadUInt32BE() != 0x53434E00)
         goto FREE;
@@ -177,16 +180,20 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         strcpy(layer.Name, Name);
         Memory::Free(Name);
 
-        layer.RelativeY = r->ReadUInt16();
-        layer.ConstantY = (short)r->ReadUInt16();
+        layer.RelativeY = r->ReadInt16();
+        layer.ConstantY = (short)r->ReadInt16();
 
         layer.Flags = 0;
 
         if (layer.Name[0] == 'F' && layer.Name[1] == 'G')
             layer.Flags |= SceneLayer::FLAGS_COLLIDEABLE;
 
-        layer.Flags |= // SceneLayer::FLAGS_NO_REPEAT_X |
-            SceneLayer::FLAGS_NO_REPEAT_Y;
+        if (strcmp(layer.Name, "Move") == 0)
+            layer.Flags |= SceneLayer::FLAGS_COLLIDEABLE | SceneLayer::FLAGS_NO_REPEAT_X | SceneLayer::FLAGS_NO_REPEAT_Y;
+        // BUG:
+        // Some kinda memory leak when FG High is not immediately after FG Low
+
+        // layer.Flags |= SceneLayer::FLAGS_NO_REPEAT_X | SceneLayer::FLAGS_NO_REPEAT_Y;
 
         layer.DrawGroup = DrawGroup & 0xF;
         if (DrawGroup & 0x10)
@@ -195,8 +202,8 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         layer.ScrollInfoCount = (int)r->ReadUInt16();
         layer.ScrollInfos = (ScrollingInfo*)Memory::Malloc(layer.ScrollInfoCount * sizeof(ScrollingInfo));
         for (int g = 0; g < layer.ScrollInfoCount; g++) {
-            layer.ScrollInfos[g].RelativeX = r->ReadUInt16();
-            layer.ScrollInfos[g].ConstantX = r->ReadUInt16();
+            layer.ScrollInfos[g].RelativeX = r->ReadInt16();
+            layer.ScrollInfos[g].ConstantX = r->ReadInt16();
 
             r->ReadByte();
             r->ReadByte();
@@ -207,8 +214,49 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         r->ReadCompressed(layer.ScrollIndexes);
         r->ReadCompressed(tileBoys);
 
+        int height16 = Height * 16;
+        int splitCount, lastValue, lastY, sliceH;
+
+        // Count first
+        splitCount = 0, lastValue = layer.ScrollIndexes[0], lastY = 0;
+        for (int y = 0; y < height16; y++) {
+            if ((y > 0 && ((y & 0xF) == 0)) || lastValue != layer.ScrollIndexes[y]) {
+                splitCount++;
+                lastValue = layer.ScrollIndexes[y];
+            }
+        }
+        splitCount++;
+
+        // printf("%s: rules count %d\n", layer.Name, splitCount);
+
+        layer.ScrollInfosSplitIndexes = (Uint16*)Memory::Malloc(splitCount * sizeof(Uint16));
+
+        splitCount = 0, lastValue = layer.ScrollIndexes[0], lastY = 0;
+        for (int y = 0; y < height16; y++) {
+            if ((y > 0 && ((y & 0xF) == 0)) || lastValue != layer.ScrollIndexes[y]) {
+                // Do slice
+                sliceH = y - lastY;
+                // if (strcmp(layer.Name, "Background 1") == 0)
+                //     printf("rule[%d]: height %d index %d  y: %d\n", splitCount, sliceH, lastValue, y);
+                layer.ScrollInfosSplitIndexes[splitCount] = (sliceH << 8) | lastValue;
+                splitCount++;
+
+                // Iterate
+                lastValue = layer.ScrollIndexes[y];
+                lastY = y;
+            }
+        }
+
+        // Do slice
+        sliceH = height16 - lastY;
+        layer.ScrollInfosSplitIndexes[splitCount] = (sliceH << 8) | lastValue;
+        splitCount++;
+
+        layer.ScrollInfosSplitIndexesCount = splitCount;
+
+        // Convert to HatchTiles
         for (int t = 0; t < Width * Height; t++) {
-            layer.Tiles[t]  = (tileBoys[t] & 0x3FF) + 1;
+            layer.Tiles[t]  = (tileBoys[t] & 0x3FF);
 
             layer.Tiles[t] |= (tileBoys[t] & 0x400) << 21; // Flip X
             layer.Tiles[t] |= (tileBoys[t] & 0x800) << 19; // Flip Y
@@ -258,7 +306,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
 
     // Hack in WindowManager, InputManager, and PauseManager
     {
-        BytecodeObject* obj;
+        Entity* obj;
         char* objectName;
 
         objectName = "WindowManager";
@@ -268,7 +316,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName);
         Scene::ObjectLists->Put(objectNameHash, objectList);
 
-        obj = (BytecodeObject*)objectList->SpawnFunction();
+        obj = objectList->SpawnFunction();
         obj->X = 0.0f;
         obj->Y = 0.0f;
         obj->InitialX = obj->X;
@@ -283,7 +331,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName);
         Scene::ObjectLists->Put(objectNameHash, objectList);
 
-        obj = (BytecodeObject*)objectList->SpawnFunction();
+        obj = objectList->SpawnFunction();
         obj->X = 0.0f;
         obj->Y = 0.0f;
         obj->InitialX = obj->X;
@@ -298,7 +346,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName);
         Scene::ObjectLists->Put(objectNameHash, objectList);
 
-        obj = (BytecodeObject*)objectList->SpawnFunction();
+        obj = objectList->SpawnFunction();
         obj->X = 0.0f;
         obj->Y = 0.0f;
         obj->InitialX = obj->X;
@@ -306,6 +354,9 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         obj->List = objectList;
         Scene::AddStatic(objectList, obj);
     }
+
+    maxObjSlots = 0x940;
+    objSlots = (Entity**)calloc(sizeof(Entity*), maxObjSlots);
 
     for (int i = 0; i < objectDefinitionCount; i++) {
         r->ReadBytes(hashTemp, 16);
@@ -337,72 +388,92 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
                 objectNameHash2,
                 ObjectHashes->Get(objectNameHash));
 
-            if (objectList->SpawnFunction) {
-                for (int a = 1; a < argumentCount; a++) {
-                    if (PropertyHashes->Exists(argumentHashes[a]) && argumentHashes[a] != 0x7CEA5BB0U) {
-                        Log::Print(Log::LOG_VERBOSE, "Property Hash: %08XU (%s)", argumentHashes[a], PropertyHashes->Get(argumentHashes[a]));
-                    }
-                }
-            }
+            // if (objectList->SpawnFunction) {
+            //     for (int a = 1; a < argumentCount; a++) {
+            //         if (PropertyHashes->Exists(argumentHashes[a]) && argumentHashes[a] != 0x7CEA5BB0U) {
+            //             const char* argType;
+            //             switch (argumentTypes[a]) {
+            //                 case 0: argType = "uint8"; break;
+            //                 case 1: argType = "uint16"; break;
+            //                 case 2: argType = "uint32"; break;
+            //                 case 3: argType = "int8"; break;
+            //                 case 4: argType = "int16"; break;
+            //                 case 5: argType = "int32"; break;
+            //                 case 6: argType = "int32"; break;
+            //                 case 7: argType = "bool"; break;
+            //                 case 8: argType = "string"; break;
+            //                 case 9: argType = "vector2"; break;
+            //                 case 11: argType = "color"; break;
+            //                 default: argType = "undefined"; break;
+            //             }
+            //             Log::Print(Log::LOG_VERBOSE, "Property: %s    Type: %s", PropertyHashes->Get(argumentHashes[a]), argType);
+            //         }
+            //     }
+            // }
         }
 
         for (int n = 0; n < entityCount; n++) {
-            // int SlotID =
-            r->ReadUInt16();
+            int SlotID = r->ReadUInt16();
+            if (SlotID >= maxObjSlots) {
+                Log::Print(Log::LOG_ERROR, "Too many objects in scene! (Count: %d, Max: %d)", SlotID + 1, maxObjSlots);
+                // exit(0);
+            }
 
             Uint32 X = r->ReadUInt32();
             Uint32 Y = r->ReadUInt32();
 
             if (objectList->SpawnFunction) {
-                BytecodeObject* obj = (BytecodeObject*)objectList->SpawnFunction();
+                Entity* obj = objectList->SpawnFunction();
                 obj->X = (X / 65536.f);
                 obj->Y = (Y / 65536.f);
                 obj->InitialX = obj->X;
                 obj->InitialY = obj->Y;
                 obj->List = objectList;
-                Scene::AddStatic(objectList, obj);
+                Scene::AddStatic(obj->List, obj);
+                // objSlots[SlotID] = obj;
 
-                // /*
-                for (int a = 1; a < argumentCount; a++) {
-                    VMValue val = NULL_VAL;
-                    switch (argumentTypes[a]) {
-                        case 0x0: val = INTEGER_VAL(r->ReadByte()); break;
-                        case 0x1: val = INTEGER_VAL(r->ReadUInt16()); break;
-                        case 0x2: val = INTEGER_VAL((int)r->ReadUInt32()); break;
-                        case 0x3: val = INTEGER_VAL((Sint8)r->ReadByte()); break;
-                        case 0x4: val = INTEGER_VAL(r->ReadInt16()); break;
-                        case 0x5: val = INTEGER_VAL(r->ReadInt32()); break;
-                        // Var
-                        case 0x6: val = INTEGER_VAL(r->ReadInt32()); break;
-                        // Bool
-                        case 0x7: val = INTEGER_VAL((int)r->ReadUInt32()); break;
-                        // String
-                        case 0x8: {
-                            ObjString* str = AllocString(r->ReadUInt16());
-                            for (int c = 0; c < str->Length; c++)
-                                str->Chars[c] = (char)(Uint8)r->ReadUInt16();
-                            val = OBJECT_VAL(str);
-                            break;
+                bool usingBytecodeObjects = true;
+                if (usingBytecodeObjects) {
+                    for (int a = 1; a < argumentCount; a++) {
+                        VMValue val = NULL_VAL;
+                        switch (argumentTypes[a]) {
+                            case 0x0: val = INTEGER_VAL(r->ReadByte()); break;
+                            case 0x1: val = INTEGER_VAL(r->ReadUInt16()); break;
+                            case 0x2: val = INTEGER_VAL((int)r->ReadUInt32()); break;
+                            case 0x3: val = INTEGER_VAL((Sint8)r->ReadByte()); break;
+                            case 0x4: val = INTEGER_VAL(r->ReadInt16()); break;
+                            case 0x5: val = INTEGER_VAL(r->ReadInt32()); break;
+                            // Var
+                            case 0x6: val = INTEGER_VAL(r->ReadInt32()); break;
+                            // Bool
+                            case 0x7: val = INTEGER_VAL((int)r->ReadUInt32()); break;
+                            // String
+                            case 0x8: {
+                                ObjString* str = AllocString(r->ReadUInt16());
+                                for (int c = 0; c < str->Length; c++)
+                                    str->Chars[c] = (char)(Uint8)r->ReadUInt16();
+                                val = OBJECT_VAL(str);
+                                break;
+                            }
+                            // Position
+                            case 0x9: {
+                                ObjArray* array = NewArray();
+                                // array->Values->push_back(INTEGER_VAL((int)r->ReadUInt32()));
+                                // array->Values->push_back(INTEGER_VAL((int)r->ReadUInt32()));
+                                array->Values->push_back(DECIMAL_VAL(r->ReadInt32() / 65536.f));
+                                array->Values->push_back(DECIMAL_VAL(r->ReadInt32() / 65536.f));
+                                val = OBJECT_VAL(array);
+                                break;
+                            }
+                            // Color
+                            case 0xB: val = INTEGER_VAL((int)r->ReadUInt32()); break;
                         }
-                        // Position
-                        case 0x9: {
-                            ObjArray* array = NewArray();
-                            // array->Values->push_back(INTEGER_VAL((int)r->ReadUInt32()));
-                            // array->Values->push_back(INTEGER_VAL((int)r->ReadUInt32()));
-                            array->Values->push_back(DECIMAL_VAL(r->ReadInt32() / 65536.f));
-                            array->Values->push_back(DECIMAL_VAL(r->ReadInt32() / 65536.f));
-                            val = OBJECT_VAL(array);
-                            break;
-                        }
-                        // Color
-                        case 0xB: val = INTEGER_VAL((int)r->ReadUInt32()); break;
-                    }
 
-                    if (PropertyHashes->Exists(argumentHashes[a])) {
-                        obj->Properties->Put(PropertyHashes->Get(argumentHashes[a]), val);
+                        if (PropertyHashes->Exists(argumentHashes[a])) {
+                            ((BytecodeObject*)obj)->Properties->Put(PropertyHashes->Get(argumentHashes[a]), val);
+                        }
                     }
                 }
-                //*/
             }
             else {
                 int len;
@@ -435,10 +506,18 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         }
     }
 
+    for (int i = 0; i < maxObjSlots; i++) {
+        if (objSlots[i]) {
+            Scene::AddStatic(objSlots[i]->List, objSlots[i]);
+        }
+    }
+
     ticks = Clock::GetTicks() - ticks;
     Log::Print(Log::LOG_VERBOSE, "Scene Object load took %.3f milliseconds.", ticks);
 
     FREE:
+    if (objSlots)
+        free(objSlots);
     r->Close();
 
     if (Scene::TileSprite) {

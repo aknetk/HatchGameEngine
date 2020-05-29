@@ -1,11 +1,12 @@
-#ifndef PNG_H
-#define PNG_H
+#ifndef ENGINE_RESOURCETYPES_IMAGEFORMATS_PNG_H
+#define ENGINE_RESOURCETYPES_IMAGEFORMATS_PNG_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -20,4 +21,4 @@ public:
                    ~PNG();
 };
 
-#endif /* PNG_H */
+#endif /* ENGINE_RESOURCETYPES_IMAGEFORMATS_PNG_H */

@@ -1,11 +1,12 @@
-#ifndef STREAM_H
-#define STREAM_H
+#ifndef ENGINE_IO_STREAM_H
+#define ENGINE_IO_STREAM_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -54,4 +55,4 @@ public:
     virtual         ~Stream();
 };
 
-#endif /* STREAM_H */
+#endif /* ENGINE_IO_STREAM_H */

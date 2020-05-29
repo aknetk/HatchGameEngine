@@ -20,6 +20,34 @@ public:
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Application.h>
 
+char* strgets(char* buf, int n, char** stream) {
+    char* readerStart = *stream;
+    char* reader = readerStart;
+    memset(buf, 0, n);
+    while (*reader) {
+        switch (*reader) {
+            case '\r':
+                memcpy(buf, readerStart, (reader - readerStart) > n ? n : (reader - readerStart));
+                *stream = reader + 1;
+                if (reader[1] == '\n')
+                    *stream = reader + 2;
+                return buf;
+            case '\n':
+                memcpy(buf, readerStart, (reader - readerStart) > n ? n : (reader - readerStart));
+                *stream = reader + 1;
+                return buf;
+            default:
+                reader++;
+                break;
+        }
+    }
+    if (readerStart == reader)
+        return NULL;
+
+    memcpy(buf, readerStart, (reader - readerStart) > n ? n : (reader - readerStart));
+    return buf;
+}
+
 PUBLIC STATIC INI* INI::Load(const char* filename) {
     INI* ini = new INI;
 
@@ -31,15 +59,57 @@ PUBLIC STATIC INI* INI::Load(const char* filename) {
 
     ini->count = 0;
 
-    FILE* f = fopen(filename, "rb");
-	if (!f) {
-		Log::Print(Log::LOG_ERROR, "Couldn't open file '%s'!", filename);
+    // FILE* f = fopen(filename, "rb");
+	// if (!f) {
+	// 	Log::Print(Log::LOG_ERROR, "Couldn't open file '%s'!", filename);
+    //     delete ini;
+	// 	return NULL;
+	// }
+    //
+	// while (fgets(buf, sizeof(buf), f) != NULL) {
+    //     if (buf[0] == '#') continue;
+    //
+    //     if (sscanf(buf, "[%[^][]]", section) == 1) {
+	// 		hasSection = true;
+	// 	}
+	// 	else if (sscanf(buf, "%[^ =]= %s", key, value) == 2 ||
+    //         sscanf(buf, "%[^ =]=%s", key, value) == 2 ||
+    //         sscanf(buf, "%[^ =] = %s", key, value) == 2 ||
+    //         sscanf(buf, "%[^ =] =%s", key, value) == 2) {
+    //         if (hasSection) {
+    //             strcpy(ini->item[ini->count].section, section);
+    //         }
+	// 		strcpy(ini->item[ini->count].key, key);
+	// 		strcpy(ini->item[ini->count].value, value);
+    //         ini->item[ini->count].hasSection = hasSection;
+    //         ini->count++;
+	// 	}
+	// }
+    // fclose(f);
+
+    SDL_RWops* rw = SDL_RWFromFile(filename, "rb");
+    if (!rw) {
+        Log::Print(Log::LOG_ERROR, "Couldn't open file '%s'!", filename);
         delete ini;
 		return NULL;
-	}
+    }
 
-	while (fgets(buf, sizeof(buf), f) != NULL) {
+    Sint64 rwSize = SDL_RWsize(rw);
+    if (rwSize < 0) {
+        Log::Print(Log::LOG_ERROR, "Could not get size of file \"%s\": %s", filename, SDL_GetError());
+        delete ini;
+		return NULL;
+    }
+
+    char* data = (char*)malloc(rwSize + 1);
+    SDL_RWread(rw, data, rwSize, 1);
+    data[rwSize] = 0;
+    SDL_RWclose(rw);
+
+    char* dataStart = data;
+    while (strgets(buf, sizeof(buf), &dataStart) != NULL) {
         if (buf[0] == '#') continue;
+        if (strlen(buf) < 2) continue;
 
         if (sscanf(buf, "[%[^][]]", section) == 1) {
 			hasSection = true;
@@ -57,7 +127,8 @@ PUBLIC STATIC INI* INI::Load(const char* filename) {
             ini->count++;
 		}
 	}
-    fclose(f);
+
+    free(data);
 
     return ini;
 }

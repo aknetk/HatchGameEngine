@@ -1,11 +1,12 @@
-#ifndef IMODEL_H
-#define IMODEL_H
+#ifndef ENGINE_RESOURCETYPES_IMODEL_H
+#define ENGINE_RESOURCETYPES_IMODEL_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -29,4 +30,4 @@ public:
     void Cleanup();
 };
 
-#endif /* IMODEL_H */
+#endif /* ENGINE_RESOURCETYPES_IMODEL_H */

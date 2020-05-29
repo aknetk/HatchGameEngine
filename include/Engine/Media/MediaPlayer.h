@@ -1,11 +1,12 @@
-#ifndef MEDIAPLAYER_H
-#define MEDIAPLAYER_H
+#ifndef ENGINE_MEDIA_MEDIAPLAYER_H
+#define ENGINE_MEDIA_MEDIAPLAYER_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Decoder;
 class MediaSource;
@@ -66,4 +67,4 @@ public:
     static Uint32       GetOutputLength(MediaPlayer* player, int i);
 };
 
-#endif /* MEDIAPLAYER_H */
+#endif /* ENGINE_MEDIA_MEDIAPLAYER_H */

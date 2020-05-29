@@ -1,11 +1,12 @@
-#ifndef SOUNDFORMAT_H
-#define SOUNDFORMAT_H
+#ifndef ENGINE_RESOURCETYPES_SOUNDFORMATS_SOUNDFORMAT_H
+#define ENGINE_RESOURCETYPES_SOUNDFORMATS_SOUNDFORMAT_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Stream;
 
@@ -26,8 +27,8 @@ public:
     Uint8*         SampleBuffer = NULL;
     Uint8*         SampleBufferHead = NULL;
 
-    virtual int    LoadSamples(int count);
-    virtual int    GetSamples(Uint8* buffer, int count);
+    virtual int    LoadSamples(size_t count);
+    virtual int    GetSamples(Uint8* buffer, size_t count);
     virtual int    SeekSample(int index);
     virtual int    TellSample();
     virtual double GetPosition();
@@ -40,4 +41,4 @@ protected:
     void        LoadFinish();
 };
 
-#endif /* SOUNDFORMAT_H */
+#endif /* ENGINE_RESOURCETYPES_SOUNDFORMATS_SOUNDFORMAT_H */

@@ -1,11 +1,12 @@
-#ifndef WAV_H
-#define WAV_H
+#ifndef ENGINE_RESOURCETYPES_SOUNDFORMATS_WAV_H
+#define ENGINE_RESOURCETYPES_SOUNDFORMATS_WAV_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 
 #include <Engine/Includes/Standard.h>
@@ -20,8 +21,8 @@ private:
 
 public:
     static SoundFormat* Load(const char* filename);
-           int          LoadSamples(int count);
+           int          LoadSamples(size_t count);
            void         Dispose();
 };
 
-#endif /* WAV_H */
+#endif /* ENGINE_RESOURCETYPES_SOUNDFORMATS_WAV_H */

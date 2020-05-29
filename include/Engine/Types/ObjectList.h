@@ -1,11 +1,12 @@
-#ifndef OBJECTLIST_H
-#define OBJECTLIST_H
+#ifndef ENGINE_TYPES_OBJECTLIST_H
+#define ENGINE_TYPES_OBJECTLIST_H
 
 #define PUBLIC
 #define PRIVATE
 #define PROTECTED
 #define STATIC
 #define VIRTUAL
+#define EXPOSED
 
 class Entity;
 class Entity;
@@ -21,6 +22,11 @@ public:
     Entity* EntityLast = NULL;
     bool            Registry = false;
     vector<Entity*> List;
+    char ObjectName[256];
+    double AverageUpdateTime = 0.0;
+    double AverageUpdateItemCount = 0;
+    double AverageRenderTime = 0.0;
+    double AverageRenderItemCount = 0;
     Entity* (*SpawnFunction)() = NULL;
 
     void    Add(Entity* obj);
@@ -37,4 +43,4 @@ public:
     int     Count();
 };
 
-#endif /* OBJECTLIST_H */
+#endif /* ENGINE_TYPES_OBJECTLIST_H */
