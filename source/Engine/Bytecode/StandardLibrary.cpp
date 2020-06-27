@@ -439,7 +439,7 @@ VMValue Display_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
 
 // #region Draw
 VMValue Draw_Sprite(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_ARGCOUNT(7);
+    CHECK_AT_LEAST_ARGCOUNT(7);
 
     ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
     int animation = GetInteger(args, 1, threadID);
@@ -448,9 +448,17 @@ VMValue Draw_Sprite(int argCount, VMValue* args, Uint32 threadID) {
     int y = (int)GetDecimal(args, 4, threadID);
     int flipX = GetInteger(args, 5, threadID);
     int flipY = GetInteger(args, 6, threadID);
+    float scaleX = 1.0f;
+    float scaleY = 1.0f;
+    float rotation = 0.0f;
+    if (argCount > 7) {
+        scaleX = GetDecimal(args, 7, threadID);
+        scaleY = GetDecimal(args, 8, threadID);
+        rotation = GetDecimal(args, 9, threadID);
+    }
 
     // Graphics::SetBlendColor(1.0, 1.0, 1.0, 1.0);
-    Graphics::DrawSprite(sprite, animation, frame, x, y, flipX, flipY);
+    Graphics::DrawSprite(sprite, animation, frame, x, y, flipX, flipY, scaleX, scaleY, rotation);
     return NULL_VAL;
 }
 VMValue Draw_Image(int argCount, VMValue* args, Uint32 threadID) {
@@ -588,7 +596,7 @@ VMValue Draw_Tile(int argCount, VMValue* args, Uint32 threadID) {
 
     if (Scene::TileSprite) {
         // Graphics::SetBlendColor(1.0, 1.0, 1.0, 1.0);
-        Graphics::DrawSprite(Scene::TileSprite, 0, id, x, y, flipX, flipY);
+        Graphics::DrawSprite(Scene::TileSprite, 0, id, x, y, flipX, flipY, 1.0f, 1.0f, 0.0f);
     }
     return NULL_VAL;
 }
@@ -823,7 +831,7 @@ VMValue Draw_Text(int argCount, VMValue* args, Uint32 threadID) {
             continue;
         }
 
-        Graphics::DrawSprite(sprite, 0, l, x - lineWidths[line] * textAlign, y - sprite->Animations[0].AnimationSpeed * textBaseline, 0, 0);
+        Graphics::DrawSprite(sprite, 0, l, x - lineWidths[line] * textAlign, y - sprite->Animations[0].AnimationSpeed * textBaseline, false, false, 1.0f, 1.0f, 0.0f);
         x += sprite->Animations[0].Frames[l].Advance * textAdvance;
     }
 
@@ -879,7 +887,7 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
                         x -= sprite->Animations[0].Frames[lm].OffsetX;
                         lineBack = false;
                     }
-                    Graphics::DrawSprite(sprite, 0, lm, x, y - sprite->Animations[0].AnimationSpeed * textBaseline, 0, 0);
+                    Graphics::DrawSprite(sprite, 0, lm, x, y - sprite->Animations[0].AnimationSpeed * textBaseline, false, false, 1.0f, 1.0f, 0.0f);
                     x += sprite->Animations[0].Frames[lm].Advance * textAdvance;
                 }
 
@@ -918,7 +926,7 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
             x -= sprite->Animations[0].Frames[l].OffsetX;
             lineBack = false;
         }
-        Graphics::DrawSprite(sprite, 0, l, x, y - sprite->Animations[0].AnimationSpeed * textBaseline, 0, 0);
+        Graphics::DrawSprite(sprite, 0, l, x, y - sprite->Animations[0].AnimationSpeed * textBaseline, false, false, 1.0f, 1.0f, 0.0f);
         x += sprite->Animations[0].Frames[l].Advance * textAdvance;
     }
 
@@ -948,7 +956,7 @@ VMValue Draw_TextEllipsis(int argCount, VMValue* args, Uint32 threadID) {
     if (textwidth <= maxwidth) {
         for (size_t i = 0; i < textlen; i++) {
             t = (int)text[i];
-            Graphics::DrawSprite(sprite, 0, t, x, y, 0, 0);
+            Graphics::DrawSprite(sprite, 0, t, x, y, false, false, 1.0f, 1.0f, 0.0f);
             x += sprite->Animations[0].Frames[t].Advance;
         }
     }
@@ -956,19 +964,19 @@ VMValue Draw_TextEllipsis(int argCount, VMValue* args, Uint32 threadID) {
         for (size_t i = 0; i < textlen; i++) {
             t = (int)text[i];
             if (x + sprite->Animations[0].Frames[t].Advance + elpisswidth > maxwidth) {
-                Graphics::DrawSprite(sprite, 0, '.', x, y, 0, 0);
+                Graphics::DrawSprite(sprite, 0, '.', x, y, false, false, 1.0f, 1.0f, 0.0f);
                 x += sprite->Animations[0].Frames['.'].Advance;
-                Graphics::DrawSprite(sprite, 0, '.', x, y, 0, 0);
+                Graphics::DrawSprite(sprite, 0, '.', x, y, false, false, 1.0f, 1.0f, 0.0f);
                 x += sprite->Animations[0].Frames['.'].Advance;
-                Graphics::DrawSprite(sprite, 0, '.', x, y, 0, 0);
+                Graphics::DrawSprite(sprite, 0, '.', x, y, false, false, 1.0f, 1.0f, 0.0f);
                 x += sprite->Animations[0].Frames['.'].Advance;
                 break;
             }
-            Graphics::DrawSprite(sprite, 0, t, x, y, 0, 0);
+            Graphics::DrawSprite(sprite, 0, t, x, y, false, false, 1.0f, 1.0f, 0.0f);
             x += sprite->Animations[0].Frames[t].Advance;
         }
     }
-    // Graphics::DrawSprite(sprite, 0, t, x, y, 0, 0);
+    // Graphics::DrawSprite(sprite, 0, t, x, y, false, false, 1.0f, 1.0f, 0.0f);
     return NULL_VAL;
 }
 
@@ -994,7 +1002,7 @@ VMValue Draw_SetTextureBlend(int argCount, VMValue* args, Uint32 threadID) {
 }
 VMValue Draw_SetBlendMode(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
-    switch (GetInteger(args, 0, threadID)) {
+    switch (Graphics::BlendMode = GetInteger(args, 0, threadID)) {
         case BlendMode_NORMAL:
             Graphics::SetBlendMode(
                 BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA,
@@ -1015,6 +1023,10 @@ VMValue Draw_SetBlendMode(int argCount, VMValue* args, Uint32 threadID) {
                 BlendFactor_ZERO, BlendFactor_INV_SRC_COLOR,
                 BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
             break;
+        default:
+        Graphics::SetBlendMode(
+            BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA,
+            BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
     }
     return NULL_VAL;
 }
@@ -3307,6 +3319,26 @@ VMValue View_SetUseDrawTarget(int argCount, VMValue* args, Uint32 threadID) {
     Scene::Views[view_index].UseDrawTarget = !!usedrawtar;
     return NULL_VAL;
 }
+VMValue View_IsUsingSoftwareRenderer(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int view_index = GetInteger(args, 0, threadID);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    return INTEGER_VAL((int)Scene::Views[view_index].Software);
+}
+VMValue View_SetUseSoftwareRenderer(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    int view_index = GetInteger(args, 0, threadID);
+    int usedswrend = GetInteger(args, 1, threadID);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    Scene::Views[view_index].Software = !!usedswrend;
+    return NULL_VAL;
+}
 VMValue View_SetUsePerspective(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     int view_index = GetInteger(args, 0, threadID);
@@ -3539,6 +3571,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     BytecodeObjectManager::GlobalConstInteger(NULL, "BlendMode_MAX", BlendMode_MAX);
     BytecodeObjectManager::GlobalConstInteger(NULL, "BlendMode_NORMAL", BlendMode_NORMAL);
     BytecodeObjectManager::GlobalConstInteger(NULL, "BlendMode_SUBTRACT", BlendMode_SUBTRACT);
+    BytecodeObjectManager::GlobalConstInteger(NULL, "BlendMode_MATCH_EQUAL", BlendMode_MATCH_EQUAL);
+    BytecodeObjectManager::GlobalConstInteger(NULL, "BlendMode_MATCH_NOT_EQUAL", BlendMode_MATCH_NOT_EQUAL);
 
     BytecodeObjectManager::GlobalConstInteger(NULL, "BlendFactor_ZERO", BlendFactor_ZERO);
     BytecodeObjectManager::GlobalConstInteger(NULL, "BlendFactor_ONE", BlendFactor_ONE);
@@ -3868,6 +3902,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(View, IsUsingDrawTarget);
     DEF_NATIVE(View, SetUseDrawTarget);
     DEF_NATIVE(View, SetUsePerspective);
+    DEF_NATIVE(View, IsUsingSoftwareRenderer);
+    DEF_NATIVE(View, SetUseSoftwareRenderer);
     DEF_NATIVE(View, IsEnabled);
     DEF_NATIVE(View, SetEnabled);
     DEF_NATIVE(View, SetFieldOfView);

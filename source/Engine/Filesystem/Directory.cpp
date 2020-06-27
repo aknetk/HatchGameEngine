@@ -19,8 +19,10 @@ private:
     #include <sys/stat.h>
 #endif
 
-bool SortFunction(char* i, char* j) {
-    return strcmp(i, j) <= 0;
+#define MAX_PATH_SIZE 1024
+
+bool CompareFunction(char* i, char* j) {
+    return strcmp(i, j) < 0;
 }
 
 PUBLIC STATIC bool          Directory::Exists(const char* path) {
@@ -57,7 +59,7 @@ PUBLIC STATIC bool          Directory::GetCurrentWorkingDirectory(char* out, siz
 
 PUBLIC STATIC void          Directory::GetFiles(vector<char*>* files, const char* path, const char* searchPattern, bool allDirs) {
     #if WIN32
-        char winPath[512];
+        char winPath[MAX_PATH_SIZE];
         sprintf(winPath, "%s%s*", path, path[strlen(path) - 1] == '/' ? "" : "/");
 
         for (char* i = winPath; *i; i++) {
@@ -68,7 +70,7 @@ PUBLIC STATIC void          Directory::GetFiles(vector<char*>* files, const char
         HANDLE hFind = FindFirstFile(winPath, &data);
 
         int i;
-        char fullpath[512];
+        char fullpath[MAX_PATH_SIZE];
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 if (data.cFileName[0] == '.' && data.cFileName[1] == 0) continue;
@@ -95,13 +97,11 @@ PUBLIC STATIC void          Directory::GetFiles(vector<char*>* files, const char
             FindClose(hFind);
         }
     #elif MACOSX || LINUX || SWITCH || IOS || ANDROID
-        char fullpath[512];
+        char fullpath[MAX_PATH_SIZE];
         DIR* dir = opendir(path);
         if (dir) {
             int i;
             struct dirent* d;
-
-            int indexBegin = files->size();
 
             while ((d = readdir(dir)) != NULL) {
                 if (d->d_name[0] == '.' && !d->d_name[1]) continue;
@@ -118,14 +118,14 @@ PUBLIC STATIC void          Directory::GetFiles(vector<char*>* files, const char
                     char* str = (char*)calloc(1, i + 1);
                     sprintf(str, "%s/%s", path, d->d_name);
                     str[i] = 0;
+
                     files->push_back(str);
                 }
             }
             closedir(dir);
-
-            int indexEnd = files->size();
-            std::sort(files->begin() + indexBegin, files->begin() + indexEnd, SortFunction);
         }
+
+        std::sort(files->begin(), files->end(), CompareFunction);
     #endif
 }
 PUBLIC STATIC vector<char*> Directory::GetFiles(const char* path, const char* searchPattern, bool allDirs) {
@@ -136,7 +136,7 @@ PUBLIC STATIC vector<char*> Directory::GetFiles(const char* path, const char* se
 
 PUBLIC STATIC void          Directory::GetDirectories(vector<char*>* files, const char* path, const char* searchPattern, bool allDirs) {
     #if WIN32
-        char winPath[512];
+        char winPath[MAX_PATH_SIZE];
         sprintf(winPath, "%s%s*", path, path[strlen(path) - 1] == '/' ? "" : "/");
 
         for (char* i = winPath; *i; i++) {
@@ -147,7 +147,7 @@ PUBLIC STATIC void          Directory::GetDirectories(vector<char*>* files, cons
         HANDLE hFind = FindFirstFile(winPath, &data);
 
         int i;
-        char fullpath[128];
+        char fullpath[MAX_PATH_SIZE];
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 if (data.cFileName[0] == '.' && !data.cFileName[1]) continue;
@@ -174,7 +174,7 @@ PUBLIC STATIC void          Directory::GetDirectories(vector<char*>* files, cons
             FindClose(hFind);
         }
     #elif MACOSX || LINUX || SWITCH || IOS || ANDROID
-        char fullpath[512];
+        char fullpath[MAX_PATH_SIZE];
         DIR* dir = opendir(path);
         if (dir) {
             int i;
@@ -203,7 +203,6 @@ PUBLIC STATIC void          Directory::GetDirectories(vector<char*>* files, cons
             closedir(dir);
 
             int indexEnd = files->size();
-            std::sort(files->begin() + indexBegin, files->begin() + indexEnd, SortFunction);
         }
     #endif
 }

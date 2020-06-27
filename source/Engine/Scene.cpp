@@ -393,18 +393,9 @@ PUBLIC STATIC void Scene::Init() {
     Application::Settings->GetInteger("dev", "viewCollision", &ShowTileCollisionFlag);
 
     Scene::ViewCurrent = 0;
-    Scene::Views[0].Active = true;
-    Scene::Views[0].Width = 640;
-    Scene::Views[0].Height = 480;
-    Scene::Views[0].FOV = 45.0f;
-    Scene::Views[0].UsePerspective = false;
-    Scene::Views[0].DrawTarget = Graphics::CreateTexture(SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, Scene::Views[0].Width, Scene::Views[0].Height);
-    Scene::Views[0].UseDrawTarget = true;
-    Scene::Views[0].ProjectionMatrix = Matrix4x4::Create();
-    Scene::Views[0].BaseProjectionMatrix = Matrix4x4::Create();
-
-    for (int i = 1; i < 8; i++) {
+    for (int i = 0; i < 8; i++) {
         Scene::Views[i].Active = false;
+        Scene::Views[i].Software = false;
         Scene::Views[i].Width = 640;
         Scene::Views[i].Height = 480;
         Scene::Views[i].FOV = 45.0f;
@@ -414,6 +405,7 @@ PUBLIC STATIC void Scene::Init() {
         Scene::Views[i].ProjectionMatrix = Matrix4x4::Create();
         Scene::Views[i].BaseProjectionMatrix = Matrix4x4::Create();
     }
+    Scene::Views[0].Active = true;
 }
 
 PUBLIC STATIC void Scene::Update() {
@@ -492,7 +484,14 @@ PUBLIC STATIC void Scene::Render() {
 
     float cx, cy, cz;
 
-    for (int i = 0; i < 8; i++) {
+    // DEV_NoTiles = true;
+    // DEV_NoObjectRender = true;
+
+    int win_w, win_h;
+    SDL_GetWindowSize(Application::Window, &win_w, &win_h);
+
+    int view_count = 8;
+    for (int i = 0; i < view_count; i++) {
         View* currentView = &Scene::Views[i];
 
         if (!currentView->Active)
@@ -517,7 +516,13 @@ PUBLIC STATIC void Scene::Render() {
             }
 
             Graphics::SetRenderTarget(currentView->DrawTarget);
-            Graphics::Clear();
+
+            if (currentView->Software) {
+                Graphics::SoftwareStart();
+            }
+            else {
+                Graphics::Clear();
+            }
         }
         else if (!currentView->Visible) {
             continue;
@@ -567,9 +572,31 @@ PUBLIC STATIC void Scene::Render() {
                 goto DEV_NoTilesCheck;
 
             double elapsed;
+            register float hbW;
+            register float hbH;
+            register float _x1;
+            register float _x2;
+            register float _y1;
+            register float _y2;
             for (size_t o = 0; o < oSz; o++) {
                 if (PriorityLists[l][o] && PriorityLists[l][o]->Active) {
                     Entity* ent = PriorityLists[l][o];
+
+                    if (ent->RenderRegionW == 0.0f || ent->RenderRegionH == 0.0f)
+                        goto DoCheckRender;
+
+                    hbW = ent->RenderRegionW * 0.5f;
+                    hbH = ent->RenderRegionH * 0.5f;
+                    _x1 = (ent->X - hbW - Scene::Views[0].X);
+                    _x2 = (ent->X + hbW - Scene::Views[0].X);
+                    _y1 = (ent->Y - hbH - Scene::Views[0].Y);
+                    _y2 = (ent->Y + hbH - Scene::Views[0].Y);
+
+                    if (_x2 < 0.0f || _x1 >= Scene::Views[0].Width ||
+                        _y2 < 0.0f || _y1 >= Scene::Views[0].Height)
+                        continue;
+
+                    DoCheckRender:
 
                     if (!(ent->ViewRenderFlag & viewRenderFlag))
                         continue;
@@ -711,7 +738,7 @@ PUBLIC STATIC void Scene::Render() {
                                 (currentView->Y + layer.OffsetY) * layer.RelativeY / 256.f +
                                 Scene::Frame * layer.ConstantY / 256.f);
 
-                            if (Graphics::SupportsBatching && Application::Platform == Platforms::Android) { // && Scene::UseBatchedTiles
+                            if (Graphics::SupportsBatching && Application::Platform == Platforms::Android && false) { // && Scene::UseBatchedTiles
                                 baseXOff = (int)std::floor(
                                     (currentView->X + layer.OffsetX) * layer.ScrollInfos[0].RelativeX / 256.f +
                                     Scene::Frame * layer.ScrollInfos[0].ConstantX / 256.f);
@@ -809,9 +836,9 @@ PUBLIC STATIC void Scene::Render() {
                                         if (flipY) partY = tileSize - height - partY;
 
                                         if (height == tileSize)
-                                            Graphics::DrawSprite(TileSprite, 0, tile, baseX, baseY, flipX, flipY);
+                                            Graphics::DrawSprite(TileSprite, 0, tile, baseX, baseY, flipX, flipY, 1.0f, 1.0f, 0.0f);
                                         else
-                                            Graphics::DrawSpritePart(TileSprite, 0, tile, 0, partY, tileSize, height, baseX, baseY, flipX, flipY);
+                                            Graphics::DrawSpritePart(TileSprite, 0, tile, 0, partY, tileSize, height, baseX, baseY, flipX, flipY, 1.0f, 1.0f, 0.0f);
 
                                         if (col) {
                                             switch (col) {
@@ -940,7 +967,7 @@ PUBLIC STATIC void Scene::Render() {
 
                                 tile &= TILE_IDENT_MASK;
                                 if (tile != EmptyTile) {
-                                    Graphics::DrawSprite(TileSprite, 0, tile, baseX, baseY, flipX, flipY);
+                                    Graphics::DrawSprite(TileSprite, 0, tile, baseX, baseY, flipX, flipY, 1.0f, 1.0f, 0.0f);
 
                                     if (col) {
                                         switch (col) {
@@ -1009,12 +1036,12 @@ PUBLIC STATIC void Scene::Render() {
         }
 
         if (currentView->UseDrawTarget && currentView->DrawTarget) {
+            if (currentView->Software)
+                Graphics::SoftwareEnd();
+
             Graphics::SetRenderTarget(NULL);
             if (currentView->Visible) {
-                int w, h;
-                SDL_GetWindowSize(Application::Window, &w, &h);
-
-                Graphics::UpdateOrthoFlipped(w, h);
+                Graphics::UpdateOrthoFlipped(win_w, win_h);
                 Graphics::UpdateProjectionMatrix();
 
                 Graphics::TextureBlend = false;
@@ -1023,7 +1050,7 @@ PUBLIC STATIC void Scene::Render() {
                     BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
                 Graphics::DrawTexture(currentView->DrawTarget,
                     0.0, 0.0, currentView->Width, currentView->Height,
-                    0.0, 0.0, w, h);
+                    0.0, Graphics::PixelOffset, win_w, win_h + Graphics::PixelOffset);
             }
         }
     }
@@ -1148,9 +1175,9 @@ PUBLIC STATIC void Scene::Render() {
 					if (tile != EmptyTile) {
 						// anID = Data->isAnims[tile] & 0xFF;
 						// if (anID != 0xFF)
-						// 	Graphics::DrawSprite(AnimTileSprite, Data->isAnims[tile] >> 8, Data->animatedTileFrames[anID], baseX + 8, baseY + 8, 0, fullFlip);
+						// 	Graphics::DrawSprite(AnimTileSprite, Data->isAnims[tile] >> 8, Data->animatedTileFrames[anID], baseX + 8, baseY + 8, 0, fullFlip, 1.0f, 1.0f, 0.0f);
 						// else
-							Graphics::DrawSpritePart(TileSprite, 0, tile, 0, wheree, tileSize, 1, baseX + tileSizeHalf, baseY + tileSizeHalf, fullFlip & 1, false);
+							Graphics::DrawSpritePart(TileSprite, 0, tile, 0, wheree, tileSize, 1, baseX + tileSizeHalf, baseY + tileSizeHalf, fullFlip & 1, false, 1.0f, 1.0f, 0.0f);
 					}
 
 					ix++;
@@ -1228,9 +1255,9 @@ PUBLIC STATIC void Scene::Render() {
 					if (tile != EmptyTile) {
 						// anID = Data->isAnims[tile] & 0xFF;
 						// if (anID != 0xFF)
-						// 	Graphics::DrawSprite(AnimTileSprite, Data->isAnims[tile] >> 8, Data->animatedTileFrames[anID], baseX + 8, baseY + 8, 0, fullFlip);
+						// 	Graphics::DrawSprite(AnimTileSprite, Data->isAnims[tile] >> 8, Data->animatedTileFrames[anID], baseX + 8, baseY + 8, 0, fullFlip, 1.0f, 1.0f, 0.0f);
 						// else
-							Graphics::DrawSprite(TileSprite, 0, tile, baseX + tileSizeHalf, baseY + tileSizeHalf, flipX, flipY);
+							Graphics::DrawSprite(TileSprite, 0, tile, baseX + tileSizeHalf, baseY + tileSizeHalf, flipX, flipY, 1.0f, 1.0f, 0.0f);
 					}
 
                     LAYER_THICK_CONTINUE:

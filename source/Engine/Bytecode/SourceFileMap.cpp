@@ -90,8 +90,8 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
     const char* scriptFolder = "Scripts";
     size_t      scriptFolderNameLen = strlen(scriptFolder);
 
-    vector<char*> list =
-    Directory::GetFiles(scriptFolder, "*.obj", true);
+    vector<char*> list;
+    Directory::GetFiles(&list, scriptFolder, "*.obj", true);
     Directory::GetFiles(&list, scriptFolder, "*.hsl", true);
 
     if (!Directory::Exists("Resources/Objects")) {
@@ -108,6 +108,7 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
 
     if (oldDirectoryChecksum != SourceFileMap::DirectoryChecksum) {
         Log::Print(Log::LOG_VERBOSE, "Detected new/deleted file: (%08X -> %08X)", oldDirectoryChecksum, SourceFileMap::DirectoryChecksum);
+        anyChanges = true;
 
         SourceFileMap::Checksums->Clear();
         SourceFileMap::ClassMap->WithAll([](Uint32, vector<Uint32>* list) -> void {
@@ -173,8 +174,6 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
                     filenameHashList->push_back(filenameHash);
                     SourceFileMap::ClassMap->Put(classHash, filenameHashList);
                 }
-                // Log::Print(Log::LOG_INFO, "class hash: 0x%08X    size: %d",
-                //     classHash, (int)SourceFileMap::ClassMap->Get(classHash)->size());
             }
 
             delete compiler;
@@ -183,7 +182,7 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
         if (freeTokens)
             Memory::Free(source);
 
-        // Log::Print(Log::LOG_INFO, "List: %s (%08X) (old: %08X, new: %08X) %d", list[i], filenameHash, oldChecksum, newChecksum, compiled);
+        // Log::Print(Log::LOG_INFO, "List: %s (%08X) (old: %08X, new: %08X) %d", list[i], filenameHash, oldChecksum, newChecksum, false);
 
         SourceFileMap::Checksums->Put(filenameHash, newChecksum);
         Memory::Free(list[i]);

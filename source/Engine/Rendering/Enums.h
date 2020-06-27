@@ -6,6 +6,8 @@ enum {
     BlendMode_ADD = 1,
     BlendMode_MAX = 2,
     BlendMode_SUBTRACT = 3,
+    BlendMode_MATCH_EQUAL = 4,
+    BlendMode_MATCH_NOT_EQUAL = 5,
 };
 
 enum {
@@ -86,8 +88,8 @@ struct GraphicsFunctions {
 	void     (*FillRectangle)(float x, float y, float w, float h);
 
 	void     (*DrawTexture)(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h);
-	void     (*DrawSprite)(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY);
-    void     (*DrawSpritePart)(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY);
+	void     (*DrawSprite)(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
+    void     (*DrawSpritePart)(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
 
     void     (*MakeFrameBufferID)(ISprite* sprite, AnimFrame* frame);
 };

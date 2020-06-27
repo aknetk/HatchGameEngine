@@ -584,6 +584,14 @@ PUBLIC STATIC void    BytecodeObjectManager::LinkExtensions() {
 }
 // #endregion
 
+#if defined(MACOSX) || defined(LINUX) || defined(UBUNTU)
+#define FG_YELLOW "\x1b[1;93m"
+#define FG_RESET "\x1b[m"
+#else
+#define FG_YELLOW ""
+#define FG_RESET ""
+#endif
+
 // #region ObjectFuncs
 PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(Uint8* head, size_t size) {
     FunctionList.clear();
@@ -721,11 +729,14 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
     memset(CurrentObjectName, 0, 256);
     strncpy(CurrentObjectName, objectName, 255);
 
-    if (!SourceFileMap::ClassMap->Exists(objectName))
+    if (!SourceFileMap::ClassMap->Exists(objectName)) {
+        Log::Print(Log::LOG_VERBOSE, "Could not find classmap for %s%s%s! (Hash: 0x%08X)", FG_YELLOW, objectName, FG_RESET, SourceFileMap::ClassMap->HashFunction(objectName));
         return NULL;
+    }
 
     // On first load:
     vector<Uint32>* filenameHashList = SourceFileMap::ClassMap->Get(objectName);
+
     for (size_t fn = 0; fn < filenameHashList->size(); fn++) {
         Uint32 filenameHash = (*filenameHashList)[fn];
         // Uint32 filenameHash = objectNameHash;
@@ -753,11 +764,8 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
             Sources->Put(filenameHash, bytecode);
 
             // Load the object class
-            #if defined(MACOSX) || defined(LINUX) || defined(UBUNTU)
-            Log::Print(Log::LOG_VERBOSE, "Loading the object \x1b[1;93m%s\x1b[m class...", objectName);
-            #else
-            Log::Print(Log::LOG_VERBOSE, "Loading the object %s class...", objectName);
-            #endif
+            if (fn == 0)
+                Log::Print(Log::LOG_VERBOSE, "Loading the object %s%s%s class, %d filenames...", FG_YELLOW, objectName, FG_RESET, (int)filenameHashList->size());
 
             RunFromIBC(bytecode, size);
 

@@ -31,6 +31,7 @@ PUBLIC STATIC Texture* Texture::New(Uint32 format, Uint32 access, Uint32 width, 
     texture->Access = access;
     texture->Width = width;
     texture->Height = height;
+    texture->Pixels = Memory::TrackedCalloc("Texture::Pixels", 1, sizeof(Uint32) * texture->Width * texture->Height);
     return texture;
 }
 // PUBLIC STATIC Texture* Texture::FromFilename(const char* filename) {

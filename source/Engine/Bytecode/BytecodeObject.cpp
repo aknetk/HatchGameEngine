@@ -52,6 +52,8 @@ PUBLIC void BytecodeObject::Link(ObjInstance* instance) {
     LINK_DEC(OnScreenHitboxW);
     LINK_DEC(OnScreenHitboxH);
     LINK_INT(ViewRenderFlag);
+    LINK_DEC(RenderRegionW);
+    LINK_DEC(RenderRegionH);
 
     LINK_DEC(HitboxW);
     LINK_DEC(HitboxH);
@@ -265,6 +267,11 @@ PUBLIC STATIC VMValue BytecodeObject::VM_SetAnimation(int argCount, VMValue* arg
     Entity* self = (Entity*)AS_INSTANCE(args[0])->EntityPtr;
     int animation = AS_INTEGER(args[1]);
     int frame = AS_INTEGER(args[2]);
+
+    if (self->Sprite < 0) {
+        BytecodeObjectManager::Threads[threadID].ThrowError(false, "this.Sprite is not set!", animation);
+        return NULL_VAL;
+    }
 
     ISprite* sprite = Scene::SpriteList[self->Sprite]->AsSprite;
     if (!(animation > -1 && (size_t)animation < sprite->Animations.size())) {

@@ -31,6 +31,8 @@ public:
     float        OnScreenHitboxW = 0.0f;
     float        OnScreenHitboxH = 0.0f;
     int          ViewRenderFlag = 1;
+    float        RenderRegionW = 0.0f;
+    float        RenderRegionH = 0.0f;
 
     int          Angle = 0;
     int          AngleMode = 0;

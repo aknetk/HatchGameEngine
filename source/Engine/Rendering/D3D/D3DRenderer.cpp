@@ -844,6 +844,8 @@ PUBLIC STATIC Uint32   D3DRenderer::GetWindowFlags() {
     return 0;
 }
 PUBLIC STATIC void     D3DRenderer::SetGraphicsFunctions() {
+    Graphics::PixelOffset = 0.5f;
+
     Graphics::Internal.Init = D3DRenderer::Init;
     Graphics::Internal.GetWindowFlags = D3DRenderer::GetWindowFlags;
     Graphics::Internal.Dispose = D3DRenderer::Dispose;
@@ -1003,7 +1005,7 @@ PUBLIC STATIC void     D3DRenderer::DisposeTexture(Texture* texture) {
         textureData->Staging = NULL;
     }
 
-    free(texture->Pixels);
+    // free(texture->Pixels);
     Memory::Free(texture->DriverData);
 
     texture->DriverData = NULL;
@@ -1065,7 +1067,10 @@ PUBLIC STATIC void     D3DRenderer::UpdateClipRect() {
     }
 }
 PUBLIC STATIC void     D3DRenderer::UpdateOrtho(float left, float top, float right, float bottom) {
-    Matrix4x4::Ortho(Scene::Views[Scene::ViewCurrent].BaseProjectionMatrix, left, right, top, bottom, 500.0f, -500.0f);
+    if (Scene::Views[Scene::ViewCurrent].Software)
+        Matrix4x4::Ortho(Scene::Views[Scene::ViewCurrent].BaseProjectionMatrix, left, right, bottom, top, 500.0f, -500.0f);
+    else
+        Matrix4x4::Ortho(Scene::Views[Scene::ViewCurrent].BaseProjectionMatrix, left, right, top, bottom, 500.0f, -500.0f);
     Matrix4x4::Copy(Scene::Views[Scene::ViewCurrent].ProjectionMatrix, Scene::Views[Scene::ViewCurrent].BaseProjectionMatrix);
 
     if (D3D_PixelPerfectScale) {
@@ -1325,7 +1330,7 @@ PUBLIC STATIC void     D3DRenderer::DrawTexture(Texture* texture, float sx, floa
         sx = 0.0, sy = 0.0, sw = texture->Width, sh = texture->Height;
     D3D_DrawTextureRaw(texture, sx, sy, sw, sh, x, y, w, h, false, texture->Access != SDL_TEXTUREACCESS_TARGET);
 }
-PUBLIC STATIC void     D3DRenderer::DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY) {
+PUBLIC STATIC void     D3DRenderer::DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation) {
 	if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
 
 	AnimFrame animframe = sprite->Animations[animation].Frames[frame];
@@ -1341,7 +1346,7 @@ PUBLIC STATIC void     D3DRenderer::DrawSprite(ISprite* sprite, int animation, i
         D3D_DrawTextureRaw(sprite->Spritesheets[animframe.SheetNumber], animframe.X, animframe.Y, animframe.Width, animframe.Height, animframe.OffsetX, animframe.OffsetY, animframe.Width, animframe.Height, flipX, flipY);
     Graphics::Restore();
 }
-PUBLIC STATIC void     D3DRenderer::DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY) {
+PUBLIC STATIC void     D3DRenderer::DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation) {
     if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
 
 	AnimFrame animframe = sprite->Animations[animation].Frames[frame];

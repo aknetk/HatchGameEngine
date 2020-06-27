@@ -86,6 +86,8 @@ void    _AVLogCallback(void *ptr, int level, const char* fmt, va_list vargs) {
     Log::Print(fin, str);
 }
 
+#endif
+
 PUBLIC STATIC MediaSource* MediaSource::CreateSourceFromUrl(const char* url) {
     if (!url)
         return NULL;
@@ -121,6 +123,7 @@ PUBLIC STATIC MediaSource* MediaSource::CreateSourceFromUrl(const char* url) {
     return NULL;
 }
 PUBLIC STATIC MediaSource* MediaSource::CreateSourceFromStream(Stream* stream) {
+    #ifdef USING_LIBAV
     AVIOContext* avio_ctx = NULL;
     Uint8* avio_ctx_buffer = NULL;
     size_t avio_ctx_buffer_size = 4096; // Typical cache page size (4KB)
@@ -136,7 +139,6 @@ PUBLIC STATIC MediaSource* MediaSource::CreateSourceFromStream(Stream* stream) {
 
     src->StreamPtr = stream;
 
-    #ifdef USING_LIBAV
     if (!(src->FormatCtx = avformat_alloc_context())) {
         Log::Print(Log::LOG_ERROR, "Unable to allocate Format context!");
         goto __FREE;
@@ -187,9 +189,9 @@ PUBLIC STATIC MediaSource* MediaSource::CreateSourceFromStream(Stream* stream) {
     avio_context_free(&avio_ctx);
 
     __FREE:
+    Memory::Free(src);
     #endif
     stream->Close();
-    Memory::Free(src);
 
     return NULL;
 }
@@ -271,5 +273,3 @@ PUBLIC        void         MediaSource::Close() {
     StreamPtr->Close();
     Memory::Free(this);
 }
-
-#endif

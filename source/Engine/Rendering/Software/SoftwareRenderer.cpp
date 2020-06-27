@@ -46,6 +46,8 @@ GraphicsFunctions  SoftwareRenderer::BackendFunctions;
 // // Other variables
 // Uint8         SoftwareRenderer::BitmapFont[128][8];
 
+int Alpha = 0xFF;
+int BlendFlag = 0;
 int DivideBy3Table[0x100];
 
 struct SWTextureData {
@@ -249,121 +251,6 @@ PUBLIC STATIC bool    SoftwareRenderer::IsOnScreen(int x, int y, int w, int h) {
 }
 
 // Drawing Shapes
-long ContourX[800][2];
-PUBLIC STATIC void    SoftwareRenderer::DrawPoint(int x, int y, Uint32 color) {
-	SetPixel(x, y, color);
-}
-PUBLIC STATIC void    SoftwareRenderer::DrawLine(int x0, int y0, int x1, int y1, Uint32 color) {
-	int dx = Math::Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-	int dy = Math::Abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-	int err = (dx > dy ? dx : -dy) / 2, e2;
-
-	while (true) {
-		SetPixel(x0, y0, color);
-		if (x0 == x1 && y0 == y1) break;
-		e2 = err;
-
-		if (e2 > -dx) { err -= dy; x0 += sx; }
-		if (e2 <  dy) { err += dx; y0 += sy; }
-	}
-}
-PUBLIC STATIC void    SoftwareRenderer::DrawCircle(int x, int y, int radius, Uint32 color) {
-
-}
-PUBLIC STATIC void    SoftwareRenderer::DrawCircleStroke(int x, int y, int radius, Uint32 color) {
-
-}
-PUBLIC STATIC void    SoftwareRenderer::DrawEllipse(int x, int y, int width, int height, Uint32 color) {
-
-}
-PUBLIC STATIC void    SoftwareRenderer::DrawEllipseStroke(int x, int y, int width, int height, int radius, Uint32 color) {
-
-}
-PUBLIC STATIC void    SoftwareRenderer::DrawTriangle(int p0_x, int p0_y, int p1_x, int p1_y, int p2_x, int p2_y, Uint32 color) {
-	// // Bresenham Scanline method:
-	// int y, maxX, maxY;
-	// for (y = 0; y < Application::HEIGHT; y++) {
-	// 	ContourX[y][0] = LONG_MAX; // min X
-	// 	ContourX[y][1] = LONG_MIN; // max X
-	// }
-    //
-	// ScanLine(p0_x, p0_y, p1_x, p1_y);
-	// ScanLine(p1_x, p1_y, p2_x, p2_y);
-	// ScanLine(p2_x, p2_y, p0_x, p0_y);
-    //
-	// maxX = Math::Max(p0_x, Math::Max(p1_x, p2_x));
-	// maxY = Math::Max(p0_y, Math::Max(p1_y, p2_y));
-    //
-	// for (y = 0; y < Application::HEIGHT; y++) {
-	// 	if (ContourX[y][1] >= ContourX[y][0]) {
-	// 		long x = ContourX[y][0];
-	// 		long len = ContourX[y][1] - ContourX[y][0];
-    //
-	// 		// Can draw a horizontal line instead of individual pixels here
-	// 		while (len--) {
-	// 			if (x < maxX && y < maxY)
-	// 				SetPixel(x++, y, color);
-	// 		}
-	// 	}
-	// }
-}
-PUBLIC STATIC void    SoftwareRenderer::DrawTriangleStroke(int p0_x, int p0_y, int p1_x, int p1_y, int p2_x, int p2_y, Uint32 color) {
-	DrawLine(p0_x, p0_y, p1_x, p1_y, color);
-	DrawLine(p1_x, p1_y, p2_x, p2_y, color);
-	DrawLine(p2_x, p2_y, p0_x, p0_y, color);
-}
-PUBLIC STATIC void    SoftwareRenderer::DrawRectangle(int x, int y, int width, int height, Uint32 color) {
-	// NOTE: Faster
-	/*
-	int Amin, Amax, Bmin, Bmax;
-	Amin = x;
-    Amax = Amin + width;
-    Bmin = Clip[0];
-    Bmax = Clip[2];
-    if (Bmin > Amin)
-        Amin = Bmin;
-    x = Amin;
-    if (Bmax < Amax)
-        Amax = Bmax;
-    width = Amax - Amin;
-
-    Amin = y;
-    Amax = Amin + height;
-    Bmin = Clip[1];
-    Bmax = Clip[3];
-    if (Bmin > Amin)
-        Amin = Bmin;
-    y = Amin;
-    if (Bmax < Amax)
-        Amax = Bmax;
-    height = Amax - Amin;
-
-	if ((width <= 0) || (height <= 0)) return;
-
-	color = GetPixelOutputColor(color);
-
-	if (SetPixelFunction == &SoftwareRenderer::SetPixelNormal) {
-		int pitch = FrameBufferStride << 2;
-		Uint8* pixels = (Uint8*)(FrameBuffer + x + y * FrameBufferStride);
-		while (height--) {
-	        Memory::Memset4(pixels, color, width);
-	        pixels += pitch;
-	    }
-	}
-	else {
-		int bx = x + width;
-		for (int b = 0; b < width * height; b++) {
-			SetPixelFunction(x, y, color);
-
-			x++;
-			if (x >= bx) {
-				x -= width;
-				y++;
-			}
-		}
-	}
-	//*/
-}
 PUBLIC STATIC void    SoftwareRenderer::DrawRectangleStroke(int x, int y, int width, int height, Uint32 color) {
 	int x1, x2, y1, y2;
 
@@ -387,15 +274,7 @@ PUBLIC STATIC void    SoftwareRenderer::DrawRectangleStroke(int x, int y, int wi
 	}
 }
 PUBLIC STATIC void    SoftwareRenderer::DrawRectangleSkewedH(int x, int y, int width, int height, int sk, Uint32 color) {
-	DrawTriangle(
-		x, y,
-		x + width, y,
-		x + width + sk, y + height, color);
 
-	DrawTriangle(
-		x, y,
-		x + sk, y + height,
-		x + width + sk, y + height, color);
 }
 
 // Drawing Sprites
@@ -602,75 +481,6 @@ PUBLIC STATIC void    SoftwareRenderer::DrawSpriteAtlas(ISprite* sprite, int x, 
 	// 			AltPal = true, Pal = sprite->PaletteAlt;
 	// 	}
 	// }
-}
-
-PUBLIC STATIC void    SoftwareRenderer::DrawSpritePart(ISprite* sprite, int animation, int frame, int srcx, int srcy, int srcw, int srch, int x, int y, bool flipX, bool flipY) {
-	if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
-
-	/*
-
-	bool AltPal = false;
-	Uint32 PixelIndex, *Pal = sprite->Palette;
-	AnimFrame animframe = sprite->Animations[animation].Frames[frame];
-
-	srcw = Math::Min(srcw, animframe.Width- srcx);
-	srch = Math::Min(srch, animframe.H - srcy);
-
-	int DX = 0, DY = 0, PX, PY, size = srcw * srch;
-	int CenterX = x, CenterY = y, RealCenterX = animframe.OffX, RealCenterY = animframe.OffY;
-	int SrcX = animframe.X + srcx, SrcY = animframe.Y + srcy, Width = srcw - 1, Height = srch - 1;
-
-	if (flipX)
-		RealCenterX = -RealCenterX - Width - 1;
-	if (flipY)
-		RealCenterY = -RealCenterY - Height - 1;
-
-	if (!AltPal && CenterY + RealCenterY >= WaterPaletteStartLine)
-		AltPal = true, Pal = sprite->PaletteAlt;
-
-	if (CenterX + Width + RealCenterX < Clip[0]) return;
-	if (CenterY + Height + RealCenterY < Clip[1]) return;
-	if (CenterX + RealCenterX >= Clip[2]) return;
-	if (CenterY + RealCenterY >= Clip[3]) return;
-
-	int FX, FY;
-	for (int D = 0; D < size; D++) {
-		PX = DX;
-		PY = DY;
-		if (flipX)
-			PX = Width - PX;
-		if (flipY)
-			PY = Height - PY;
-
-		FX = CenterX + DX + RealCenterX;
-		FY = CenterY + DY + RealCenterY;
-		if (FX <  Clip[0]) goto CONTINUE;
-		if (FY <  Clip[1]) goto CONTINUE;
-		if (FX >= Clip[2]) goto CONTINUE;
-		if (FY >= Clip[3]) return;
-
-		PixelIndex = GetPixelIndex(sprite, SrcX + PX, SrcY + PY);
-		if (sprite->PaletteCount) {
-			if (PixelIndex != sprite->TransparentColorIndex)
-				SetPixelFunction(FX, FY, GetPixelOutputColor(Pal[PixelIndex]));
-				// SetPixelFunction(FX, FY, Pal[PixelIndex]);
-		}
-		else if (PixelIndex & 0xFF000000U) {
-			SetPixelFunction(FX, FY, GetPixelOutputColor(PixelIndex));
-			// SetPixelFunction(FX, FY, PixelIndex);
-		}
-
-		CONTINUE:
-
-		DX++;
-		if (DX > Width) {
-			DX = 0, DY++;
-
-			if (!AltPal && CenterY + DY + RealCenterY >= WaterPaletteStartLine)
-				AltPal = true, Pal = sprite->PaletteAlt;
-		}
-	}
-	//*/
 }
 
 // Drawing Text
@@ -1044,28 +854,6 @@ PUBLIC STATIC void    SoftwareRenderer::DrawSpriteIn3D(ISprite* sprite, int anim
 }
 
 // Utility Functions
-PUBLIC STATIC Uint32  SoftwareRenderer::ColorAdd(Uint32 color1, Uint32 color2, int percent) {
-	Uint32 r = color1 >> 16 & 0xFF;
-	Uint32 g = color1 >> 8 & 0xFF;
-	Uint32 b = color1 & 0xFF;
-
-	r += (color2 >> 16 & 0xFF) * percent >> 8;
-	g += (color2 >> 8 & 0xFF) * percent >> 8;
-	b += (color2 & 0xFF) * percent >> 8;
-
-	if (r > 0xFF) r = 0xFF;
-	if (g > 0xFF) g = 0xFF;
-	if (b > 0xFF) b = 0xFF;
-
-	return r << 16 | g << 8 | b;
-}
-PUBLIC STATIC Uint32  SoftwareRenderer::ColorBlend(Uint32 color1, Uint32 color2, int percent) {
-	Uint32 rb = color1 & 0xff00ff;
-	Uint32 g = color1 & 0x00ff00;
-	rb += ((color2 & 0xff00ff) - rb) * percent >> 8;
-	g += ((color2 & 0x00ff00) - g) * percent >> 8;
-	return (rb & 0xff00ff) | (g & 0xff00);
-}
 
 PUBLIC STATIC void    SoftwareRenderer::ScanLine(long x1, long y1, long x2, long y2) {
 	long sx, sy, dx1, dy1, dx2, dy2, x, y, m, n, k, cnt;
@@ -1298,6 +1086,21 @@ PUBLIC STATIC void    SoftwareRenderer::ScanLine(long x1, long y1, long x2, long
 // }
 */
 
+int ColR = 0xFF;
+int ColG = 0xFF;
+int ColB = 0xFF;
+int ColRGB = 0xFFFFFF;
+Uint32 CompareColor = 0xFF000000U;
+int MultTable[0x10000];
+int MultTableInv[0x10000];
+int MultSubTable[0x10000];
+int Sin0x200[0x200];
+int Cos0x200[0x200];
+
+int FilterColor[0x8000];
+int FilterInvert[0x8000];
+int FilterBlackAndWhite[0x8000];
+int* FilterTable = NULL;
 // Initialization and disposal functions
 PUBLIC STATIC void     SoftwareRenderer::Init() {
     SoftwareRenderer::BackendFunctions.Init();
@@ -1330,65 +1133,96 @@ PUBLIC STATIC void     SoftwareRenderer::Init() {
     // }
 }
 PUBLIC STATIC Uint32   SoftwareRenderer::GetWindowFlags() {
-    return SoftwareRenderer::BackendFunctions.GetWindowFlags();
+    return Graphics::Internal.GetWindowFlags();
 }
-PUBLIC STATIC void     SoftwareRenderer::SetGraphicsFunctions(void* baseGFXfunctions) {
-    ((void(*)())baseGFXfunctions)();
-    SoftwareRenderer::BackendFunctions = Graphics::Internal; // memcpy(&SoftwareRenderer::BackendFunctions, Graphics::Internal, sizeof(Graphics::Internal));
+PUBLIC STATIC void     SoftwareRenderer::SetGraphicsFunctions() {
+    for (int a = 0; a < 0x100; a++) {
+        for (int b = 0; b < 0x100; b++) {
+            MultTable[a << 8 | b] = (a * b) >> 8;
+            MultTableInv[a << 8 | b] = (a * (b ^ 0xFF)) >> 8;
+            MultSubTable[a << 8 | b] = (a * -b) >> 8;
+        }
+    }
 
-    return;
+    for (int a = 0; a < 0x200; a++) {
+        float ang = a * M_PI / 0x100;
+        Sin0x200[a] = (int)(Math::Sin(ang) * 0x200);
+        Cos0x200[a] = (int)(Math::Cos(ang) * 0x200);
+    }
+    for (int a = 0; a < 0x8000; a++) {
+        int r = (a >> 10) & 0x1F;
+        int g = (a >> 5) & 0x1F;
+        int b = (a) & 0x1F;
 
-    // Graphics::Internal.Init = SoftwareRenderer::Init;
-    // Graphics::Internal.GetWindowFlags = SoftwareRenderer::GetWindowFlags;
-    // Graphics::Internal.Dispose = SoftwareRenderer::Dispose;
-    //
-    // // Texture management functions
-    // Graphics::Internal.CreateTexture = SoftwareRenderer::CreateTexture;
-    // Graphics::Internal.LockTexture = SoftwareRenderer::LockTexture;
-    // Graphics::Internal.UpdateTexture = SoftwareRenderer::UpdateTexture;
-    // Graphics::Internal.UpdateYUVTexture = SoftwareRenderer::UpdateTextureYUV;
-    // Graphics::Internal.UnlockTexture = SoftwareRenderer::UnlockTexture;
-    // Graphics::Internal.DisposeTexture = SoftwareRenderer::DisposeTexture;
-    //
-    // // Viewport and view-related functions
-    // Graphics::Internal.SetRenderTarget = SoftwareRenderer::SetRenderTarget;
-    // Graphics::Internal.UpdateWindowSize = SoftwareRenderer::UpdateWindowSize;
-    // Graphics::Internal.UpdateViewport = SoftwareRenderer::UpdateViewport;
-    // Graphics::Internal.UpdateClipRect = SoftwareRenderer::UpdateClipRect;
-    // Graphics::Internal.UpdateOrtho = SoftwareRenderer::UpdateOrtho;
-    // Graphics::Internal.UpdatePerspective = SoftwareRenderer::UpdatePerspective;
-    // Graphics::Internal.UpdateProjectionMatrix = SoftwareRenderer::UpdateProjectionMatrix;
-    //
-    // // Shader-related functions
-    // Graphics::Internal.UseShader = SoftwareRenderer::UseShader;
-    // Graphics::Internal.SetUniformF = SoftwareRenderer::SetUniformF;
-    // Graphics::Internal.SetUniformI = SoftwareRenderer::SetUniformI;
-    // Graphics::Internal.SetUniformTexture = SoftwareRenderer::SetUniformTexture;
-    //
-    // // These guys
-    // Graphics::Internal.Clear = SoftwareRenderer::Clear;
-    // Graphics::Internal.Present = SoftwareRenderer::Present;
-    //
-    // // Draw mode setting functions
-    // Graphics::Internal.SetBlendColor = SoftwareRenderer::SetBlendColor;
-    // Graphics::Internal.SetBlendMode = SoftwareRenderer::SetBlendMode;
-    // Graphics::Internal.SetLineWidth = SoftwareRenderer::SetLineWidth;
-    //
-    // // Primitive drawing functions
-    // Graphics::Internal.StrokeLine = SoftwareRenderer::StrokeLine;
-    // Graphics::Internal.StrokeCircle = SoftwareRenderer::StrokeCircle;
-    // Graphics::Internal.StrokeEllipse = SoftwareRenderer::StrokeEllipse;
-    // Graphics::Internal.StrokeRectangle = SoftwareRenderer::StrokeRectangle;
-    // Graphics::Internal.FillCircle = SoftwareRenderer::FillCircle;
-    // Graphics::Internal.FillEllipse = SoftwareRenderer::FillEllipse;
-    // Graphics::Internal.FillTriangle = SoftwareRenderer::FillTriangle;
-    // Graphics::Internal.FillRectangle = SoftwareRenderer::FillRectangle;
-    //
-    // // Texture drawing functions
-    // Graphics::Internal.DrawTexture = SoftwareRenderer::DrawTexture;
-    // Graphics::Internal.DrawSprite = SoftwareRenderer::DrawSprite;
-    // Graphics::Internal.DrawSpritePart = SoftwareRenderer::DrawSpritePart;
-    // Graphics::Internal.MakeFrameBufferID = SoftwareRenderer::MakeFrameBufferID;
+        int bw = ((r + g + b) / 3) << 3;
+        int hex = r << 19 | g << 11 | b << 3;
+        FilterBlackAndWhite[a] = bw << 16 | bw << 8 | bw | 0xFF000000U;
+        FilterInvert[a] = (hex ^ 0xFFFFFF) | 0xFF000000U;
+        FilterColor[a] = hex | 0xFF000000U;
+
+        // Game Boy-like Filter
+        // bw = (((r & 0x10) + (g & 0x10) + (b & 0x10)) / 3) << 3;
+        // bw <<= 1;
+        // if (bw > 0xFF) bw = 0xFF;
+        // r = bw * 183 / 255;
+        // g = bw * 227 / 255;
+        // b = bw * 42 / 255;
+        // FilterBlackAndWhite[a] = b << 16 | g << 8 | r | 0xFF000000U;
+    }
+
+    FilterTable = &FilterColor[0];
+
+    SoftwareRenderer::BackendFunctions.Init = SoftwareRenderer::Init;
+    SoftwareRenderer::BackendFunctions.GetWindowFlags = SoftwareRenderer::GetWindowFlags;
+    SoftwareRenderer::BackendFunctions.Dispose = SoftwareRenderer::Dispose;
+
+    // Texture management functions
+    SoftwareRenderer::BackendFunctions.CreateTexture = SoftwareRenderer::CreateTexture;
+    SoftwareRenderer::BackendFunctions.LockTexture = SoftwareRenderer::LockTexture;
+    SoftwareRenderer::BackendFunctions.UpdateTexture = SoftwareRenderer::UpdateTexture;
+    // SoftwareRenderer::BackendFunctions.UpdateYUVTexture = SoftwareRenderer::UpdateTextureYUV;
+    SoftwareRenderer::BackendFunctions.UnlockTexture = SoftwareRenderer::UnlockTexture;
+    SoftwareRenderer::BackendFunctions.DisposeTexture = SoftwareRenderer::DisposeTexture;
+
+    // Viewport and view-related functions
+    SoftwareRenderer::BackendFunctions.SetRenderTarget = SoftwareRenderer::SetRenderTarget;
+    SoftwareRenderer::BackendFunctions.UpdateWindowSize = SoftwareRenderer::UpdateWindowSize;
+    SoftwareRenderer::BackendFunctions.UpdateViewport = SoftwareRenderer::UpdateViewport;
+    SoftwareRenderer::BackendFunctions.UpdateClipRect = SoftwareRenderer::UpdateClipRect;
+    SoftwareRenderer::BackendFunctions.UpdateOrtho = SoftwareRenderer::UpdateOrtho;
+    SoftwareRenderer::BackendFunctions.UpdatePerspective = SoftwareRenderer::UpdatePerspective;
+    SoftwareRenderer::BackendFunctions.UpdateProjectionMatrix = SoftwareRenderer::UpdateProjectionMatrix;
+
+    // Shader-related functions
+    SoftwareRenderer::BackendFunctions.UseShader = SoftwareRenderer::UseShader;
+    SoftwareRenderer::BackendFunctions.SetUniformF = SoftwareRenderer::SetUniformF;
+    SoftwareRenderer::BackendFunctions.SetUniformI = SoftwareRenderer::SetUniformI;
+    SoftwareRenderer::BackendFunctions.SetUniformTexture = SoftwareRenderer::SetUniformTexture;
+
+    // These guys
+    SoftwareRenderer::BackendFunctions.Clear = SoftwareRenderer::Clear;
+    SoftwareRenderer::BackendFunctions.Present = SoftwareRenderer::Present;
+
+    // Draw mode setting functions
+    SoftwareRenderer::BackendFunctions.SetBlendColor = SoftwareRenderer::SetBlendColor;
+    SoftwareRenderer::BackendFunctions.SetBlendMode = SoftwareRenderer::SetBlendMode;
+    SoftwareRenderer::BackendFunctions.SetLineWidth = SoftwareRenderer::SetLineWidth;
+
+    // Primitive drawing functions
+    SoftwareRenderer::BackendFunctions.StrokeLine = SoftwareRenderer::StrokeLine;
+    SoftwareRenderer::BackendFunctions.StrokeCircle = SoftwareRenderer::StrokeCircle;
+    SoftwareRenderer::BackendFunctions.StrokeEllipse = SoftwareRenderer::StrokeEllipse;
+    SoftwareRenderer::BackendFunctions.StrokeRectangle = SoftwareRenderer::StrokeRectangle;
+    SoftwareRenderer::BackendFunctions.FillCircle = SoftwareRenderer::FillCircle;
+    SoftwareRenderer::BackendFunctions.FillEllipse = SoftwareRenderer::FillEllipse;
+    SoftwareRenderer::BackendFunctions.FillTriangle = SoftwareRenderer::FillTriangle;
+    SoftwareRenderer::BackendFunctions.FillRectangle = SoftwareRenderer::FillRectangle;
+
+    // Texture drawing functions
+    SoftwareRenderer::BackendFunctions.DrawTexture = SoftwareRenderer::DrawTexture;
+    SoftwareRenderer::BackendFunctions.DrawSprite = SoftwareRenderer::DrawSprite;
+    SoftwareRenderer::BackendFunctions.DrawSpritePart = SoftwareRenderer::DrawSpritePart;
+    SoftwareRenderer::BackendFunctions.MakeFrameBufferID = SoftwareRenderer::MakeFrameBufferID;
 }
 PUBLIC STATIC void     SoftwareRenderer::Dispose() {
 	// Memory::Free(Deform);
@@ -1428,6 +1262,24 @@ PUBLIC STATIC void     SoftwareRenderer::DisposeTexture(Texture* texture) {
 PUBLIC STATIC void     SoftwareRenderer::SetRenderTarget(Texture* texture) {
 
 }
+PUBLIC STATIC void     SoftwareRenderer::UpdateWindowSize(int width, int height) {
+    Graphics::Internal.UpdateWindowSize(width, height);
+}
+PUBLIC STATIC void     SoftwareRenderer::UpdateViewport() {
+    Graphics::Internal.UpdateViewport();
+}
+PUBLIC STATIC void     SoftwareRenderer::UpdateClipRect() {
+    Graphics::Internal.UpdateClipRect();
+}
+PUBLIC STATIC void     SoftwareRenderer::UpdateOrtho(float left, float top, float right, float bottom) {
+    Graphics::Internal.UpdateOrtho(left, top, right, bottom);
+}
+PUBLIC STATIC void     SoftwareRenderer::UpdatePerspective(float fovy, float aspect, float nearv, float farv) {
+    Graphics::Internal.UpdatePerspective(fovy, aspect, nearv, farv);
+}
+PUBLIC STATIC void     SoftwareRenderer::UpdateProjectionMatrix() {
+    Graphics::Internal.UpdateProjectionMatrix();
+}
 
 // Shader-related functions
 PUBLIC STATIC void     SoftwareRenderer::UseShader(void* shader) {
@@ -1458,7 +1310,9 @@ PUBLIC STATIC void     SoftwareRenderer::SetUniformTexture(Texture* texture, int
 
 // These guys
 PUBLIC STATIC void     SoftwareRenderer::Clear() {
-
+    Uint32* dstPx = (Uint32*)Graphics::CurrentRenderTarget->Pixels;
+    Uint32  dstStride = Graphics::CurrentRenderTarget->Width;
+    memset(dstPx, 0, dstStride * Graphics::CurrentRenderTarget->Height * 4);
 }
 PUBLIC STATIC void     SoftwareRenderer::Present() {
 
@@ -1466,10 +1320,40 @@ PUBLIC STATIC void     SoftwareRenderer::Present() {
 
 // Draw mode setting functions
 PUBLIC STATIC void     SoftwareRenderer::SetBlendColor(float r, float g, float b, float a) {
+    ColR = (int)(r * 0xFF);
+    ColG = (int)(g * 0xFF);
+    ColB = (int)(b * 0xFF);
+    if (Graphics::PreferredPixelFormat == SDL_PIXELFORMAT_ABGR8888)
+        ColRGB = 0xFF000000U | ColB << 16 | ColG << 8 | ColR;
+    else
+        ColRGB = 0xFF000000U | ColR << 16 | ColG << 8 | ColB;
 
+    if (a >= 1.0) {
+        Alpha = 0xFF;
+        // BlendFlag = 0;
+        return;
+    }
+    Alpha = (int)(a * 0xFF);
+    // BlendFlag = 1;
 }
 PUBLIC STATIC void     SoftwareRenderer::SetBlendMode(int srcC, int dstC, int srcA, int dstA) {
-
+    switch (Graphics::BlendMode) {
+        case BlendMode_NORMAL:
+            BlendFlag = 1;
+            break;
+        case BlendMode_ADD:
+            BlendFlag = 2;
+            break;
+        case BlendMode_SUBTRACT:
+            BlendFlag = 3;
+            break;
+        case BlendMode_MATCH_EQUAL:
+            BlendFlag = 4;
+            break;
+        case BlendMode_MATCH_NOT_EQUAL:
+            BlendFlag = 5;
+            break;
+    }
 }
 
 PUBLIC STATIC void     SoftwareRenderer::Resize(int width, int height) {
@@ -1532,11 +1416,385 @@ PUBLIC STATIC void     SoftwareRenderer::Restore() {
 
 }
 
+// Filter versions
+inline void PixelSetOpaque(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    if ((*src) & 0xFF000000U) {
+        register Uint32 col = *src;
+        *dst = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+    }
+}
+inline void PixelSetTransparent(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    if ((*src) & 0xFF000000U) {
+        register Uint32 col = *src;
+        col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+        *dst = ColorBlend(*dst, col, opacity) | 0xFF000000U;
+    }
+}
+inline void PixelSetAdditive(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    if ((*src) & 0xFF000000U) {
+        register Uint32 col = *src;
+        col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+
+        Uint32 R = (multTableAt[(col >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
+        Uint32 G = (multTableAt[(col >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
+        Uint32 B = (multTableAt[(col) & 0xFF]) + (*dst & 0x0000FF);
+        if (R > 0xFF0000) R = 0xFF0000;
+        if (G > 0x00FF00) G = 0x00FF00;
+        if (B > 0x0000FF) B = 0x0000FF;
+        *dst = R | G | B | 0xFF000000U;
+    }
+}
+inline void PixelSetSubtract(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    if ((*src) & 0xFF000000U) {
+        register Uint32 col = *src;
+        col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+
+        Sint32 R = (multSubTableAt[(col >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
+        Sint32 G = (multSubTableAt[(col >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
+        Sint32 B = (multSubTableAt[(col) & 0xFF]) + (*dst & 0x0000FF);
+        if (R < 0) R = 0;
+        if (G < 0) G = 0;
+        if (B < 0) B = 0;
+        *dst = R | G | B | 0xFF000000U;
+    }
+}
+inline void PixelSetMatchEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    if (*dst == CompareColor) {
+        register Uint32 col = *src;
+        *dst = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+    }
+}
+inline void PixelSetMatchNotEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    if (*dst != CompareColor) {
+        register Uint32 col = *src;
+        *dst = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+    }
+}
+
+// Filterless versions
+inline void PixelNoFiltSetOpaque(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    *dst = *src;
+}
+inline void PixelNoFiltSetTransparent(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    *dst = ColorBlend(*dst, *src, opacity) | 0xFF000000U;
+}
+inline void PixelNoFiltSetAdditive(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    Uint32 R = (multTableAt[(*src >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
+    Uint32 G = (multTableAt[(*src >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
+    Uint32 B = (multTableAt[(*src) & 0xFF]) + (*dst & 0x0000FF);
+    if (R > 0xFF0000) R = 0xFF0000;
+    if (G > 0x00FF00) G = 0x00FF00;
+    if (B > 0x0000FF) B = 0x0000FF;
+    *dst = R | G | B | 0xFF000000U;
+}
+inline void PixelNoFiltSetSubtract(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    Sint32 R = (multSubTableAt[(*src >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
+    Sint32 G = (multSubTableAt[(*src >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
+    Sint32 B = (multSubTableAt[(*src) & 0xFF]) + (*dst & 0x0000FF);
+    if (R < 0) R = 0;
+    if (G < 0) G = 0;
+    if (B < 0) B = 0;
+    *dst = R | G | B | 0xFF000000U;
+}
+inline void PixelNoFiltSetMatchEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    if (*dst == CompareColor) {
+        *dst = *src;
+    }
+}
+inline void PixelNoFiltSetMatchNotEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    if (*dst != CompareColor) {
+        *dst = *src;
+    }
+}
+
+struct Contour {
+    int MinX;
+    int MaxX;
+};
+Contour ContourField[480];
+void DrawPolygonBlendScanLine(int color1, int color2, int x1, int y1, int x2, int y2) {
+    int sx, sy, dx1, dy1, dx2, dy2, x, y, m, n, k, cnt;
+
+    int minY = y1;
+    int maxY = y1;
+
+    if (y2 < minY)
+        minY = y2;
+    if (y2 > maxY)
+        maxY = y2;
+
+    if (Graphics::CurrentClip.Enabled) {
+        if (minY < Graphics::CurrentClip.Y)
+            minY = Graphics::CurrentClip.Y;
+        if (maxY > Graphics::CurrentClip.Y + Graphics::CurrentClip.Height)
+            maxY = Graphics::CurrentClip.Y + Graphics::CurrentClip.Height;
+    }
+    else {
+        if (minY < 0)
+            minY = 0;
+        if (maxY > (int)Graphics::CurrentRenderTarget->Height)
+            maxY = (int)Graphics::CurrentRenderTarget->Height;
+    }
+
+    int minX;
+    int maxX;
+    if (Graphics::CurrentClip.Enabled) {
+        minX = Graphics::CurrentClip.X;
+        maxX = Graphics::CurrentClip.X + Graphics::CurrentClip.Width;
+    }
+    else {
+        minX = 0;
+        maxX = (int)Graphics::CurrentRenderTarget->Width;
+    }
+
+	sx = x2 - x1;
+	sy = y2 - y1;
+
+	if (sx > 0) dx1 = 1;
+	else if (sx < 0) dx1 = -1;
+	else dx1 = 0;
+
+	if (sy > 0) dy1 = 1;
+	else if (sy < 0) dy1 = -1;
+	else dy1 = 0;
+
+	m = abs(sx);
+	n = abs(sy);
+	dx2 = dx1;
+	dy2 = 0;
+
+	if (m < n) {
+		m = abs(sy);
+		n = abs(sx);
+		dx2 = 0;
+		dy2 = dy1;
+	}
+
+	x = x1;
+	y = y1;
+	cnt = m;
+	k = n / 2;
+
+	while (cnt--) {
+        if (y >= minY && y <= maxY) {
+            if (x < minX) {
+                ContourField[y].MinX = minX;
+            }
+            else if (x >= maxX) {
+                ContourField[y].MaxX = maxX;
+            }
+            else {
+                if (x < ContourField[y].MinX)
+                    ContourField[y].MinX = x;
+    			if (x > ContourField[y].MaxX)
+                    ContourField[y].MaxX = x;
+            }
+		}
+
+		k += n;
+		if (k < m) {
+			x += dx2;
+			y += dy2;
+		}
+		else {
+			k -= m;
+			x += dx1;
+			y += dy1;
+		}
+	}
+}
+void DrawPolygonBlend(int* vectors, int* colors, int count, int opacity, int blendFlag) {
+    Uint32* dstPx = (Uint32*)Graphics::CurrentRenderTarget->Pixels;
+    Uint32  dstStride = Graphics::CurrentRenderTarget->Width;
+
+    int minVal = INT_MAX;
+    int maxVal = INT_MIN;
+
+    if (count == 0)
+        return;
+
+    int* tempVertex = &vectors[0];
+    int  tempCount = count;
+    while (tempCount--) {
+        register int vy = tempVertex[1];
+        if (vy < minVal)
+            minVal = vy;
+        if (vy > maxVal)
+            maxVal = vy;
+
+        tempVertex += 2;
+    }
+
+    int dst_y1 = minVal;
+    int dst_y2 = maxVal;
+
+    if (Graphics::CurrentClip.Enabled) {
+        if (dst_y2 > Graphics::CurrentClip.Y + Graphics::CurrentClip.Height)
+            dst_y2 = Graphics::CurrentClip.Y + Graphics::CurrentClip.Height;
+        if (dst_y1 < Graphics::CurrentClip.Y)
+            dst_y1 = Graphics::CurrentClip.Y;
+    }
+    else {
+        if (dst_y2 > (int)Graphics::CurrentRenderTarget->Height)
+            dst_y2 = (int)Graphics::CurrentRenderTarget->Height;
+        if (dst_y1 < 0)
+            dst_y1 = 0;
+    }
+
+    if (dst_y1 >= dst_y2)
+        return;
+
+    int scanLineCount = dst_y2 - dst_y1;
+    Contour* contourPtr = &ContourField[dst_y1];
+    while (scanLineCount--) {
+        contourPtr->MinX = 0x7FFFFFFF;
+        contourPtr->MaxX = -1;
+        contourPtr++;
+    }
+
+    int* lastVector = vectors;
+    int* lastColor = colors;
+    if (count > 1) {
+        int countRem = count - 1;
+        while (countRem--) {
+            DrawPolygonBlendScanLine(lastColor[0], lastColor[1], lastVector[0], lastVector[1], lastVector[2], lastVector[3]);
+            lastVector += 2;
+            lastColor++;
+        }
+    }
+    DrawPolygonBlendScanLine(lastColor[0], colors[0], lastVector[0], lastVector[1], vectors[0], vectors[1]);
+
+    // int blendFlag = BlendFlag;
+    // int opacity = Alpha;
+    // if (Alpha == 0 && blendFlag != 0)
+    //     return;
+    // if (Alpha != 0 && blendFlag == 0)
+    //     blendFlag = 1;
+
+    register Uint32 col = ColRGB;
+    col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+
+    #define DRAW_POLYGONBLEND(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
+        Contour contour = ContourField[dst_y]; \
+        if (contour.MaxX < contour.MinX) { \
+            dst_strideY += dstStride; \
+            continue; \
+        } \
+        for (int dst_x = contour.MinX; dst_x < contour.MaxX; dst_x++) { \
+            pixelFunction((Uint32*)&col, &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+        } \
+        dst_strideY += dstStride; \
+    }
+
+    int* multTableAt = &MultTable[opacity << 8];
+    int* multSubTableAt = &MultSubTable[opacity << 8];
+    int dst_strideY = dst_y1 * dstStride;
+    switch (blendFlag) {
+        case 0:
+            for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) {
+                Contour contour = ContourField[dst_y];
+                if (contour.MaxX < contour.MinX) {
+                    dst_strideY += dstStride;
+                    continue;
+                }
+
+                Memory::Memset4(&dstPx[contour.MinX + dst_strideY], col, contour.MaxX - contour.MinX);
+                dst_strideY += dstStride;
+            }
+            break;
+        case 1:
+            DRAW_POLYGONBLEND(PixelNoFiltSetTransparent);
+            break;
+        case 2:
+            DRAW_POLYGONBLEND(PixelNoFiltSetAdditive);
+            break;
+        case 3:
+            DRAW_POLYGONBLEND(PixelNoFiltSetSubtract);
+            break;
+    }
+
+    #undef DRAW_POLYGONBLEND
+}
+
 PUBLIC STATIC void     SoftwareRenderer::SetLineWidth(float n) {
 
 }
 PUBLIC STATIC void     SoftwareRenderer::StrokeLine(float x1, float y1, float x2, float y2) {
+    int x = 0, y = 0;
+    Uint32* dstPx = (Uint32*)Graphics::CurrentRenderTarget->Pixels;
+    Uint32  dstStride = Graphics::CurrentRenderTarget->Width;
 
+    View* currentView = &Scene::Views[Scene::ViewCurrent];
+    int cx = (int)std::floor(currentView->X);
+    int cy = (int)std::floor(currentView->Y);
+
+    Matrix4x4* out = Graphics::ModelViewMatrix.top();
+    x += out->Values[12];
+    y += out->Values[13];
+    x -= cx;
+    y -= cy;
+
+    int dst_x1 = x + x1;
+    int dst_y1 = y + y1;
+    int dst_x2 = x + x2;
+    int dst_y2 = y + y2;
+
+    int minX, maxX, minY, maxY;
+    if (Graphics::CurrentClip.Enabled) {
+        minX = Graphics::CurrentClip.X;
+        minY = Graphics::CurrentClip.Y;
+        maxX = Graphics::CurrentClip.X + Graphics::CurrentClip.Width;
+        maxY = Graphics::CurrentClip.Y + Graphics::CurrentClip.Height;
+    }
+    else {
+        minX = 0;
+        minY = 0;
+        maxX = (int)Graphics::CurrentRenderTarget->Width;
+        maxY = (int)Graphics::CurrentRenderTarget->Height;
+    }
+
+    int dx = Math::Abs(dst_x2 - dst_x1), sx = dst_x1 < dst_x2 ? 1 : -1;
+    int dy = Math::Abs(dst_y2 - dst_y1), sy = dst_y1 < dst_y2 ? 1 : -1;
+    int err = (dx > dy ? dx : -dy) / 2, e2;
+
+    int blendFlag = BlendFlag;
+    int opacity = Alpha;
+    if (Alpha == 0 && blendFlag != 0)
+        return;
+    if (Alpha != 0 && blendFlag == 0)
+        blendFlag = 1;
+
+    register Uint32 col = ColRGB;
+    col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+
+    #define DRAW_LINE(pixelFunction) while (true) { \
+        if (dst_x1 >= minX && dst_y1 >= minY && dst_x1 < maxX && dst_y1 < maxY) \
+            pixelFunction((Uint32*)&col, &dstPx[dst_x1 + dst_y1 * dstStride], opacity, multTableAt, multSubTableAt); \
+        if (dst_x1 == dst_x2 && dst_y1 == dst_y2) break; \
+        e2 = err; \
+        if (e2 > -dx) { err -= dy; dst_x1 += sx; } \
+        if (e2 <  dy) { err += dx; dst_y1 += sy; } \
+    }
+
+    int* multTableAt = &MultTable[opacity << 8];
+    int* multSubTableAt = &MultSubTable[opacity << 8];
+    // int dst_strideY = dst_y1 * dstStride;
+    switch (blendFlag) {
+        case 0:
+            DRAW_LINE(PixelNoFiltSetOpaque);
+            break;
+        case 1:
+            DRAW_LINE(PixelNoFiltSetTransparent);
+            break;
+        case 2:
+            DRAW_LINE(PixelNoFiltSetAdditive);
+            break;
+        case 3:
+            DRAW_LINE(PixelNoFiltSetSubtract);
+            break;
+    }
+
+    #undef DRAW_LINE
 }
 PUBLIC STATIC void     SoftwareRenderer::StrokeCircle(float x, float y, float rad) {
 
@@ -1549,21 +1807,846 @@ PUBLIC STATIC void     SoftwareRenderer::StrokeRectangle(float x, float y, float
 }
 
 PUBLIC STATIC void     SoftwareRenderer::FillCircle(float x, float y, float rad) {
+    // just checks to see if the pixel is within a radius range, uses a bounding box constructed by the diameter
 
+    Uint32* dstPx = (Uint32*)Graphics::CurrentRenderTarget->Pixels;
+    Uint32  dstStride = Graphics::CurrentRenderTarget->Width;
+
+    View* currentView = &Scene::Views[Scene::ViewCurrent];
+    int cx = (int)std::floor(currentView->X);
+    int cy = (int)std::floor(currentView->Y);
+
+    Matrix4x4* out = Graphics::ModelViewMatrix.top();
+    x += out->Values[12];
+    y += out->Values[13];
+    x -= cx;
+    y -= cy;
+
+    int dst_x1 = x - rad;
+    int dst_y1 = y - rad;
+    int dst_x2 = x + rad;
+    int dst_y2 = y + rad;
+
+    if (Graphics::CurrentClip.Enabled) {
+        if (dst_x2 > Graphics::CurrentClip.X + Graphics::CurrentClip.Width)
+            dst_x2 = Graphics::CurrentClip.X + Graphics::CurrentClip.Width;
+        if (dst_y2 > Graphics::CurrentClip.Y + Graphics::CurrentClip.Height)
+            dst_y2 = Graphics::CurrentClip.Y + Graphics::CurrentClip.Height;
+
+        if (dst_x1 < Graphics::CurrentClip.X)
+            dst_x1 = Graphics::CurrentClip.X;
+        if (dst_y1 < Graphics::CurrentClip.Y)
+            dst_y1 = Graphics::CurrentClip.Y;
+    }
+    else {
+        if (dst_x2 > (int)Graphics::CurrentRenderTarget->Width)
+            dst_x2 = (int)Graphics::CurrentRenderTarget->Width;
+        if (dst_y2 > (int)Graphics::CurrentRenderTarget->Height)
+            dst_y2 = (int)Graphics::CurrentRenderTarget->Height;
+
+        if (dst_x1 < 0)
+            dst_x1 = 0;
+        if (dst_y1 < 0)
+            dst_y1 = 0;
+    }
+
+    if (dst_x1 >= dst_x2)
+        return;
+    if (dst_y1 >= dst_y2)
+        return;
+
+    int blendFlag = BlendFlag;
+    int opacity = Alpha;
+    if (Alpha == 0 && blendFlag != 0)
+        return;
+    if (Alpha != 0 && blendFlag == 0)
+        blendFlag = 1;
+
+    int outRad = rad * rad;
+    int innRad = 0;
+
+    register Uint32 col = ColRGB;
+    col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+
+    #define DRAW_CIRCLE(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
+        int i_y = dst_y - y; \
+            i_y *= i_y; \
+        for (int dst_x = dst_x1; dst_x < dst_x2; dst_x++) { \
+            int i_x = dst_x - x; \
+                i_x *= i_x; \
+            if (i_x + i_y < outRad) \
+                pixelFunction((Uint32*)&col, &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+        } \
+        dst_strideY += dstStride; \
+    }
+
+    int* multTableAt = &MultTable[opacity << 8];
+    int* multSubTableAt = &MultSubTable[opacity << 8];
+    int dst_strideY = dst_y1 * dstStride;
+    switch (blendFlag) {
+        case 0:
+            DRAW_CIRCLE(PixelNoFiltSetOpaque);
+            break;
+        case 1:
+            DRAW_CIRCLE(PixelNoFiltSetTransparent);
+            break;
+        case 2:
+            DRAW_CIRCLE(PixelNoFiltSetAdditive);
+            break;
+        case 3:
+            DRAW_CIRCLE(PixelNoFiltSetSubtract);
+            break;
+        case 4:
+            DRAW_CIRCLE(PixelNoFiltSetMatchEqual);
+            break;
+        case 5:
+            DRAW_CIRCLE(PixelNoFiltSetMatchNotEqual);
+            break;
+    }
+
+    #undef DRAW_CIRCLE
 }
 PUBLIC STATIC void     SoftwareRenderer::FillEllipse(float x, float y, float w, float h) {
 
 }
 PUBLIC STATIC void     SoftwareRenderer::FillRectangle(float x, float y, float w, float h) {
+    Uint32* dstPx = (Uint32*)Graphics::CurrentRenderTarget->Pixels;
+    Uint32  dstStride = Graphics::CurrentRenderTarget->Width;
 
+    View* currentView = &Scene::Views[Scene::ViewCurrent];
+    int cx = (int)std::floor(currentView->X);
+    int cy = (int)std::floor(currentView->Y);
+
+    Matrix4x4* out = Graphics::ModelViewMatrix.top();
+    x += out->Values[12];
+    y += out->Values[13];
+    x -= cx;
+    y -= cy;
+
+    int dst_x1 = x;
+    int dst_y1 = y;
+    int dst_x2 = x + w;
+    int dst_y2 = y + h;
+
+    if (Graphics::CurrentClip.Enabled) {
+        if (dst_x2 > Graphics::CurrentClip.X + Graphics::CurrentClip.Width)
+            dst_x2 = Graphics::CurrentClip.X + Graphics::CurrentClip.Width;
+        if (dst_y2 > Graphics::CurrentClip.Y + Graphics::CurrentClip.Height)
+            dst_y2 = Graphics::CurrentClip.Y + Graphics::CurrentClip.Height;
+
+        if (dst_x1 < Graphics::CurrentClip.X)
+            dst_x1 = Graphics::CurrentClip.X;
+        if (dst_y1 < Graphics::CurrentClip.Y)
+            dst_y1 = Graphics::CurrentClip.Y;
+    }
+    else {
+        if (dst_x2 > (int)Graphics::CurrentRenderTarget->Width)
+            dst_x2 = (int)Graphics::CurrentRenderTarget->Width;
+        if (dst_y2 > (int)Graphics::CurrentRenderTarget->Height)
+            dst_y2 = (int)Graphics::CurrentRenderTarget->Height;
+
+        if (dst_x1 < 0)
+            dst_x1 = 0;
+        if (dst_y1 < 0)
+            dst_y1 = 0;
+    }
+
+    if (dst_x1 >= dst_x2)
+        return;
+    if (dst_y1 >= dst_y2)
+        return;
+
+    int blendFlag = BlendFlag;
+    int opacity = Alpha;
+    if (Alpha == 0 && blendFlag != 0)
+        return;
+    if (Alpha != 0 && blendFlag == 0)
+        blendFlag = 1;
+
+    register Uint32 col = ColRGB;
+    col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
+
+    #define DRAW_RECT(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
+        for (int dst_x = dst_x1; dst_x < dst_x2; dst_x++) { \
+            pixelFunction((Uint32*)&col, &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+        } \
+        dst_strideY += dstStride; \
+    }
+
+    int* multTableAt = &MultTable[opacity << 8];
+    int* multSubTableAt = &MultSubTable[opacity << 8];
+    int dst_strideY = dst_y1 * dstStride;
+    switch (blendFlag) {
+        case 0:
+            for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) {
+                Memory::Memset4(&dstPx[dst_x1 + dst_strideY], col, dst_x2 - dst_x1);
+                dst_strideY += dstStride;
+            }
+            break;
+        case 1:
+            DRAW_RECT(PixelNoFiltSetTransparent);
+            break;
+        case 2:
+            DRAW_RECT(PixelNoFiltSetAdditive);
+            break;
+        case 3:
+            DRAW_RECT(PixelNoFiltSetSubtract);
+            break;
+    }
+
+    #undef DRAW_RECT
+}
+PUBLIC STATIC void     SoftwareRenderer::FillTriangle(float x1, float y1, float x2, float y2, float x3, float y3) {
+    int x = 0, y = 0;
+    View* currentView = &Scene::Views[Scene::ViewCurrent];
+    int cx = (int)std::floor(currentView->X);
+    int cy = (int)std::floor(currentView->Y);
+
+    Matrix4x4* out = Graphics::ModelViewMatrix.top();
+    x += out->Values[12];
+    y += out->Values[13];
+    x -= cx;
+    y -= cy;
+
+    int vectors[6] = {
+        (int)x1 + x, (int)y1 + y,
+        (int)x2 + x, (int)y2 + y,
+        (int)x3 + x, (int)y3 + y,
+    };
+    int colors[3] = {
+        0,
+        0,
+        0,
+    };
+    DrawPolygonBlend(vectors, colors, 3, Alpha, BlendFlag);
+}
+
+void DrawSpriteImage(Texture* texture, int x, int y, int w, int h, int sx, int sy, int flipFlag, int blendFlag, int opacity) {
+    register Uint32* srcPx = (Uint32*)texture->Pixels;
+    register Uint32  srcStride = texture->Width;
+
+    register Uint32* dstPx = (Uint32*)Graphics::CurrentRenderTarget->Pixels;
+    register Uint32  dstStride = Graphics::CurrentRenderTarget->Width;
+
+    register int src_x1 = sx;
+    register int src_y1 = sy;
+    register int src_x2 = sx + w - 1;
+    register int src_y2 = sy + h - 1;
+
+    register int dst_x1 = x;
+    register int dst_y1 = y;
+    register int dst_x2 = x + w;
+    register int dst_y2 = y + h;
+
+    if (Alpha != 0 && blendFlag == 0)
+        blendFlag = 1;
+    if (!Graphics::TextureBlend)
+        blendFlag = 0;
+
+    if (Graphics::CurrentClip.Enabled) {
+        register int
+            clip_x1 = Graphics::CurrentClip.X,
+            clip_y1 = Graphics::CurrentClip.Y,
+            clip_x2 = Graphics::CurrentClip.X + Graphics::CurrentClip.Width,
+            clip_y2 = Graphics::CurrentClip.Y + Graphics::CurrentClip.Height;
+
+        if (dst_x2 > clip_x2)
+            dst_x2 = clip_x2;
+        if (dst_y2 > clip_y2)
+            dst_y2 = clip_y2;
+
+        if (dst_x1 < clip_x1) {
+            src_x1 += clip_x1 - dst_x1;
+            src_x2 -= clip_x1 - dst_x1;
+            dst_x1 = clip_x1;
+        }
+        if (dst_y1 < clip_y1) {
+            src_y1 += clip_y1 - dst_y1;
+            src_y2 -= clip_y1 - dst_y1;
+            dst_y1 = clip_y1;
+        }
+    }
+    else {
+        register int
+            clip_x2 = (int)Graphics::CurrentRenderTarget->Width,
+            clip_y2 = (int)Graphics::CurrentRenderTarget->Height;
+        if (dst_x2 > clip_x2)
+            dst_x2 = clip_x2;
+        if (dst_y2 > clip_y2)
+            dst_y2 = clip_y2;
+
+        if (dst_x1 < 0) {
+            src_x1 += -dst_x1;
+            src_x2 -= -dst_x1;
+            dst_x1 = 0;
+        }
+        if (dst_y1 < 0) {
+            src_y1 += -dst_y1;
+            src_y2 -= -dst_y1;
+            dst_y1 = 0;
+        }
+    }
+
+    if (dst_x1 >= dst_x2)
+        return;
+    if (dst_y1 >= dst_y2)
+        return;
+
+    #define DRAW_NOFLIP(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
+        for (int dst_x = dst_x1, src_x = src_x1; dst_x < dst_x2; dst_x++, src_x++) { \
+            pixelFunction(&srcPx[src_x + src_strideY], &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+        } \
+        dst_strideY += dstStride; src_strideY += srcStride; \
+    }
+    #define DRAW_FLIPX(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
+        for (int dst_x = dst_x1, src_x = src_x2; dst_x < dst_x2; dst_x++, src_x--) { \
+            pixelFunction(&srcPx[src_x + src_strideY], &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+        } \
+        dst_strideY += dstStride; src_strideY += srcStride; \
+    }
+    #define DRAW_FLIPY(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
+        for (int dst_x = dst_x1, src_x = src_x1; dst_x < dst_x2; dst_x++, src_x++) { \
+            pixelFunction(&srcPx[src_x + src_strideY], &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+        } \
+        dst_strideY += dstStride; src_strideY -= srcStride; \
+    }
+    #define DRAW_FLIPXY(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
+        for (int dst_x = dst_x1, src_x = src_x2; dst_x < dst_x2; dst_x++, src_x--) { \
+            pixelFunction(&srcPx[src_x + src_strideY], &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+        } \
+        dst_strideY += dstStride; src_strideY -= srcStride; \
+    }
+
+    register Uint32 color;
+    register int dst_strideY, src_strideY;
+    register int* multTableAt = &MultTable[opacity << 8];
+    register int* multSubTableAt = &MultSubTable[opacity << 8];
+    switch (flipFlag) {
+        case 0:
+            dst_strideY = dst_y1 * dstStride;
+            src_strideY = src_y1 * srcStride;
+            switch (blendFlag) {
+                case 0:
+                    DRAW_NOFLIP(PixelSetOpaque);
+                    break;
+                case 1:
+                    DRAW_NOFLIP(PixelSetTransparent);
+                    break;
+                case 2:
+                    DRAW_NOFLIP(PixelSetAdditive);
+                    break;
+                case 3:
+                    DRAW_NOFLIP(PixelSetSubtract);
+                    break;
+            }
+            break;
+        case 1:
+            dst_strideY = dst_y1 * dstStride;
+            src_strideY = src_y1 * srcStride;
+            switch (blendFlag) {
+                case 0:
+                    DRAW_FLIPX(PixelSetOpaque);
+                    break;
+                case 1:
+                    DRAW_FLIPX(PixelSetTransparent);
+                    break;
+                case 2:
+                    DRAW_FLIPX(PixelSetAdditive);
+                    break;
+                case 3:
+                    DRAW_FLIPX(PixelSetSubtract);
+                    break;
+            }
+            break;
+        case 2:
+            dst_strideY = dst_y1 * dstStride;
+            src_strideY = src_y2 * srcStride;
+            switch (blendFlag) {
+                case 0:
+                    DRAW_FLIPY(PixelSetOpaque);
+                    break;
+                case 1:
+                    DRAW_FLIPY(PixelSetTransparent);
+                    break;
+                case 2:
+                    DRAW_FLIPY(PixelSetAdditive);
+                    break;
+                case 3:
+                    DRAW_FLIPY(PixelSetSubtract);
+                    break;
+            }
+            break;
+        case 3:
+            dst_strideY = dst_y1 * dstStride;
+            src_strideY = src_y2 * srcStride;
+            switch (blendFlag) {
+                case 0:
+                    DRAW_FLIPXY(PixelSetOpaque);
+                    break;
+                case 1:
+                    DRAW_FLIPXY(PixelSetTransparent);
+                    break;
+                case 2:
+                    DRAW_FLIPXY(PixelSetAdditive);
+                    break;
+                case 3:
+                    DRAW_FLIPXY(PixelSetSubtract);
+                    break;
+            }
+            break;
+    }
+
+    #undef DRAW_NOFLIP
+    #undef DRAW_FLIPX
+    #undef DRAW_FLIPY
+    #undef DRAW_FLIPXY
+}
+void DrawSpriteImageTransformed(Texture* texture, int x, int y, int offx, int offy, int w, int h, int sx, int sy, int sw, int sh, int flipFlag, int rotation, int blendFlag, int opacity) {
+    register Uint32* srcPx = (Uint32*)texture->Pixels;
+    register Uint32  srcStride = texture->Width;
+
+    register Uint32* dstPx = (Uint32*)Graphics::CurrentRenderTarget->Pixels;
+    register Uint32  dstStride = Graphics::CurrentRenderTarget->Width;
+
+    register int src_x;
+    register int src_y;
+    register int src_x1 = sx;
+    register int src_y1 = sy;
+    register int src_x2 = sx + w - 1;
+    register int src_y2 = sy + h - 1;
+
+    register int cos = Cos0x200[rotation];
+    register int sin = Sin0x200[rotation];
+    register int rcos = Cos0x200[(0x200 - rotation + 0x200) & 0x1FF];
+    register int rsin = Sin0x200[(0x200 - rotation + 0x200) & 0x1FF];
+
+    register int _x1 = offx;
+    register int _y1 = offy;
+    register int _x2 = offx + w;
+    register int _y2 = offy + h;
+
+    switch (flipFlag) {
+        case 1: _x1 = -offx - w, _x2 = -offx; break;
+        case 2: _y1 = -offy - h, _y2 = -offy; break;
+        case 3:
+            _x1 = -offx - w, _x2 = -offx;
+            _y1 = -offy - h, _y2 = -offy;
+    }
+
+    register int dst_x1 = _x1;
+    register int dst_y1 = _y1;
+    register int dst_x2 = _x2;
+    register int dst_y2 = _y2;
+
+    if (Alpha != 0 && blendFlag == 0)
+        blendFlag = 1;
+    if (!Graphics::TextureBlend)
+        blendFlag = 0;
+
+    #define SET_MIN(a, b) if (a > b) a = b;
+    #define SET_MAX(a, b) if (a < b) a = b;
+
+    register int px, py, cx, cy;
+
+    py = _y1;
+    {
+        px = _x1;
+        cx = (px * cos - py * sin); SET_MIN(dst_x1, cx); SET_MAX(dst_x2, cx);
+        cy = (px * sin + py * cos); SET_MIN(dst_y1, cy); SET_MAX(dst_y2, cy);
+
+        px = _x2;
+        cx = (px * cos - py * sin); SET_MIN(dst_x1, cx); SET_MAX(dst_x2, cx);
+        cy = (px * sin + py * cos); SET_MIN(dst_y1, cy); SET_MAX(dst_y2, cy);
+    }
+
+    py = _y2;
+    {
+        px = _x1;
+        cx = (px * cos - py * sin); SET_MIN(dst_x1, cx); SET_MAX(dst_x2, cx);
+        cy = (px * sin + py * cos); SET_MIN(dst_y1, cy); SET_MAX(dst_y2, cy);
+
+        px = _x2;
+        cx = (px * cos - py * sin); SET_MIN(dst_x1, cx); SET_MAX(dst_x2, cx);
+        cy = (px * sin + py * cos); SET_MIN(dst_y1, cy); SET_MAX(dst_y2, cy);
+    }
+
+    #undef SET_MIN
+    #undef SET_MAX
+
+    dst_x1 >>= 9;
+    dst_y1 >>= 9;
+    dst_x2 >>= 9;
+    dst_y2 >>= 9;
+
+    dst_x1 += x;
+    dst_y1 += y;
+    dst_x2 += x + 1;
+    dst_y2 += y + 1;
+
+    if (Graphics::CurrentClip.Enabled) {
+        register int
+            clip_x1 = Graphics::CurrentClip.X,
+            clip_y1 = Graphics::CurrentClip.Y,
+            clip_x2 = Graphics::CurrentClip.X + Graphics::CurrentClip.Width,
+            clip_y2 = Graphics::CurrentClip.Y + Graphics::CurrentClip.Height;
+
+        if (dst_x1 < clip_x1)
+            dst_x1 = clip_x1;
+        if (dst_y1 < clip_y1)
+            dst_y1 = clip_y1;
+        if (dst_x2 > clip_x2)
+            dst_x2 = clip_x2;
+        if (dst_y2 > clip_y2)
+            dst_y2 = clip_y2;
+    }
+    else {
+        register int
+            clip_x2 = (int)Graphics::CurrentRenderTarget->Width,
+            clip_y2 = (int)Graphics::CurrentRenderTarget->Height;
+        if (dst_x1 < 0)
+            dst_x1 = 0;
+        if (dst_y1 < 0)
+            dst_y1 = 0;
+        if (dst_x2 > clip_x2)
+            dst_x2 = clip_x2;
+        if (dst_y2 > clip_y2)
+            dst_y2 = clip_y2;
+    }
+
+    if (dst_x1 >= dst_x2)
+        return;
+    if (dst_y1 >= dst_y2)
+        return;
+
+    #define DRAW_NOFLIP(pixelFunction) for (int dst_y = dst_y1, i_y = dst_y1 - y; dst_y < dst_y2; dst_y++, i_y++) { \
+        i_y_rsin = -i_y * rsin; \
+        i_y_rcos =  i_y * rcos; \
+        for (int dst_x = dst_x1, i_x = dst_x1 - x; dst_x < dst_x2; dst_x++, i_x++) { \
+            src_x = (i_x * rcos + i_y_rsin) >> 9; \
+            src_y = (i_x * rsin + i_y_rcos) >> 9; \
+            if (src_x >= _x1 && src_y >= _y1 && \
+                src_x <  _x2 && src_y <  _y2) { \
+                src_x       = (src_x1 + (src_x - _x1)); \
+                src_strideY = (src_y1 + (src_y - _y1)) * srcStride; \
+                pixelFunction(&srcPx[src_x + src_strideY], &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+            } \
+        } \
+        dst_strideY += dstStride; \
+    }
+    #define DRAW_FLIPX(pixelFunction) for (int dst_y = dst_y1, i_y = dst_y1 - y; dst_y < dst_y2; dst_y++, i_y++) { \
+        i_y_rsin = -i_y * rsin; \
+        i_y_rcos =  i_y * rcos; \
+        for (int dst_x = dst_x1, i_x = dst_x1 - x; dst_x < dst_x2; dst_x++, i_x++) { \
+            src_x = (i_x * rcos + i_y_rsin) >> 9; \
+            src_y = (i_x * rsin + i_y_rcos) >> 9; \
+            if (src_x >= _x1 && src_y >= _y1 && \
+                src_x <  _x2 && src_y <  _y2) { \
+                src_x       = (src_x2 - (src_x - _x1)); \
+                src_strideY = (src_y1 + (src_y - _y1)) * srcStride; \
+                pixelFunction(&srcPx[src_x + src_strideY], &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+            } \
+        } \
+        dst_strideY += dstStride; \
+    }
+    #define DRAW_FLIPY(pixelFunction) for (int dst_y = dst_y1, i_y = dst_y1 - y; dst_y < dst_y2; dst_y++, i_y++) { \
+        i_y_rsin = -i_y * rsin; \
+        i_y_rcos =  i_y * rcos; \
+        for (int dst_x = dst_x1, i_x = dst_x1 - x; dst_x < dst_x2; dst_x++, i_x++) { \
+            src_x = (i_x * rcos + i_y_rsin) >> 9; \
+            src_y = (i_x * rsin + i_y_rcos) >> 9; \
+            if (src_x >= _x1 && src_y >= _y1 && \
+                src_x <  _x2 && src_y <  _y2) { \
+                src_x       = (src_x1 + (src_x - _x1)); \
+                src_strideY = (src_y2 - (src_y - _y1)) * srcStride; \
+                pixelFunction(&srcPx[src_x + src_strideY], &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+            } \
+        } \
+        dst_strideY += dstStride; \
+    }
+    #define DRAW_FLIPXY(pixelFunction) for (int dst_y = dst_y1, i_y = dst_y1 - y; dst_y < dst_y2; dst_y++, i_y++) { \
+        i_y_rsin = -i_y * rsin; \
+        i_y_rcos =  i_y * rcos; \
+        for (int dst_x = dst_x1, i_x = dst_x1 - x; dst_x < dst_x2; dst_x++, i_x++) { \
+            src_x = (i_x * rcos + i_y_rsin) >> 9; \
+            src_y = (i_x * rsin + i_y_rcos) >> 9; \
+            if (src_x >= _x1 && src_y >= _y1 && \
+                src_x <  _x2 && src_y <  _y2) { \
+                src_x       = (src_x2 - (src_x - _x1)); \
+                src_strideY = (src_y2 - (src_y - _y1)) * srcStride; \
+                pixelFunction(&srcPx[src_x + src_strideY], &dstPx[dst_x + dst_strideY], opacity, multTableAt, multSubTableAt); \
+            } \
+        } \
+        dst_strideY += dstStride; \
+    }
+
+    register Uint32 color;
+    register int i_y_rsin, i_y_rcos;
+    register int dst_strideY, src_strideY;
+    register int* multTableAt = &MultTable[opacity << 8];
+    register int* multSubTableAt = &MultSubTable[opacity << 8];
+    switch (flipFlag) {
+        case 0:
+            dst_strideY = dst_y1 * dstStride;
+            switch (blendFlag) {
+                case 0:
+                    DRAW_NOFLIP(PixelSetOpaque);
+                    break;
+                case 1:
+                    DRAW_NOFLIP(PixelSetTransparent);
+                    break;
+                case 2:
+                    DRAW_NOFLIP(PixelSetAdditive);
+                    break;
+                case 3:
+                    DRAW_NOFLIP(PixelSetSubtract);
+                    break;
+            }
+            break;
+        case 1:
+            dst_strideY = dst_y1 * dstStride;
+            switch (blendFlag) {
+                case 0:
+                    DRAW_FLIPX(PixelSetOpaque);
+                    break;
+                case 1:
+                    DRAW_FLIPX(PixelSetTransparent);
+                    break;
+                case 2:
+                    DRAW_FLIPX(PixelSetAdditive);
+                    break;
+                case 3:
+                    DRAW_FLIPX(PixelSetSubtract);
+                    break;
+            }
+            break;
+        case 2:
+            dst_strideY = dst_y1 * dstStride;
+            switch (blendFlag) {
+                case 0:
+                    DRAW_FLIPY(PixelSetOpaque);
+                    break;
+                case 1:
+                    DRAW_FLIPY(PixelSetTransparent);
+                    break;
+                case 2:
+                    DRAW_FLIPY(PixelSetAdditive);
+                    break;
+                case 3:
+                    DRAW_FLIPY(PixelSetSubtract);
+                    break;
+            }
+            break;
+        case 3:
+            dst_strideY = dst_y1 * dstStride;
+            switch (blendFlag) {
+                case 0:
+                    DRAW_FLIPXY(PixelSetOpaque);
+                    break;
+                case 1:
+                    DRAW_FLIPXY(PixelSetTransparent);
+                    break;
+                case 2:
+                    DRAW_FLIPXY(PixelSetAdditive);
+                    break;
+                case 3:
+                    DRAW_FLIPXY(PixelSetSubtract);
+                    break;
+            }
+            break;
+    }
+
+    #undef DRAW_NOFLIP
+    #undef DRAW_FLIPX
+    #undef DRAW_FLIPY
+    #undef DRAW_FLIPXY
 }
 
 PUBLIC STATIC void     SoftwareRenderer::DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h) {
+    View* currentView = &Scene::Views[Scene::ViewCurrent];
+    int cx = (int)std::floor(currentView->X);
+    int cy = (int)std::floor(currentView->Y);
 
+    Matrix4x4* out = Graphics::ModelViewMatrix.top();
+    x += out->Values[12];
+    y += out->Values[13];
+    x -= cx;
+    y -= cy;
+
+    DrawSpriteImage(texture,
+        x, y, (int)sw, (int)sh, (int)sx, (int)sy, 0, BlendFlag, Alpha);
 }
-PUBLIC STATIC void     SoftwareRenderer::DrawTexture(Texture* texture, float x, float y, float w, float h) {
+PUBLIC STATIC void     SoftwareRenderer::DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation) {
+    if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
 
+    AnimFrame frameStr = sprite->Animations[animation].Frames[frame];
+    Texture* texture = sprite->Spritesheets[frameStr.SheetNumber];
+
+    View* currentView = &Scene::Views[Scene::ViewCurrent];
+    int cx = (int)std::floor(currentView->X);
+    int cy = (int)std::floor(currentView->Y);
+
+    Matrix4x4* out = Graphics::ModelViewMatrix.top();
+    x += out->Values[12];
+    y += out->Values[13];
+    x -= cx;
+    y -= cy;
+
+    int flipFlag = (int)flipX | ((int)flipY << 1);
+    if (rotation != 0.0f || scaleW != 1.0f || scaleH != 1.0f) {
+        int rot = (int)(rotation * 0x100 / M_PI) & 0x1FF;
+        DrawSpriteImageTransformed(texture,
+            x, y,
+            frameStr.OffsetX, frameStr.OffsetY,
+            frameStr.Width, frameStr.Height,
+
+            frameStr.X, frameStr.Y,
+            frameStr.Width, frameStr.Height,
+            flipFlag, rot,
+            BlendFlag, Alpha);
+        return;
+    }
+    switch (flipFlag) {
+        case 0:
+            DrawSpriteImage(texture,
+                x + frameStr.OffsetX,
+                y + frameStr.OffsetY,
+                frameStr.Width, frameStr.Height, frameStr.X, frameStr.Y, flipFlag, BlendFlag, Alpha);
+            break;
+        case 1:
+            DrawSpriteImage(texture,
+                x - frameStr.OffsetX - frameStr.Width,
+                y + frameStr.OffsetY,
+                frameStr.Width, frameStr.Height, frameStr.X, frameStr.Y, flipFlag, BlendFlag, Alpha);
+            break;
+        case 2:
+            DrawSpriteImage(texture,
+                x + frameStr.OffsetX,
+                y - frameStr.OffsetY - frameStr.Height,
+                frameStr.Width, frameStr.Height, frameStr.X, frameStr.Y, flipFlag, BlendFlag, Alpha);
+            break;
+        case 3:
+            DrawSpriteImage(texture,
+                x - frameStr.OffsetX - frameStr.Width,
+                y - frameStr.OffsetY - frameStr.Height,
+                frameStr.Width, frameStr.Height, frameStr.X, frameStr.Y, flipFlag, BlendFlag, Alpha);
+            break;
+    }
 }
-PUBLIC STATIC void     SoftwareRenderer::DrawTexture(Texture* texture, float x, float y) {
+PUBLIC STATIC void     SoftwareRenderer::DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation) {
+	if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
 
+	/*
+
+	bool AltPal = false;
+	Uint32 PixelIndex, *Pal = sprite->Palette;
+	AnimFrame animframe = sprite->Animations[animation].Frames[frame];
+
+	srcw = Math::Min(srcw, animframe.Width- srcx);
+	srch = Math::Min(srch, animframe.H - srcy);
+
+	int DX = 0, DY = 0, PX, PY, size = srcw * srch;
+	int CenterX = x, CenterY = y, RealCenterX = animframe.OffX, RealCenterY = animframe.OffY;
+	int SrcX = animframe.X + srcx, SrcY = animframe.Y + srcy, Width = srcw - 1, Height = srch - 1;
+
+	if (flipX)
+		RealCenterX = -RealCenterX - Width - 1;
+	if (flipY)
+		RealCenterY = -RealCenterY - Height - 1;
+
+	if (!AltPal && CenterY + RealCenterY >= WaterPaletteStartLine)
+		AltPal = true, Pal = sprite->PaletteAlt;
+
+	if (CenterX + Width + RealCenterX < Clip[0]) return;
+	if (CenterY + Height + RealCenterY < Clip[1]) return;
+	if (CenterX + RealCenterX >= Clip[2]) return;
+	if (CenterY + RealCenterY >= Clip[3]) return;
+
+	int FX, FY;
+	for (int D = 0; D < size; D++) {
+		PX = DX;
+		PY = DY;
+		if (flipX)
+			PX = Width - PX;
+		if (flipY)
+			PY = Height - PY;
+
+		FX = CenterX + DX + RealCenterX;
+		FY = CenterY + DY + RealCenterY;
+		if (FX <  Clip[0]) goto CONTINUE;
+		if (FY <  Clip[1]) goto CONTINUE;
+		if (FX >= Clip[2]) goto CONTINUE;
+		if (FY >= Clip[3]) return;
+
+		PixelIndex = GetPixelIndex(sprite, SrcX + PX, SrcY + PY);
+		if (sprite->PaletteCount) {
+			if (PixelIndex != sprite->TransparentColorIndex)
+				SetPixelFunction(FX, FY, GetPixelOutputColor(Pal[PixelIndex]));
+				// SetPixelFunction(FX, FY, Pal[PixelIndex]);
+		}
+		else if (PixelIndex & 0xFF000000U) {
+			SetPixelFunction(FX, FY, GetPixelOutputColor(PixelIndex));
+			// SetPixelFunction(FX, FY, PixelIndex);
+		}
+
+		CONTINUE:
+
+		DX++;
+		if (DX > Width) {
+			DX = 0, DY++;
+
+			if (!AltPal && CenterY + DY + RealCenterY >= WaterPaletteStartLine)
+				AltPal = true, Pal = sprite->PaletteAlt;
+		}
+	}
+	//*/
+
+    AnimFrame frameStr = sprite->Animations[animation].Frames[frame];
+    Texture* texture = sprite->Spritesheets[frameStr.SheetNumber];
+
+    View* currentView = &Scene::Views[Scene::ViewCurrent];
+    int cx = (int)std::floor(currentView->X);
+    int cy = (int)std::floor(currentView->Y);
+
+    Matrix4x4* out = Graphics::ModelViewMatrix.top();
+    x += out->Values[12];
+    y += out->Values[13];
+    x -= cx;
+    y -= cy;
+
+    if (sw >= frameStr.Width - sx)
+        sw  = frameStr.Width - sx;
+    if (sh >= frameStr.Height - sy)
+        sh  = frameStr.Height - sy;
+
+    int flipFlag = flipX | (flipY << 1);
+    switch (flipFlag) {
+        case 0:
+            DrawSpriteImage(texture,
+                x + frameStr.OffsetX + sx,
+                y + frameStr.OffsetY + sy,
+                sw, sh, frameStr.X + sx, frameStr.Y + sy, flipFlag, BlendFlag, Alpha);
+            break;
+        case 1:
+            DrawSpriteImage(texture,
+                x - frameStr.OffsetX - sw - sx,
+                y + frameStr.OffsetY + sy,
+                sw, sh, frameStr.X + sx, frameStr.Y + sy, flipFlag, BlendFlag, Alpha);
+            break;
+        case 2:
+            DrawSpriteImage(texture,
+                x + frameStr.OffsetX + sx,
+                y - frameStr.OffsetY - sh - sy,
+                sw, sh, frameStr.X + sx, frameStr.Y + sy, flipFlag, BlendFlag, Alpha);
+            break;
+        case 3:
+            DrawSpriteImage(texture,
+                x - frameStr.OffsetX - sw - sx,
+                y - frameStr.OffsetY - sh - sy,
+                sw, sh, frameStr.X + sx, frameStr.Y + sy, flipFlag, BlendFlag, Alpha);
+            break;
+    }
+}
+
+PUBLIC STATIC void     SoftwareRenderer::MakeFrameBufferID(ISprite* sprite, AnimFrame* frame) {
+    frame->ID = 0;
 }

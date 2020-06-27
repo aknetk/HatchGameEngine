@@ -73,7 +73,7 @@ char        StartingScene[256];
 ISprite*    DEBUG_fontSprite = NULL;
 void        DEBUG_DrawText(char* text, float x, float y) {
     for (char* i = text; *i; i++) {
-        Graphics::DrawSprite(DEBUG_fontSprite, 0, (int)*i, x, y, 0, 0);
+        Graphics::DrawSprite(DEBUG_fontSprite, 0, (int)*i, x, y, false, false, 1.0f, 1.0f, 0.0f);
         x += 14; // DEBUG_fontSprite->Animations[0].Frames[(int)*i].ID;
     }
 }
@@ -227,13 +227,17 @@ PUBLIC STATIC void Application::GetPerformanceSnapshot() {
             Log::Print(Log::LOG_INFO, typeNames[i], types[i]);
         }
 
+        double total = 0.0;
         Log::Print(Log::LOG_IMPORTANT, "Object Performance Snapshot:");
         for (size_t i = 0; i < ListList.size(); i++) {
             ObjectList* list = ListList[i];
             Log::Print(Log::LOG_INFO, "Object \"%s\": \n            Avg Update %.1f mcs (Total %.1f mcs, Count %d)\n            Avg Render %.1f mcs (Total %.1f mcs, Count %d)", list->ObjectName,
                 list->AverageUpdateTime * 1000.0, list->AverageUpdateTime * list->AverageUpdateItemCount * 1000.0, (int)list->AverageUpdateItemCount,
                 list->AverageRenderTime * 1000.0, list->AverageRenderTime * list->AverageRenderItemCount * 1000.0, (int)list->AverageRenderItemCount);
+
+            total += list->AverageRenderTime * list->AverageRenderItemCount * 1000.0;
         }
+        Log::Print(Log::LOG_WARN, "Total: %.3f mcs / %.3f ms", total, total / 1000.0);
 
         Log::Print(Log::LOG_IMPORTANT, "Garbage Size:");
         Log::Print(Log::LOG_INFO, "%u", (Uint32)GarbageCollector::GarbageSize);

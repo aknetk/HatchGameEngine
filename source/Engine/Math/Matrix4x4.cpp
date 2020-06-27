@@ -326,5 +326,5 @@ PUBLIC STATIC void       Matrix4x4::LookAt(Matrix4x4* out, float eyex, float eye
 }
 
 PUBLIC STATIC void       Matrix4x4::Print(Matrix4x4* out) {
-    Log::Print(Log::LOG_INFO, "mat4 \n%f %f %f %f \n%f %f %f %f \n%f %f %f %f \n%f %f %f %f", out->Values[0], out->Values[1], out->Values[2], out->Values[3], out->Values[4], out->Values[5], out->Values[6], out->Values[7], out->Values[8], out->Values[9], out->Values[10], out->Values[11], out->Values[12], out->Values[13], out->Values[14], out->Values[15]);
+    Log::Print(Log::LOG_INFO, "\n%6.2f %6.2f %6.2f %6.2f \n%6.2f %6.2f %6.2f %6.2f \n%6.2f %6.2f %6.2f %6.2f \n%6.2f %6.2f %6.2f %6.2f", out->Values[0], out->Values[1], out->Values[2], out->Values[3], out->Values[4], out->Values[5], out->Values[6], out->Values[7], out->Values[8], out->Values[9], out->Values[10], out->Values[11], out->Values[12], out->Values[13], out->Values[14], out->Values[15]);
 }

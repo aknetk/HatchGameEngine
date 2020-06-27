@@ -67,8 +67,8 @@ public:
     static Uint32   CreateTexturedShapeBuffer(float* data, int vertexCount);
     static void     DrawTexturedShapeBuffer(Texture* texture, Uint32 bufferID, int vertexCount);
     static void     DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h);
-    static void     DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY);
-    static void     DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY);
+    static void     DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
+    static void     DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
     static void     MakeFrameBufferID(ISprite* sprite, AnimFrame* frame);
 };
 

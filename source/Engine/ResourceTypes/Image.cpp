@@ -137,12 +137,19 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
         return NULL;
     }
 
-    if (width > Graphics::MaxTextureWidth || height > Graphics::MaxTextureHeight) {
-		Log::Print(Log::LOG_ERROR, "Image file \"%s\" of size %d x %d is larger than maximum size of %d x %d!", altered, width, height, Graphics::MaxTextureWidth, Graphics::MaxTextureHeight);
-		return NULL;
-	}
+    // if (!overrideSoftware && (width > Graphics::MaxTextureWidth || height > Graphics::MaxTextureHeight)) {
+	// 	Log::Print(Log::LOG_ERROR, "Image file \"%s\" of size %d x %d is larger than maximum size of %d x %d!", altered, width, height, Graphics::MaxTextureWidth, Graphics::MaxTextureHeight);
+	// 	return NULL;
+	// }
+
+    bool overrideSoftware = false;
+    Application::Settings->GetBool("display", "software", &overrideSoftware);
+    if (overrideSoftware)
+        Graphics::NoInternalTextures = true;
 
     texture = Graphics::CreateTextureFromPixels(width, height, data, width * sizeof(Uint32));
+    Graphics::NoInternalTextures = false;
+
     Memory::Free(data);
 
     // Graphics::SpriteSheetTextureMap->Put(altered, texture);

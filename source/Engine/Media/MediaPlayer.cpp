@@ -800,4 +800,104 @@ PUBLIC STATIC Uint32       MediaPlayer::GetOutputLength(MediaPlayer* player, int
     return dec->GetOutputLength();
 }
 
+#else
+
+int          MediaPlayer::DemuxAllStreams(MediaPlayer* player) {
+    return DEMUXER_KEEP_READING;
+}
+int          MediaPlayer::RunAllDecoders(MediaPlayer* player) {
+    return DECODER_RUN_OKAY;
+}
+int          MediaPlayer::DecoderThreadFunc(void* ptr) {
+    return 0;
+}
+
+MediaPlayer* MediaPlayer::Create(MediaSource* src, int video_stream_index, int audio_stream_index, int subtitle_stream_index, int screen_w, int screen_h) {
+    return NULL;
+}
+void         MediaPlayer::Close() {
+
+}
+
+void         MediaPlayer::SetScreenSize(int w, int h) {
+
+}
+int          MediaPlayer::GetVideoStream() {
+    return 0;
+}
+int          MediaPlayer::GetAudioStream() {
+    return 0;
+}
+int          MediaPlayer::GetSubtitleStream() {
+    return 0;
+}
+void         MediaPlayer::GetInfo(PlayerInfo* info) {
+
+}
+double       MediaPlayer::GetDuration() {
+    return 0.0;
+}
+double       MediaPlayer::GetPosition() {
+    return 0.0;
+}
+double       MediaPlayer::GetBufferPosition() {
+    return 0.0;
+}
+
+bool         MediaPlayer::ManageWaiting() {
+    return false;
+}
+int          MediaPlayer::GetVideoData(Texture* texture) {
+    return 0;
+}
+int          MediaPlayer::GetVideoDataForPaused(Texture* texture) {
+    return 0;
+}
+int          MediaPlayer::GetAudioData(unsigned char* buffer, int length) {
+    return 0;
+}
+int          MediaPlayer::GetSubtitleData(Texture* texture, SDL_Rect* sources, SDL_Rect* targets, int limit) {
+    return 0;
+}
+
+void         MediaPlayer::SetClockSync() {
+
+}
+void         MediaPlayer::SetClockSyncOffset(double offset) {
+
+}
+void         MediaPlayer::ChangeClockSync(double delta) {
+
+}
+
+void         MediaPlayer::Play() {
+
+}
+void         MediaPlayer::Stop() {
+
+}
+void         MediaPlayer::Pause() {
+
+}
+int          MediaPlayer::Seek(double seek_set) {
+    return 0;
+}
+Uint32       MediaPlayer::GetPlayerState() {
+    return this->State;
+}
+
+bool         MediaPlayer::IsInputEmpty() {
+    return true;
+}
+bool         MediaPlayer::IsOutputEmpty() {
+    return true;
+}
+
+
+Uint32       MediaPlayer::GetInputLength(MediaPlayer* player, int i) {
+    return 0;
+}
+Uint32       MediaPlayer::GetOutputLength(MediaPlayer* player, int i) {
+    return 0;
+}
 #endif

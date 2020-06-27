@@ -468,6 +468,8 @@ PUBLIC STATIC Uint32   GLRenderer::GetWindowFlags() {
     return SDL_WINDOW_OPENGL;
 }
 PUBLIC STATIC void     GLRenderer::SetGraphicsFunctions() {
+    Graphics::PixelOffset = 0.0f;
+
     Graphics::Internal.Init = GLRenderer::Init;
     Graphics::Internal.GetWindowFlags = GLRenderer::GetWindowFlags;
     Graphics::Internal.Dispose = GLRenderer::Dispose;
@@ -730,6 +732,9 @@ PUBLIC STATIC void     GLRenderer::UnlockTexture(Texture* texture) {
 }
 PUBLIC STATIC void     GLRenderer::DisposeTexture(Texture* texture) {
     GL_TextureData* textureData = (GL_TextureData*)texture->DriverData;
+    if (!textureData)
+        return;
+
     if (texture->Access == SDL_TEXTUREACCESS_TARGET) {
         glDeleteFramebuffers(1, &textureData->FBO); CHECK_GL();
         #ifdef GL_SUPPORTS_RENDERBUFFER
@@ -737,14 +742,14 @@ PUBLIC STATIC void     GLRenderer::DisposeTexture(Texture* texture) {
         #endif
     }
     else if (texture->Access == SDL_TEXTUREACCESS_STREAMING) {
-        free(texture->Pixels);
+        // free(texture->Pixels);
     }
     if (textureData->YUV) {
         glDeleteTextures(1, &textureData->TextureU); CHECK_GL();
         glDeleteTextures(1, &textureData->TextureV); CHECK_GL();
     }
     glDeleteTextures(1, &textureData->TextureID); CHECK_GL();
-    Memory::Free(texture->DriverData);
+    Memory::Free(textureData);
 }
 
 // Viewport and view-related functions
@@ -1068,7 +1073,7 @@ PUBLIC STATIC void     GLRenderer::DrawTexturedShapeBuffer(Texture* texture, Uin
 PUBLIC STATIC void     GLRenderer::DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h) {
     GL_DrawTexture(texture, sx, sy, sw, sh, x, y, w, h);
 }
-PUBLIC STATIC void     GLRenderer::DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY) {
+PUBLIC STATIC void     GLRenderer::DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation) {
     if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
 
     // /*
@@ -1090,7 +1095,7 @@ PUBLIC STATIC void     GLRenderer::DrawSprite(ISprite* sprite, int animation, in
     //     x + fX * animframe.OffsetX,
     //     y + fY * animframe.OffsetY, fX * sw, fY * sh);
 }
-PUBLIC STATIC void     GLRenderer::DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY) {
+PUBLIC STATIC void     GLRenderer::DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation) {
     if (Graphics::SpriteRangeCheck(sprite, animation, frame)) return;
 
     AnimFrame animframe = sprite->Animations[animation].Frames[frame];

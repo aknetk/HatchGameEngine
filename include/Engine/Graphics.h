@@ -47,6 +47,11 @@ public:
     static bool               SmoothStroke;
     // Rendering functions
     static GraphicsFunctions  Internal;
+    static GraphicsFunctions* GfxFunctions;
+    static const char*        Renderer;
+    static float              PixelOffset;
+    static bool 			  NoInternalTextures;
+    static int   			  BlendMode;
 
     static void     Init();
     static void     ChooseBackend();
@@ -65,6 +70,8 @@ public:
     static void     SetTextureInterpolation(bool interpolate);
     static void     Clear();
     static void     Present();
+    static void     SoftwareStart();
+    static void     SoftwareEnd();
     static void     SetRenderTarget(Texture* texture);
     static void     UpdateOrtho(float width, float height);
     static void     UpdateOrthoFlipped(float width, float height);
@@ -93,8 +100,8 @@ public:
     static void     FillTriangle(float x1, float y1, float x2, float y2, float x3, float y3);
     static void     FillRectangle(float x, float y, float w, float h);
     static void     DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h);
-    static void     DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY);
-    static void     DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY);
+    static void     DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
+    static void     DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
     static void     MakeFrameBufferID(ISprite* sprite, AnimFrame* frame);
     static bool     SpriteRangeCheck(ISprite* sprite, int animation, int frame);
 };

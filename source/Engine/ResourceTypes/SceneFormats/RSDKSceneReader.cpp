@@ -388,7 +388,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
                 objectNameHash2,
                 ObjectHashes->Get(objectNameHash));
 
-            // if (objectList->SpawnFunction) {
+            if (objectList->SpawnFunction) {
             //     for (int a = 1; a < argumentCount; a++) {
             //         if (PropertyHashes->Exists(argumentHashes[a]) && argumentHashes[a] != 0x7CEA5BB0U) {
             //             const char* argType;
@@ -409,7 +409,10 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
             //             Log::Print(Log::LOG_VERBOSE, "Property: %s    Type: %s", PropertyHashes->Get(argumentHashes[a]), argType);
             //         }
             //     }
-            // }
+            }
+            else {
+                Log::Print(Log::LOG_WARN, "Unimplemented %s class!", ObjectHashes->Get(objectNameHash));
+            }
         }
 
         for (int n = 0; n < entityCount; n++) {

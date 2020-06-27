@@ -327,6 +327,21 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
                         obj->Properties->Put("Width", INTEGER_VAL((int)XMLParser::TokenToNumber(object->attributes.Get("width"))));
                         obj->Properties->Put("Height", INTEGER_VAL((int)XMLParser::TokenToNumber(object->attributes.Get("height"))));
                     }
+                    if (object->attributes.Exists("rotation")) {
+                        obj->Properties->Put("Rotation", INTEGER_VAL((int)XMLParser::TokenToNumber(object->attributes.Get("rotation"))));
+                    }
+
+                    if (object->attributes.Exists("gid")) {
+                        Uint32 gid = (Uint32)XMLParser::TokenToNumber(object->attributes.Get("gid"));
+                        if (gid & TILE_FLIPX_MASK)
+                            obj->Properties->Put("FlipX", INTEGER_VAL(1));
+                        else
+                            obj->Properties->Put("FlipX", INTEGER_VAL(0));
+                        if (gid & TILE_FLIPY_MASK)
+                            obj->Properties->Put("FlipY", INTEGER_VAL(1));
+                        else
+                            obj->Properties->Put("FlipY", INTEGER_VAL(0));
+                    }
 
                     for (size_t p = 0; p < object->children.size(); p++) {
                         if (XMLParser::MatchToken(object->children[p]->name, "properties")) {
@@ -342,6 +357,7 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
                                     memcpy(object_attribute_name, property_name.Start, property_name.Length);
                                     object_attribute_name[property_name.Length] = 0;
 
+                                    float fx, fy;
                                     VMValue val = NULL_VAL;
                                     if (XMLParser::MatchToken(property_type, "int")) {
                                         val = INTEGER_VAL((int)XMLParser::TokenToNumber(property_value));
@@ -368,6 +384,15 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
                                         just a string
                                         */
                                         val = OBJECT_VAL(CopyString(property_value.Start, property_value.Length));
+                                    }
+                                    else if (sscanf(property_value.Start, "vec2 %f,%f", &fx, &fy) == 2) {
+                                        VMValue valX = DECIMAL_VAL(fx);
+                                        VMValue valY = DECIMAL_VAL(fy);
+
+                                        ObjArray* array = NewArray();
+                                        array->Values->push_back(valX);
+                                        array->Values->push_back(valY);
+                                        val = OBJECT_VAL(array);
                                     }
                                     else { // implied as string
                                         val = OBJECT_VAL(CopyString(property_value.Start, property_value.Length));

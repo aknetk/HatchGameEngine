@@ -5,7 +5,8 @@
 class View {
 public:
     bool       Active = false;
-    bool       Visible = true; 
+    bool       Visible = true;
+    bool       Software = false;
     float      X = 0.0f;
     float      Y = 0.0f;
     float      Z = 0.0f;

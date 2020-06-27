@@ -154,7 +154,7 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
     fflush(stdout);
 
     if (WriteToFile && f) {
-        fprintf(f, "%s\r\n", string);
+        fprintf(f, "%s\n", string);
         fclose(f);
     }
 }
