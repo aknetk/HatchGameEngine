@@ -46,6 +46,7 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
     Uint32   width = 0;
     Uint32   height = 0;
 
+    bool paletted = false;
     const char* altered = filename;
 
     // if ((texture = Graphics::SpriteSheetTextureMap->Get(altered))) {
@@ -78,6 +79,7 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
             height = (Uint32)png->Height;
 
             data = png->Data;
+            paletted = png->Paletted;
             Memory::Track(data, "Texture::Data");
 
             delete png;
@@ -115,6 +117,7 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
             height = (Uint32)gif->Height;
 
             data = gif->Data;
+            paletted = gif->Paletted;
             // Palette = gif->Colors;
             // PaletteAlt = (Uint32*)Memory::TrackedCalloc("Sprite::PaletteAlt", 256, sizeof(Uint32));
             // PaletteCount = 1;
@@ -137,17 +140,19 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
         return NULL;
     }
 
-    // if (!overrideSoftware && (width > Graphics::MaxTextureWidth || height > Graphics::MaxTextureHeight)) {
-	// 	Log::Print(Log::LOG_ERROR, "Image file \"%s\" of size %d x %d is larger than maximum size of %d x %d!", altered, width, height, Graphics::MaxTextureWidth, Graphics::MaxTextureHeight);
-	// 	return NULL;
-	// }
-
     bool overrideSoftware = false;
     Application::Settings->GetBool("display", "software", &overrideSoftware);
     if (overrideSoftware)
         Graphics::NoInternalTextures = true;
 
+    if (!overrideSoftware && (width > Graphics::MaxTextureWidth || height > Graphics::MaxTextureHeight)) {
+		Log::Print(Log::LOG_WARN, "Image file \"%s\" of size %d x %d is larger than maximum size of %d x %d!", altered, width, height, Graphics::MaxTextureWidth, Graphics::MaxTextureHeight);
+		// return NULL;
+	}
+
     texture = Graphics::CreateTextureFromPixels(width, height, data, width * sizeof(Uint32));
+    texture->Paletted = paletted;
+
     Graphics::NoInternalTextures = false;
 
     Memory::Free(data);

@@ -19,10 +19,35 @@ public:
 #define LINK_DEC(VAR) Instance->Fields->Put(#VAR, DECIMAL_LINK_VAL(&VAR))
 #define LINK_BOOL(VAR) Instance->Fields->Put(#VAR, INTEGER_LINK_VAL(&VAR))
 
+bool   SavedHashes = false;
+Uint32 Hash_GameStart = 0;
+Uint32 Hash_Create = 0;
+Uint32 Hash_Update = 0;
+Uint32 Hash_UpdateLate = 0;
+Uint32 Hash_UpdateEarly = 0;
+Uint32 Hash_RenderEarly = 0;
+Uint32 Hash_Render = 0;
+Uint32 Hash_RenderLate = 0;
+Uint32 Hash_OnAnimationFinish = 0;
+
 PUBLIC void BytecodeObject::Link(ObjInstance* instance) {
     Instance = instance;
     Instance->EntityPtr = this;
     Properties = new HashMap<VMValue>(NULL, 4);
+
+    if (!SavedHashes) {
+        Hash_GameStart = Murmur::EncryptString("GameStart");
+        Hash_Create = Murmur::EncryptString("Create");
+        Hash_Update = Murmur::EncryptString("Update");
+        Hash_UpdateLate = Murmur::EncryptString("UpdateLate");
+        Hash_UpdateEarly = Murmur::EncryptString("UpdateEarly");
+        Hash_RenderEarly = Murmur::EncryptString("RenderEarly");
+        Hash_Render = Murmur::EncryptString("Render");
+        Hash_RenderLate = Murmur::EncryptString("RenderLate");
+        Hash_OnAnimationFinish = Murmur::EncryptString("OnAnimationFinish");
+
+        SavedHashes = true;
+    }
 
     LINK_DEC(X);
     LINK_DEC(Y);
@@ -52,6 +77,9 @@ PUBLIC void BytecodeObject::Link(ObjInstance* instance) {
     LINK_DEC(OnScreenHitboxW);
     LINK_DEC(OnScreenHitboxH);
     LINK_INT(ViewRenderFlag);
+
+    Instance->Fields->Put("UpdateRegionW", DECIMAL_LINK_VAL(&OnScreenHitboxW));
+    Instance->Fields->Put("UpdateRegionH", DECIMAL_LINK_VAL(&OnScreenHitboxH));
     LINK_DEC(RenderRegionW);
     LINK_DEC(RenderRegionH);
 
@@ -68,11 +96,10 @@ PUBLIC void BytecodeObject::Link(ObjInstance* instance) {
 
 #undef LINK
 
-PUBLIC bool BytecodeObject::RunFunction(const char* f) {
+PUBLIC bool BytecodeObject::RunFunction(Uint32 hash) {
     // NOTE:
     // If the function doesn't exist, this is not an error VM side,
     // treat whatever we call from C++ as a virtual-like function.
-    Uint32 hash = FNV1A::EncryptString(f);
     if (!Instance->Class->Methods->Exists(hash))
         return true;
 
@@ -100,8 +127,7 @@ PUBLIC bool BytecodeObject::RunCreateFunction(int flag) {
     // NOTE:
     // If the function doesn't exist, this is not an error VM side,
     // treat whatever we call from C++ as a virtual-like function.
-    const char* f = "Create";
-    Uint32 hash = FNV1A::EncryptString(f);
+    Uint32 hash = Hash_Create;
     if (!Instance->Class->Methods->Exists(hash))
         return true;
 
@@ -139,7 +165,7 @@ PUBLIC bool BytecodeObject::RunCreateFunction(int flag) {
 PUBLIC void BytecodeObject::GameStart() {
     if (!Instance) return;
 
-    RunFunction("GameStart");
+    RunFunction(Hash_GameStart);
 }
 PUBLIC void BytecodeObject::Create(int flag) {
     if (!Instance) return;
@@ -147,6 +173,24 @@ PUBLIC void BytecodeObject::Create(int flag) {
     // Set defaults
     Active = true;
     Pauseable = true;
+
+    XSpeed = 0.0f;
+    YSpeed = 0.0f;
+    GroundSpeed = 0.0f;
+    Gravity = 0.0f;
+    Ground = false;
+
+    OnScreen = true;
+    OnScreenHitboxW = 0.0f;
+    OnScreenHitboxH = 0.0f;
+    ViewRenderFlag = 1;
+    RenderRegionW = 0.0f;
+    RenderRegionH = 0.0f;
+
+    Angle = 0;
+    AngleMode = 0;
+    Rotation = 0.0;
+    AutoPhysics = false;
 
     Priority = 0;
     PriorityListIndex = -1;
@@ -159,21 +203,6 @@ PUBLIC void BytecodeObject::Create(int flag) {
     AnimationSpeedMult = 1.0;
     AnimationSpeedAdd = 0;
     AutoAnimate = true;
-
-    XSpeed = 0.0f;
-    YSpeed = 0.0f;
-    GroundSpeed = 0.0f;
-    Gravity = 0.0f;
-    Ground = false;
-
-    Angle = 0;
-    AngleMode = 0;
-    Rotation = 0.0;
-    AutoPhysics = false;
-
-    OnScreen = true;
-    OnScreenHitboxW = 0.0f;
-    OnScreenHitboxH = 0.0f;
 
     HitboxW = 0.0f;
     HitboxH = 0.0f;
@@ -193,19 +222,19 @@ PUBLIC void BytecodeObject::UpdateEarly() {
     if (!Active) return;
     if (!Instance) return;
 
-    RunFunction("UpdateEarly");
+    RunFunction(Hash_UpdateEarly);
 }
 PUBLIC void BytecodeObject::Update() {
     if (!Active) return;
     if (!Instance) return;
 
-    RunFunction("Update");
+    RunFunction(Hash_Update);
 }
 PUBLIC void BytecodeObject::UpdateLate() {
     if (!Active) return;
     if (!Instance) return;
 
-    RunFunction("UpdateLate");
+    RunFunction(Hash_UpdateLate);
 
     if (AutoAnimate)
         Animate();
@@ -216,13 +245,13 @@ PUBLIC void BytecodeObject::RenderEarly() {
     if (!Active) return;
     if (!Instance) return;
 
-    RunFunction("RenderEarly");
+    RunFunction(Hash_RenderEarly);
 }
 PUBLIC void BytecodeObject::Render(int CamX, int CamY) {
     if (!Active) return;
     if (!Instance) return;
 
-    if (RunFunction("Render")) {
+    if (RunFunction(Hash_Render)) {
         // Default render
     }
 }
@@ -230,10 +259,10 @@ PUBLIC void BytecodeObject::RenderLate() {
     if (!Active) return;
     if (!Instance) return;
 
-    RunFunction("RenderLate");
+    RunFunction(Hash_RenderLate);
 }
 PUBLIC void BytecodeObject::OnAnimationFinish() {
-    RunFunction("OnAnimationFinish");
+    RunFunction(Hash_OnAnimationFinish);
 }
 
 PUBLIC void BytecodeObject::Dispose() {
@@ -269,17 +298,17 @@ PUBLIC STATIC VMValue BytecodeObject::VM_SetAnimation(int argCount, VMValue* arg
     int frame = AS_INTEGER(args[2]);
 
     if (self->Sprite < 0) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "this.Sprite is not set!", animation);
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "this.Sprite is not set!", animation);
         return NULL_VAL;
     }
 
     ISprite* sprite = Scene::SpriteList[self->Sprite]->AsSprite;
     if (!(animation > -1 && (size_t)animation < sprite->Animations.size())) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Animation %d is not in bounds of sprite.", animation);
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Animation %d is not in bounds of sprite.", animation);
         return NULL_VAL;
     }
     if (!(frame > -1 && (size_t)frame < sprite->Animations[animation].Frames.size())) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Frame %d is not in bounds of animation %d.", frame, animation);
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Frame %d is not in bounds of animation %d.", frame, animation);
         return NULL_VAL;
     }
 
@@ -293,11 +322,11 @@ PUBLIC STATIC VMValue BytecodeObject::VM_ResetAnimation(int argCount, VMValue* a
 
     ISprite* sprite = Scene::SpriteList[self->Sprite]->AsSprite;
     if (!(animation >= 0 && (Uint32)animation < sprite->Animations.size())) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Animation %d is not in bounds of sprite.", animation);
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Animation %d is not in bounds of sprite.", animation);
         return NULL_VAL;
     }
     if (!(frame >= 0 && (Uint32)frame < sprite->Animations[animation].Frames.size())) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Frame %d is not in bounds of animation %d.", frame, animation);
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Frame %d is not in bounds of animation %d.", frame, animation);
         return NULL_VAL;
     }
 
@@ -354,6 +383,15 @@ PUBLIC STATIC VMValue BytecodeObject::VM_InView(int argCount, VMValue* args, Uin
     float w      = StandardLibrary::GetDecimal(args, 4);
     float h      = StandardLibrary::GetDecimal(args, 5);
 
+    // printf("InView: view %d x %.1f y %.1f w %.1f h %.1f\n        entity x %.1f y %.1f w %.1f h %.1f\n%s\n",
+    //     view,
+    //     Scene::Views[view].X, Scene::Views[view].Y, Scene::Views[view].Width, Scene::Views[view].Height,
+    //     x, y, w, h,
+    //     (x + w >= Scene::Views[view].X &&
+    //     y + h >= Scene::Views[view].Y &&
+    //     x      < Scene::Views[view].X + Scene::Views[view].Width &&
+    //     y      < Scene::Views[view].Y + Scene::Views[view].Height) ? "TRUE" : "FALSE");
+
     if (x + w >= Scene::Views[view].X &&
         y + h >= Scene::Views[view].Y &&
         x      < Scene::Views[view].X + Scene::Views[view].Width &&
@@ -405,18 +443,18 @@ PUBLIC STATIC VMValue BytecodeObject::VM_GetHitboxFromSprite(int argCount, VMVal
     int hitbox      = StandardLibrary::GetInteger(args, 4);
 
     if (!(animation > -1 && (size_t)animation < sprite->Animations.size())) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Animation %d is not in bounds of sprite.", animation);
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Animation %d is not in bounds of sprite.", animation);
         return NULL_VAL;
     }
     if (!(frame > -1 && (size_t)frame < sprite->Animations[animation].Frames.size())) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Frame %d is not in bounds of animation %d.", frame, animation);
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Frame %d is not in bounds of animation %d.", frame, animation);
         return NULL_VAL;
     }
 
     AnimFrame frameO = sprite->Animations[animation].Frames[frame];
 
     if (!(hitbox > -1 && hitbox < frameO.BoxCount)) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Hitbox %d is not in bounds of frame %d.", hitbox, frame);
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Hitbox %d is not in bounds of frame %d.", hitbox, frame);
         return NULL_VAL;
     }
 

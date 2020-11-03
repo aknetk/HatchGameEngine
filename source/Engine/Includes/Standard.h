@@ -16,6 +16,7 @@
 #include <vector>
 #include <deque>
 #include <stack>
+#include <csetjmp>
 
 #if WIN32
     #define snprintf _snprintf

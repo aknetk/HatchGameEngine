@@ -18,7 +18,7 @@ public:
     HashMap<VMValue>* Properties;
 
     void Link(ObjInstance* instance);
-    bool RunFunction(const char* f);
+    bool RunFunction(Uint32 hash);
     bool RunCreateFunction(int flag);
     void GameStart();
     void Create(int flag);

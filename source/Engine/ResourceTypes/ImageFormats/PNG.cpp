@@ -91,6 +91,9 @@ PUBLIC STATIC  PNG*   PNG::Load(const char* filename) {
     png->Width = width;
     png->Height = height;
     png->Data = (Uint32*)Memory::TrackedMalloc("PNG::Data", png->Width * png->Height * sizeof(Uint32));
+    if (Graphics::UsePalettes) {
+        png->Colors = (Uint32*)Memory::TrackedMalloc("PNG::Colors", 0x100 * sizeof(Uint32));
+    }
     png->TransparentColorIndex = -1;
 
     pixelData = (Uint32*)malloc(png->Width * png->Height * sizeof(Uint32));
@@ -152,6 +155,8 @@ PUBLIC STATIC  PNG*   PNG::Load(const char* filename) {
     }
     free(pixelData);
 
+    png->Paletted = false;
+
     goto PNG_Load_Success;
 
     PNG_Load_FAIL:
@@ -159,18 +164,12 @@ PUBLIC STATIC  PNG*   PNG::Load(const char* filename) {
         png = NULL;
 
     PNG_Load_Success:
-        if (png_ptr) {
-            png_destroy_read_struct(&png_ptr,
-                                    info_ptr ? &info_ptr : (png_infopp)NULL,
-                                    (png_infopp)NULL);
-        }
-        if (row_pointers) {
+        if (png_ptr)
+            png_destroy_read_struct(&png_ptr, info_ptr ? &info_ptr : (png_infopp)NULL, (png_infopp)NULL);
+        if (row_pointers)
             free(row_pointers);
-        }
-
         if (stream)
             stream->Close();
-        // Memory::Free(fileBuffer);
         return png;
 }
 PUBLIC STATIC  bool   PNG::Save(PNG* png, const char* filename) {

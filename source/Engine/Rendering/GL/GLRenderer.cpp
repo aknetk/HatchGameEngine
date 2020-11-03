@@ -667,15 +667,22 @@ PUBLIC STATIC int      GLRenderer::LockTexture(Texture* texture, void** pixels, 
     return 0;
 }
 PUBLIC STATIC int      GLRenderer::UpdateTexture(Texture* texture, SDL_Rect* src, void* pixels, int pitch) {
-    int inputPixelsX = 0;
-    int inputPixelsY = 0;
-    int inputPixelsW = texture->Width;
-    int inputPixelsH = texture->Height;
+    Uint32 inputPixelsX = 0;
+    Uint32 inputPixelsY = 0;
+    Uint32 inputPixelsW = texture->Width;
+    Uint32 inputPixelsH = texture->Height;
     if (src) {
         inputPixelsX = src->x;
         inputPixelsY = src->y;
         inputPixelsW = src->w;
         inputPixelsH = src->h;
+    }
+
+    if (Graphics::NoInternalTextures) {
+        if (inputPixelsW > Graphics::MaxTextureWidth)
+            inputPixelsW = Graphics::MaxTextureWidth;
+        if (inputPixelsH > Graphics::MaxTextureHeight)
+            inputPixelsH = Graphics::MaxTextureHeight;
     }
 
     GL_TextureData* textureData = (GL_TextureData*)texture->DriverData;
@@ -843,8 +850,8 @@ PUBLIC STATIC void     GLRenderer::UpdateProjectionMatrix() {
 // Shader-related functions
 PUBLIC STATIC void     GLRenderer::UseShader(void* shader) {
     // Override shader
-    if (Graphics::CurrentShader)
-        shader = Graphics::CurrentShader;
+    // if (Graphics::CurrentShader)
+    //     shader = Graphics::CurrentShader;
 
     if (GLRenderer::CurrentShader != (GLShader*)shader) {
         GLRenderer::CurrentShader = (GLShader*)shader;
@@ -1129,6 +1136,11 @@ PUBLIC STATIC void     GLRenderer::MakeFrameBufferID(ISprite* sprite, AnimFrame*
 
     GL_AnimFrameVert vertices[16];
     GL_AnimFrameVert* vert = &vertices[0];
+
+    if (frame->SheetNumber >= sprite->SpritesheetCount)
+        return;
+    if (!sprite->Spritesheets[frame->SheetNumber])
+        return;
 
     float texWidth = sprite->Spritesheets[frame->SheetNumber]->Width;
     float texHeight = sprite->Spritesheets[frame->SheetNumber]->Height;

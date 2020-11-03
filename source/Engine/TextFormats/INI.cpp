@@ -24,6 +24,11 @@ char* strgets(char* buf, int n, char** stream) {
     char* readerStart = *stream;
     char* reader = readerStart;
     memset(buf, 0, n);
+
+    if (!*reader) {
+        return NULL;
+    }
+
     while (*reader) {
         switch (*reader) {
             case '\r':
@@ -41,6 +46,13 @@ char* strgets(char* buf, int n, char** stream) {
                 break;
         }
     }
+
+    if (!*reader) {
+        memcpy(buf, readerStart, (reader - readerStart) > n ? n : (reader - readerStart));
+        *stream = reader + 1;
+        return buf;
+    }
+
     if (readerStart == reader)
         return NULL;
 

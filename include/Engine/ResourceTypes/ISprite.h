@@ -18,9 +18,9 @@ class ISprite {
 public:
     char              Filename[256];
     bool              Print = false;
-    Texture*          Spritesheets[4];
-    bool              SpritesheetsBorrowed[4];
-    char              SpritesheetsFilenames[128][4];
+    Texture*          Spritesheets[32];
+    bool              SpritesheetsBorrowed[32];
+    char              SpritesheetsFilenames[128][32];
     int               SpritesheetCount = 0;
     int               CollisionBoxCount = 0;
     vector<Animation> Animations;

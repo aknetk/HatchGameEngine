@@ -160,7 +160,7 @@ PRIVATE STATIC void   GIF::FreeTree(void* root, int degree) {
 }
 
 PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
-    bool loadPalette = false;
+    bool loadPalette = Graphics::UsePalettes;
     // Entry* codeTable = (Entry*)Memory::Calloc(0x1000, sizeof(Entry));
     Entry* codeTable = (Entry*)Memory::Malloc(0x1000 * sizeof(Entry));
 
@@ -198,7 +198,8 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
 
     Uint8 magic89a[4];
     stream->ReadBytes(magic89a, 3);
-    if (memcmp(magic89a, "89a", 3) != 0) {
+    if (memcmp(magic89a, "89a", 3) != 0 &&
+        memcmp(magic89a, "87a", 3) != 0) {
         magic89a[3] = 0;
         Log::Print(Log::LOG_ERROR, "Invalid GIF version! Found \"%s\", expected \"89a\"!", magic89a);
         goto GIF_Load_FAIL;
@@ -256,6 +257,9 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
             gif->Colors[p] |= stream->ReadByte();
         }
     }
+
+    gif->Paletted = loadPalette;
+
     if (colorBitDepth != 4) {
 
     }

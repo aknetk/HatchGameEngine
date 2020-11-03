@@ -21,7 +21,7 @@ PUBLIC STATIC Uint32 CombinedHash::EncryptString(const char* message) {
     return CombinedHash::EncryptString((char*)message);
 }
 
-PUBLIC STATIC Uint32 CombinedHash::EncryptData(const char* message, size_t len) {
+PUBLIC STATIC Uint32 CombinedHash::EncryptData(const void* message, Uint32 len) {
     Uint8 objMD5[16];
     return CRC32::EncryptData(MD5::EncryptData(objMD5, (void*)message, len), 16);
 }

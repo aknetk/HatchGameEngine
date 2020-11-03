@@ -54,6 +54,10 @@ struct Local {
     Token Name;
     int   Depth;
 };
+struct Enum {
+    Token Name;
+    int   Constant;
+};
 
 struct ParseRule {
     ParseFn         Prefix;

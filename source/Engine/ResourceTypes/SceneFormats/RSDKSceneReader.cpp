@@ -21,6 +21,9 @@ public:
 #include <Engine/IO/Compression/ZLibStream.h>
 #include <Engine/IO/ResourceStream.h>
 #include <Engine/Includes/HashMap.h>
+#include <Engine/Rendering/Software/SoftwareRenderer.h>
+#include <Engine/ResourceTypes/ImageFormats/GIF.h>
+#include <Engine/ResourceTypes/ResourceManager.h>
 #include <Engine/Scene/SceneLayer.h>
 #include <Engine/Scene.h>
 
@@ -36,8 +39,111 @@ public:
 bool            RSDKSceneReader::Initialized = false;
 char*           ObjectNames = NULL;
 char*           PropertyNames = NULL;
-HashMap<char*>* ObjectHashes = NULL;
-HashMap<char*>* PropertyHashes = NULL;
+HashMap<const char*>* ObjectHashes = NULL;
+HashMap<const char*>* PropertyHashes = NULL;
+
+void StageConfig_GetColors(const char* filename) {
+    MemoryStream* memoryReader;
+    ResourceStream* stageConfigReader;
+    if ((stageConfigReader = ResourceStream::New(filename))) {
+        if ((memoryReader = MemoryStream::New(stageConfigReader))) {
+            do {
+                Uint32 magic = memoryReader->ReadUInt32();
+                if (magic != 0x474643)
+                    break;
+
+                memoryReader->ReadByte(); // useGameObjects
+
+                int objectNameCount = memoryReader->ReadByte();
+                for (int i = 0; i < objectNameCount; i++)
+                    Memory::Free(memoryReader->ReadHeaderedString());
+
+                int paletteCount = 8;
+
+                Uint8 Color[3];
+                for (int i = 0; i < paletteCount; i++) {
+                    // Palette Set
+                    int bitmap = memoryReader->ReadUInt16();
+                    for (int col = 0; col < 16; col++) {
+                        if ((bitmap & (1 << col)) != 0) {
+                            for (int d = 0; d < 16; d++) {
+                                memoryReader->ReadBytes(Color, 3);
+                                if (Color[0] == 0xFF && Color[1] == 0x00 && Color[2] == 0xFF)
+                                    continue;
+
+                                SoftwareRenderer::PaletteColors[i][(col << 4) | d] = 0xFF000000U | Color[0] << 16 | Color[1] << 8 | Color[2];
+                            }
+                            SoftwareRenderer::ConvertFromARGBtoNative(&SoftwareRenderer::PaletteColors[i][(col << 4)], 16);
+                        }
+                    }
+                }
+
+                int wavConfigCount = memoryReader->ReadByte();
+                for (int i = 0; i < wavConfigCount; i++) {
+                    Memory::Free(memoryReader->ReadHeaderedString());
+                    memoryReader->ReadByte();
+                }
+            } while (false);
+
+            memoryReader->Close();
+        }
+        stageConfigReader->Close();
+    }
+}
+void GameConfig_GetColors(const char* filename) {
+    MemoryStream* memoryReader;
+    ResourceStream* gameConfigReader;
+    if ((gameConfigReader = ResourceStream::New(filename))) {
+        if ((memoryReader = MemoryStream::New(gameConfigReader))) {
+            do {
+                Uint32 magic = memoryReader->ReadUInt32();
+                if (magic != 0x474643)
+                    break;
+
+                Memory::Free(memoryReader->ReadHeaderedString());
+                Memory::Free(memoryReader->ReadHeaderedString());
+                Memory::Free(memoryReader->ReadHeaderedString());
+
+                memoryReader->ReadByte(); // useGameObjects
+                memoryReader->ReadUInt16();
+
+                // Common config
+                int objectNameCount = memoryReader->ReadByte();
+                for (int i = 0; i < objectNameCount; i++)
+                    Memory::Free(memoryReader->ReadHeaderedString());
+
+                int paletteCount = 8;
+
+                Uint8 Color[3];
+                for (int i = 0; i < paletteCount; i++) {
+                    // Palette Set
+                    int bitmap = memoryReader->ReadUInt16();
+                    for (int col = 0; col < 16; col++) {
+                        if ((bitmap & (1 << col)) != 0) {
+                            for (int d = 0; d < 16; d++) {
+                                memoryReader->ReadBytes(Color, 3);
+                                if (Color[0] == 0xFF && Color[1] == 0x00 && Color[2] == 0xFF)
+                                    continue;
+
+                                SoftwareRenderer::PaletteColors[i][(col << 4) | d] = 0xFF000000U | Color[0] << 16 | Color[1] << 8 | Color[2];
+                            }
+                            SoftwareRenderer::ConvertFromARGBtoNative(&SoftwareRenderer::PaletteColors[i][(col << 4)], 16);
+                        }
+                    }
+                }
+
+                int wavConfigCount = memoryReader->ReadByte();
+                for (int i = 0; i < wavConfigCount; i++) {
+                    Memory::Free(memoryReader->ReadHeaderedString());
+                    memoryReader->ReadByte();
+                }
+            } while (false);
+
+            memoryReader->Close();
+        }
+        gameConfigReader->Close();
+    }
+}
 
 PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* parentFolder) {
     Stream* r;
@@ -45,6 +151,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
     // char* objectName;
     ObjectList* objectList;
     Uint32 objectNameHash, objectNameHash2, layerCount;
+    Uint32 HACK_PlayerNameHash;
 
     int    roundedUpPow2, objectDefinitionCount;
 
@@ -76,7 +183,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
                 r->ReadBytes(ObjectNames, sz);
                 ObjectNames[sz] = 0;
 
-                ObjectHashes = new HashMap<char*>(CombinedHash::EncryptString, 1024);
+                ObjectHashes = new HashMap<const char*>(CombinedHash::EncryptData, 1024);
 
                 nameHead = ObjectNames;
                 nameStart = ObjectNames;
@@ -112,7 +219,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
                 r->ReadBytes(PropertyNames, sz);
                 PropertyNames[sz] = 0;
 
-                PropertyHashes = new HashMap<char*>(CombinedHash::EncryptString, 512);
+                PropertyHashes = new HashMap<const char*>(CombinedHash::EncryptData, 512);
 
                 nameHead = PropertyNames;
                 nameStart = PropertyNames;
@@ -137,11 +244,12 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
     if (!ObjectNames) //  || !PropertyNames
         return false;
 
-    // XMLNode* tileMapXML = XMLParser::ParseFromResource(sourceF);
-    // if (!tileMapXML) {
-    //     Log::Print(Log::LOG_ERROR, "Could not parse from resource \"%s\"", sourceF);
-    //     return;
-    // }
+    char stageConfigFilename[256];
+    sprintf(stageConfigFilename, "%sStageConfig.bin", parentFolder);
+    if (ResourceManager::ResourceExists(stageConfigFilename))
+        StageConfig_GetColors(stageConfigFilename);
+    else
+        Log::Print(Log::LOG_WARN, "No StageConfig at '%s'!", stageConfigFilename);
 
     r = ResourceStream::New(filename);
     if (!r) {
@@ -255,15 +363,20 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         layer.ScrollInfosSplitIndexesCount = splitCount;
 
         // Convert to HatchTiles
-        for (int t = 0; t < Width * Height; t++) {
-            layer.Tiles[t]  = (tileBoys[t] & 0x3FF);
-
-            layer.Tiles[t] |= (tileBoys[t] & 0x400) << 21; // Flip X
-            layer.Tiles[t] |= (tileBoys[t] & 0x800) << 19; // Flip Y
-            layer.Tiles[t] |= (tileBoys[t] & 0xC000) << 12; // Collision B
-            layer.Tiles[t] |= (tileBoys[t] & 0x3000) << 16; // Collision A
+        int t = 0;
+        Uint32* tileRow = &layer.Tiles[0];
+        for (int y = 0; y < layer.Height; y++) {
+            for (int x = 0; x < layer.Width; x++) {
+                tileRow[x] = (tileBoys[t] & 0x3FF);
+                tileRow[x] |= (tileBoys[t] & 0x400) << 21; // Flip X
+                tileRow[x] |= (tileBoys[t] & 0x800) << 19; // Flip Y
+                tileRow[x] |= (tileBoys[t] & 0xC000) << 12; // Collision B
+                tileRow[x] |= (tileBoys[t] & 0x3000) << 16; // Collision A
+                t++;
+            }
+            tileRow += (layer.WidthMask + 1);
         }
-        memcpy(layer.TilesBackup, layer.Tiles, sizeof(Uint32) * Width * Height);
+        memcpy(layer.TilesBackup, layer.Tiles, sizeof(Uint32) * (layer.WidthMask + 1) * (layer.HeightMask + 1));
 
         // Sprite Flag? (Entity -> 0x53)
         // 0x1: Can flip
@@ -300,14 +413,14 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
     roundedUpPow2++;
 
     if (Scene::ObjectLists == NULL) {
-        Scene::ObjectLists = new HashMap<ObjectList*>(CombinedHash::EncryptString, roundedUpPow2);
-        Scene::ObjectRegistries = new HashMap<ObjectList*>(CombinedHash::EncryptString, 16);
+        Scene::ObjectLists = new HashMap<ObjectList*>(CombinedHash::EncryptData, roundedUpPow2);
+        Scene::ObjectRegistries = new HashMap<ObjectList*>(CombinedHash::EncryptData, 16);
     }
 
     // Hack in WindowManager, InputManager, and PauseManager
     {
         Entity* obj;
-        char* objectName;
+        const char* objectName;
 
         objectName = "WindowManager";
         objectNameHash = CombinedHash::EncryptString(objectName);
@@ -358,13 +471,17 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
     maxObjSlots = 0x940;
     objSlots = (Entity**)calloc(sizeof(Entity*), maxObjSlots);
 
+    HACK_PlayerNameHash = ObjectHashes->HashFunction("Player", 6);
+
     for (int i = 0; i < objectDefinitionCount; i++) {
         r->ReadBytes(hashTemp, 16);
         objectNameHash = CRC32::EncryptData(hashTemp, 16);
         objectNameHash2 = objectNameHash;
 
-        if (ObjectHashes->Exists(objectNameHash))
-            objectNameHash2 = ObjectHashes->HashFunction(ObjectHashes->Get(objectNameHash));
+        if (ObjectHashes->Exists(objectNameHash)) {
+            const char* name = ObjectHashes->Get(objectNameHash);
+            objectNameHash2 = ObjectHashes->HashFunction(name, strlen(name));
+        }
 
         objectList = new ObjectList();
         strcpy(objectList->ObjectName, ObjectHashes->Get(objectNameHash));
@@ -416,9 +533,11 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         }
 
         for (int n = 0; n < entityCount; n++) {
+            bool doAdd = true;
             int SlotID = r->ReadUInt16();
             if (SlotID >= maxObjSlots) {
                 Log::Print(Log::LOG_ERROR, "Too many objects in scene! (Count: %d, Max: %d)", SlotID + 1, maxObjSlots);
+                doAdd = false;
                 // exit(0);
             }
 
@@ -432,8 +551,13 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
                 obj->InitialX = obj->X;
                 obj->InitialY = obj->Y;
                 obj->List = objectList;
-                Scene::AddStatic(obj->List, obj);
-                // objSlots[SlotID] = obj;
+
+                // HACK: This is so Player ends up in the current SlotID,
+                //       since this currently cannot be changed during runtime.
+                if (objectNameHash2 == HACK_PlayerNameHash)
+                    Scene::AddStatic(obj->List, obj);
+                else if (doAdd)
+                    objSlots[SlotID] = obj;
 
                 bool usingBytecodeObjects = true;
                 if (usingBytecodeObjects) {
@@ -530,11 +654,29 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
 
     Scene::TileSprite = new ISprite();
 
-    char parentFolderSODNFSD[256];
-    sprintf(parentFolderSODNFSD, "%s16x16Tiles.gif", parentFolder);
+    // Load Tileset and copy palette
+    char filename16x16Tiles[256];
+    sprintf(filename16x16Tiles, "%s16x16Tiles.gif", parentFolder);
+    {
+        GIF* gif;
+        bool loadPalette = Graphics::UsePalettes;
+
+        Graphics::UsePalettes = false;
+        gif = GIF::Load(filename16x16Tiles);
+        Graphics::UsePalettes = loadPalette;
+
+        if (gif) {
+            if (gif->Colors) {
+                for (int p = 0; p < 256; p++)
+                    SoftwareRenderer::PaletteColors[0][p] = gif->Colors[p];
+                Memory::Free(gif->Colors);
+            }
+            delete gif;
+        }
+    }
 
     int cols, rows;
-    Scene::TileSprite->Spritesheets[0] = Scene::TileSprite->AddSpriteSheet(parentFolderSODNFSD);
+    Scene::TileSprite->Spritesheets[0] = Scene::TileSprite->AddSpriteSheet(filename16x16Tiles);
     cols = Scene::TileSprite->Spritesheets[0]->Width / Scene::TileSize;
     rows = Scene::TileSprite->Spritesheets[0]->Height / Scene::TileSize;
 
@@ -546,5 +688,12 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
             (i / cols) * Scene::TileSize,
             Scene::TileSize, Scene::TileSize, -Scene::TileSize / 2, -Scene::TileSize / 2);
     }
+
+    // Load GameConfig palettes
+    sprintf(stageConfigFilename, "Game/GameConfig.bin", parentFolder);
+    if (ResourceManager::ResourceExists(stageConfigFilename))
+        GameConfig_GetColors(stageConfigFilename);
+    else
+        Log::Print(Log::LOG_WARN, "No GameConfig at '%s'!", stageConfigFilename);
     return true;
 }

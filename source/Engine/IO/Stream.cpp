@@ -77,7 +77,7 @@ PUBLIC         float   Stream::ReadFloat() {
     return data;
 }
 PUBLIC         char*   Stream::ReadLine() {
-    Uint8 byte;
+    Uint8 byte = 0;
     size_t start = Position();
     while ((byte = ReadByte()) != '\n' && byte);
 
@@ -159,6 +159,9 @@ PUBLIC         void    Stream::WriteUInt32BE(Uint32 data) {
     WriteByte(data >> 8 & 0xFF);
     WriteByte(data & 0xFF);
 }
+PUBLIC         void    Stream::WriteUInt64(Uint64 data) {
+    WriteBytes(&data, sizeof(data));
+}
 PUBLIC         void    Stream::WriteInt16(Sint16 data) {
     WriteBytes(&data, sizeof(data));
 }
@@ -170,6 +173,9 @@ PUBLIC         void    Stream::WriteInt32(Sint32 data) {
 }
 PUBLIC         void    Stream::WriteInt32BE(Sint32 data) {
     WriteUInt32BE((Sint32)data);
+}
+PUBLIC         void    Stream::WriteInt64(Sint64 data) {
+    WriteBytes(&data, sizeof(data));
 }
 PUBLIC         void    Stream::WriteFloat(float data) {
     WriteBytes(&data, sizeof(data));

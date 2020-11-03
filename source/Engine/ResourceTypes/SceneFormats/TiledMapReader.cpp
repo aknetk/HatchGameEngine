@@ -114,7 +114,6 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
     // 'infinite' maps will not work
 
     XMLNode* map = tileMapXML->children[0];
-
     if (!XMLParser::MatchToken(map->attributes.Get("version"), "1.2")) {
         Log::Print(Log::LOG_ERROR, "Only supports Tiled version 1.2!");
         XMLParser::Free(tileMapXML);
@@ -135,8 +134,8 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
     int layer_height = (int)XMLParser::TokenToNumber(map->attributes.Get("height"));
 
     if (Scene::ObjectLists == NULL) {
-        Scene::ObjectLists = new HashMap<ObjectList*>(CombinedHash::EncryptString, 4);
-        Scene::ObjectRegistries = new HashMap<ObjectList*>(CombinedHash::EncryptString, 16);
+        Scene::ObjectLists = new HashMap<ObjectList*>(CombinedHash::EncryptData, 4);
+        Scene::ObjectRegistries = new HashMap<ObjectList*>(CombinedHash::EncryptData, 16);
     }
 
     // Scene::Layers.resize(1);
@@ -280,8 +279,11 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
                 tile_buffer[i] |= TILE_COLLB_MASK;
             }
 
-            memcpy(scenelayer.TilesBackup, tile_buffer, layer_size_in_bytes);
-            memcpy(scenelayer.Tiles, tile_buffer, layer_size_in_bytes);
+            for (int i = 0, iH = 0; i < layer_height; i++) {
+                memcpy(&scenelayer.Tiles[iH], &tile_buffer[i * layer_width], layer_width * sizeof(int));
+                iH += scenelayer.WidthData;
+            }
+            memcpy(scenelayer.TilesBackup, scenelayer.Tiles, scenelayer.DataSize);
 
             Scene::Layers.push_back(scenelayer);
 
@@ -376,7 +378,16 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
                                         property_value:
                                         In "#AARRGGBB" hex format, can also be "" empty
                                         */
-                                        val = OBJECT_VAL(CopyString(property_value.Start, property_value.Length));
+                                        int hexCol;
+                                        if (property_value.Length == 0) {
+                                            val = INTEGER_VAL(0);
+                                        }
+                                        else if (sscanf(property_value.Start, "#%X", &hexCol) == 1) {
+                                            val = INTEGER_VAL(hexCol);
+                                        }
+                                        else {
+                                            val = INTEGER_VAL(0);
+                                        }
                                     }
                                     else if (XMLParser::MatchToken(property_type, "file")) {
                                         /*

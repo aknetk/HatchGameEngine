@@ -13,6 +13,9 @@ class BytecodeObject;
 #include <Engine/Includes/Standard.h>
 #include <Engine/Bytecode/VMThread.h>
 #include <Engine/Bytecode/Types.h>
+#include <Engine/IO/Stream.h>
+#include <Engine/IO/MemoryStream.h>
+#include <Engine/IO/ResourceStream.h>
 #include <Engine/Types/Entity.h>
 
 class BytecodeObjectManager {
@@ -30,7 +33,7 @@ public:
     static vector<char*>        TokensList;
     static SDL_mutex*           GlobalLock;
 
-    static bool    ThrowError(bool fatal, const char* errorMessage, ...);
+    static bool    ThrowRuntimeError(bool fatal, const char* errorMessage, ...);
     static void    RequestGarbageCollection();
     static void    ForceGarbageCollection();
     static void    ResetStack();
@@ -59,10 +62,10 @@ public:
     static void    GlobalConstDecimal(ObjClass* klass, const char* name, float value);
     static void    LinkStandardLibrary();
     static void    LinkExtensions();
-    static void    RunFromIBC(Uint8* head, size_t size);
+    static void    RunFromIBC(MemoryStream* stream, size_t size);
     static void    SetCurrentObjectHash(Uint32 hash);
     static Entity* SpawnFunction();
-    static void*   GetSpawnFunction(Uint32 objectNameHash, char* objectName);
+    static void*   GetSpawnFunction(Uint32 objectNameHash, const char* objectName);
 };
 
 #endif /* ENGINE_BYTECODE_BYTECODEOBJECTMANAGER_H */

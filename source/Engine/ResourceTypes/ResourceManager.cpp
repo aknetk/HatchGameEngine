@@ -32,6 +32,7 @@ struct  ResourceRegistryItem {
     Stream* Table;
     Uint64  Offset;
     Uint64  Size;
+    Uint32  DataFlag;
     Uint64  CompressedSize;
 };
 HashMap<ResourceRegistryItem>* ResourceRegistry = NULL;
@@ -58,7 +59,7 @@ PUBLIC STATIC void   ResourceManager::PrefixParentPath(char* out, const char* pa
 }
 
 PUBLIC STATIC void   ResourceManager::Init(const char* filename) {
-    ResourceRegistry = new HashMap<ResourceRegistryItem>(CRC32::EncryptString, 16);
+    ResourceRegistry = new HashMap<ResourceRegistryItem>(CRC32::EncryptData, 16);
 
     if (filename == NULL)
         filename = "Data.hatch";
@@ -116,7 +117,8 @@ PUBLIC STATIC void   ResourceManager::Load(const char* filename) {
     Uint8 magicHATCH[5];
     dataTableStream->ReadBytes(magicHATCH, 5);
     if (memcmp(magicHATCH, "HATCH", 5)) {
-        Log::Print(Log::LOG_ERROR, "Invalid HATCH data file \"%s\"!", filename);
+        Log::Print(Log::LOG_ERROR, "Invalid HATCH data file \"%s\"! (%02X %02X %02X %02X %02X)", filename, magicHATCH[0], magicHATCH[1], magicHATCH[2], magicHATCH[3], magicHATCH[4]);
+        Log::Print(Log::LOG_ERROR, "Size: %lld", rwSize);
         dataTableStream->Close();
         return;
     }
@@ -132,19 +134,18 @@ PUBLIC STATIC void   ResourceManager::Load(const char* filename) {
     streamNode->Next = StreamNodeHead;
     StreamNodeHead = streamNode;
 
-    Log::Print(Log::LOG_VERBOSE, "Loading resource table from \"%s\"...", filename);
     fileCount = dataTableStream->ReadUInt16();
+    Log::Print(Log::LOG_VERBOSE, "Loading resource table from \"%s\"...", filename);
     for (int i = 0; i < fileCount; i++) {
         Uint32 crc32 = dataTableStream->ReadUInt32();
         Uint64 offset = dataTableStream->ReadUInt64();
         Uint64 size = dataTableStream->ReadUInt64();
-        // bool   compressed =
-        dataTableStream->ReadUInt32();
+        Uint32 dataFlag = dataTableStream->ReadUInt32();
         Uint64 compressedSize = dataTableStream->ReadUInt64();
 
-        ResourceRegistryItem item { dataTableStream, offset, size, compressedSize };
+        ResourceRegistryItem item { dataTableStream, offset, size, dataFlag, compressedSize };
         ResourceRegistry->Put(crc32, item);
-        // Log::Print(Log::LOG_VERBOSE, "%08X: Offset: %08llX Size: %08llX Comp Size: %08llX", crc32, offset, size, compressedSize);
+        // Log::Print(Log::LOG_VERBOSE, "%08X: Offset: %08llX Size: %08llX Comp Size: %08llX Data Flag: %08X", crc32, offset, size, compressedSize, dataFlag);
     }
 }
 PUBLIC STATIC bool   ResourceManager::LoadResource(const char* filename, Uint8** out, size_t* size) {
@@ -183,6 +184,68 @@ PUBLIC STATIC bool   ResourceManager::LoadResource(const char* filename, Uint8**
     }
     else {
         item.Table->ReadBytes(memory, item.Size);
+    }
+
+    if (item.DataFlag == 2) {
+        Uint8 keyA[16];
+        Uint8 keyB[16];
+        Uint32 filenameHash = CRC32::EncryptString(filename);
+        Uint32 sizeHash = CRC32::EncryptData(&item.Size, sizeof(item.Size));
+
+        // Populate Key A
+        Uint32* keyA32 = (Uint32*)&keyA[0];
+        keyA32[0] = filenameHash;
+        keyA32[1] = filenameHash;
+        keyA32[2] = filenameHash;
+        keyA32[3] = filenameHash;
+
+        // Populate Key B
+        Uint32* keyB32 = (Uint32*)&keyB[0];
+        keyB32[0] = sizeHash;
+        keyB32[1] = sizeHash;
+        keyB32[2] = sizeHash;
+        keyB32[3] = sizeHash;
+
+        int swapNibbles = 0;
+        int indexKeyA = 0;
+        int indexKeyB = 8;
+        int xorValue = (item.Size >> 2) & 0x7F;
+        for (Uint32 x = 0; x < item.Size; x++) {
+            Uint8 temp = memory[x];
+
+            temp ^= xorValue ^ keyB[indexKeyB++];
+
+            if (swapNibbles)
+                temp = (((temp & 0x0F) << 4) | ((temp & 0xF0) >> 4));
+
+            temp ^= keyA[indexKeyA++];
+
+            memory[x] = temp;
+
+            if (indexKeyA <= 15) {
+                if (indexKeyB > 12) {
+                    indexKeyB = 0;
+                    swapNibbles ^= 1;
+                }
+            }
+            else if (indexKeyB <= 8) {
+                indexKeyA = 0;
+                swapNibbles ^= 1;
+            }
+            else {
+                xorValue = (xorValue + 2) & 0x7F;
+                if (swapNibbles) {
+                    swapNibbles = false;
+                    indexKeyA = xorValue % 7;
+                    indexKeyB = (xorValue % 12) + 2;
+                }
+                else {
+                    swapNibbles = true;
+                    indexKeyA = (xorValue % 12) + 3;
+                    indexKeyB = xorValue % 7;
+                }
+            }
+        }
     }
 
     *out = memory;

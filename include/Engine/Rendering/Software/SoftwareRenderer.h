@@ -20,7 +20,11 @@
 
 class SoftwareRenderer {
 public:
-    static GraphicsFunctions  BackendFunctions;
+    static GraphicsFunctions BackendFunctions;
+    static Uint32            CompareColor;
+    static Sint32            CurrentPalette;
+    static Uint32            PaletteColors[32][0x100];
+    static Uint8             PaletteIndexLines[4096];
 
     static inline Uint32 GetPixelIndex(ISprite* sprite, int x, int y);
     static void    SetDrawAlpha(int a);
@@ -41,7 +45,7 @@ public:
     static int     MeasureTextSprite(ISprite* sprite, int animation, char first, const char* string);
     static void    DrawModelOn2D(IModel* model, int x, int y, double scale, int rx, int ry, int rz, Uint32 color, bool wireframe);
     static void    DrawSpriteIn3D(ISprite* sprite, int animation, int frame, int x, int y, int z, double scale, int rx, int ry, int rz);
-    static void    ScanLine(long x1, long y1, long x2, long y2);
+    static void    ConvertFromARGBtoNative(Uint32* argb, int count);
     static void     Init();
     static Uint32   GetWindowFlags();
     static void     SetGraphicsFunctions();

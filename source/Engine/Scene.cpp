@@ -64,6 +64,11 @@ public:
 
     static View                  Views[8];
     static int                   ViewCurrent;
+    static float                 PreGameRenderViewRenderTimes[8];
+    static float                 GameRenderEarlyViewRenderTimes[8];
+    static float                 GameRenderViewRenderTimes[8];
+    static float                 GameRenderLateViewRenderTimes[8];
+    static float                 PostGameRenderViewRenderTimes[8];
 
     static char                  NextScene[256];
     static char                  CurrentScene[256];
@@ -145,6 +150,11 @@ float                 Scene::CameraX = 0.0f;
 float                 Scene::CameraY = 0.0f;
 View                  Scene::Views[8];
 int                   Scene::ViewCurrent = 0;
+float                 Scene::PreGameRenderViewRenderTimes[8];
+float                 Scene::GameRenderEarlyViewRenderTimes[8];
+float                 Scene::GameRenderViewRenderTimes[8];
+float                 Scene::GameRenderLateViewRenderTimes[8];
+float                 Scene::PostGameRenderViewRenderTimes[8];
 
 char                  Scene::NextScene[256];
 char                  Scene::CurrentScene[256];
@@ -392,6 +402,8 @@ PUBLIC STATIC void Scene::Init() {
     Application::Settings->GetBool("dev", "noobjectrender", &DEV_NoObjectRender);
     Application::Settings->GetInteger("dev", "viewCollision", &ShowTileCollisionFlag);
 
+    Graphics::SetTextureInterpolation(false);
+
     Scene::ViewCurrent = 0;
     for (int i = 0; i < 8; i++) {
         Scene::Views[i].Active = false;
@@ -497,6 +509,8 @@ PUBLIC STATIC void Scene::Render() {
         if (!currentView->Active)
             continue;
 
+        Scene::PreGameRenderViewRenderTimes[i] = Clock::GetTicks();
+
         cx = std::floor(currentView->X);
         cy = std::floor(currentView->Y);
         cz = std::floor(currentView->Z);
@@ -512,6 +526,7 @@ PUBLIC STATIC void Scene::Render() {
             Texture* tar = currentView->DrawTarget;
             if (tar->Width != view_w || tar->Height != view_h) {
                 Graphics::DisposeTexture(tar);
+                Graphics::SetTextureInterpolation(false);
                 currentView->DrawTarget = Graphics::CreateTexture(SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, view_w, view_h);
             }
 
@@ -549,10 +564,14 @@ PUBLIC STATIC void Scene::Render() {
         }
         Graphics::UpdateProjectionMatrix();
 
+        Scene::PreGameRenderViewRenderTimes[i] = Clock::GetTicks() - Scene::PreGameRenderViewRenderTimes[i];
+
         // Graphics::SetBlendColor(0.5, 0.5, 0.5, 1.0);
         // Graphics::FillRectangle(currentView->X, currentView->Y, currentView->Width, currentView->Height);
 
+
         // RenderEarly
+        Scene::GameRenderEarlyViewRenderTimes[i] = Clock::GetTicks();
         for (int l = 0; l < Scene::PriorityPerLayer; l++) {
             if (DEV_NoObjectRender)
                 break;
@@ -563,8 +582,14 @@ PUBLIC STATIC void Scene::Render() {
                     PriorityLists[l][o]->RenderEarly();
             }
         }
+        Scene::GameRenderEarlyViewRenderTimes[i] = Clock::GetTicks() - Scene::GameRenderEarlyViewRenderTimes[i];
 
         // Render
+        register float _vx = currentView->X;
+        register float _vy = currentView->Y;
+        register float _vw = currentView->Width;
+        register float _vh = currentView->Height;
+        Scene::GameRenderViewRenderTimes[i] = Clock::GetTicks();
         for (int l = 0; l < Scene::PriorityPerLayer; l++) {
             size_t oSz = PriorityLists[l].size();
 
@@ -578,6 +603,8 @@ PUBLIC STATIC void Scene::Render() {
             register float _x2;
             register float _y1;
             register float _y2;
+            register float _ox;
+            register float _oy;
             for (size_t o = 0; o < oSz; o++) {
                 if (PriorityLists[l][o] && PriorityLists[l][o]->Active) {
                     Entity* ent = PriorityLists[l][o];
@@ -587,17 +614,13 @@ PUBLIC STATIC void Scene::Render() {
 
                     hbW = ent->RenderRegionW * 0.5f;
                     hbH = ent->RenderRegionH * 0.5f;
-                    _x1 = (ent->X - hbW - Scene::Views[0].X);
-                    _x2 = (ent->X + hbW - Scene::Views[0].X);
-                    _y1 = (ent->Y - hbH - Scene::Views[0].Y);
-                    _y2 = (ent->Y + hbH - Scene::Views[0].Y);
-
-                    if (_x2 < 0.0f || _x1 >= Scene::Views[0].Width ||
-                        _y2 < 0.0f || _y1 >= Scene::Views[0].Height)
+                    _ox = ent->X - _vx;
+                    _oy = ent->Y - _vy;
+                    if ((_ox + hbW) < 0.0f || (_ox - hbW) >= _vw ||
+                        (_oy + hbH) < 0.0f || (_oy - hbH) >= _vh)
                         continue;
 
                     DoCheckRender:
-
                     if (!(ent->ViewRenderFlag & viewRenderFlag))
                         continue;
 
@@ -633,6 +656,9 @@ PUBLIC STATIC void Scene::Render() {
             if (!(TileViewRenderFlag & viewRenderFlag))
                 continue;
 
+            bool texBlend = Graphics::TextureBlend;
+
+            Graphics::TextureBlend = false;
             for (size_t li = 0; li < Layers.size(); li++) {
                 SceneLayer layer = Layers[li];
                 // Skip layer tile render if already rendered
@@ -650,7 +676,7 @@ PUBLIC STATIC void Scene::Render() {
                     int tileCellMaxHeight = 2 + (currentView->Height / tileSize);
 
                     int flipX, flipY, col;
-                    int TileBaseX, TileBaseY, baseX, baseY, tile, baseXOff, baseYOff;
+                    int TileBaseX, TileBaseY, baseX, baseY, tile, tileOrig, baseXOff, baseYOff;
                     float tBX, tBY;
 
                     TileConfig* baseTileCfg = Scene::ShowTileCollisionFlag == 2 ? Scene::TileCfgB : Scene::TileCfgA;
@@ -734,9 +760,10 @@ PUBLIC STATIC void Scene::Render() {
                             int height, heightHalf, tileY, index;
                             int ix, sourceTileCellX, sourceTileCellY;
 
-                            baseYOff = (int)std::floor(
-                                (currentView->Y + layer.OffsetY) * layer.RelativeY / 256.f +
-                                Scene::Frame * layer.ConstantY / 256.f);
+                            // baseYOff = (int)std::floor(
+                            //     (currentView->Y + layer.OffsetY) * layer.RelativeY / 256.f +
+                            //     Scene::Frame * layer.ConstantY / 256.f);
+                            baseYOff = ((((int)currentView->Y + layer.OffsetY) * layer.RelativeY) + Scene::Frame * layer.ConstantY) >> 8;
 
                             if (Graphics::SupportsBatching && Application::Platform == Platforms::Android && false) { // && Scene::UseBatchedTiles
                                 baseXOff = (int)std::floor(
@@ -774,11 +801,13 @@ PUBLIC STATIC void Scene::Render() {
                             TileBaseY = 0;
 
                             for (int split = 0, spl; split < 4096; split++) {
-                                spl = split % layer.ScrollInfosSplitIndexesCount;
+                                spl = split;
+                                while (spl >= layer.ScrollInfosSplitIndexesCount) spl -= layer.ScrollInfosSplitIndexesCount;
+
                                 height = (layer.ScrollInfosSplitIndexes[spl] >> 8) & 0xFF;
 
-                                sourceTileCellY = (TileBaseY / tileSize);
-                                baseY = (sourceTileCellY * tileSize) + 8;
+                                sourceTileCellY = (TileBaseY >> 4);
+                                baseY = (sourceTileCellY << 4) + 8;
                                 baseY -= baseYOff;
 
                                 if (baseY - 8 + height < -tileSize)
@@ -787,9 +816,10 @@ PUBLIC STATIC void Scene::Render() {
                                     break;
 
                                 index = layer.ScrollInfosSplitIndexes[spl] & 0xFF;
-                                baseXOff = (int)std::floor(
-                                    (currentView->X + layer.OffsetX) * layer.ScrollInfos[index].RelativeX / 256.f +
-                                    Scene::Frame * layer.ScrollInfos[index].ConstantX / 256.f);
+                                // baseXOff = (int)std::floor(
+                                //     (currentView->X + layer.OffsetX) * layer.ScrollInfos[index].RelativeX / 256.f +
+                                //     Scene::Frame * layer.ScrollInfos[index].ConstantX / 256.f);
+                                baseXOff = ((((int)currentView->X + layer.OffsetX) * layer.ScrollInfos[index].RelativeX) + Scene::Frame * layer.ScrollInfos[index].ConstantX) >> 8;
                                 TileBaseX = baseXOff;
 
                                 // Loop or cut off sourceTileCellY
@@ -797,17 +827,18 @@ PUBLIC STATIC void Scene::Render() {
                                     if (sourceTileCellY < 0) goto SKIP_TILE_ROW_DRAW;
                                     if (sourceTileCellY >= layer.Height) goto SKIP_TILE_ROW_DRAW;
                                 }
-                                sourceTileCellY = ((sourceTileCellY % layer.Height) + layer.Height) % layer.Height;
+                                sourceTileCellY = sourceTileCellY & layer.HeightMask;
 
                                 // Draw row of tiles
-                                ix = (TileBaseX / tileSize);
+                                ix = (TileBaseX >> 4);
                                 baseX = tileSizeHalf;
-                                baseX -= baseXOff % 16;
+                                baseX -= baseXOff & 15; // baseX -= baseXOff % 16;
 
                                 // To get the leftmost tile, ix--, and start t = -1
                                 baseX -= 16;
                                 ix--;
 
+                                // sourceTileCellX = ((sourceTileCellX % layer.Width) + layer.Width) % layer.Width;
                                 for (int t = 0; t < tileCellMaxWidth; t++) {
                                     // Loop or cut off sourceTileCellX
                                     sourceTileCellX = ix;
@@ -815,32 +846,31 @@ PUBLIC STATIC void Scene::Render() {
                                         if (sourceTileCellX < 0) goto SKIP_TILE_DRAW;
                                         if (sourceTileCellX >= layer.Width) goto SKIP_TILE_DRAW;
                                     }
-                                    sourceTileCellX = ((sourceTileCellX % layer.Width) + layer.Width) % layer.Width;
-
-
-                                    tile = layer.Tiles[sourceTileCellX + sourceTileCellY * layer.Width];
-                                    flipX = !!(tile & TILE_FLIPX_MASK);
-                                    flipY = !!(tile & TILE_FLIPY_MASK);
-
-                                    col = 0;
-                                    if (Scene::ShowTileCollisionFlag && Scene::TileCfgA && layer.ScrollInfoCount <= 1) {
-                                        if (Scene::ShowTileCollisionFlag == 1)
-                                            col = (tile & TILE_COLLA_MASK) >> 28;
-                                        else if (Scene::ShowTileCollisionFlag == 2)
-                                            col = (tile & TILE_COLLB_MASK) >> 26;
+                                    else {
+                                        // sourceTileCellX = ((sourceTileCellX % layer.Width) + layer.Width) % layer.Width;
+                                        while (sourceTileCellX < 0) sourceTileCellX += layer.Width;
+                                        while (sourceTileCellX >= layer.Width) sourceTileCellX -= layer.Width;
                                     }
+
+                                    tileOrig = tile = layer.Tiles[sourceTileCellX + (sourceTileCellY << layer.WidthInBits)];
 
                                     tile &= TILE_IDENT_MASK;
                                     if (tile != EmptyTile) {
+                                        flipX = (tileOrig & TILE_FLIPX_MASK);
+                                        flipY = (tileOrig & TILE_FLIPY_MASK);
+
                                         int partY = TileBaseY & 0xF;
                                         if (flipY) partY = tileSize - height - partY;
 
-                                        if (height == tileSize)
-                                            Graphics::DrawSprite(TileSprite, 0, tile, baseX, baseY, flipX, flipY, 1.0f, 1.0f, 0.0f);
-                                        else
-                                            Graphics::DrawSpritePart(TileSprite, 0, tile, 0, partY, tileSize, height, baseX, baseY, flipX, flipY, 1.0f, 1.0f, 0.0f);
+                                        Graphics::DrawSpritePart(TileSprite, 0, tile, 0, partY, tileSize, height, baseX, baseY, flipX, flipY, 1.0f, 1.0f, 0.0f);
 
-                                        if (col) {
+                                        if (Scene::ShowTileCollisionFlag && Scene::TileCfgA && layer.ScrollInfoCount <= 1) {
+                                            col = 0;
+                                            if (Scene::ShowTileCollisionFlag == 1)
+                                                col = (tileOrig & TILE_COLLA_MASK) >> 28;
+                                            else if (Scene::ShowTileCollisionFlag == 2)
+                                                col = (tileOrig & TILE_COLLB_MASK) >> 26;
+
                                             switch (col) {
                                                 case 1:
                                                     Graphics::SetBlendColor(1.0, 1.0, 0.0, 1.0);
@@ -941,11 +971,11 @@ PUBLIC STATIC void Scene::Render() {
 
                                 // while (sourceTileCellX < 0) sourceTileCellX += layer.Width;
                                 // while (sourceTileCellX >= layer.Width) sourceTileCellX -= layer.Width;
-                                sourceTileCellX = ((sourceTileCellX % layer.Width) + layer.Width) % layer.Width;
+                                sourceTileCellX &= layer.WidthMask; // sourceTileCellX = ((sourceTileCellX % layer.Width) + layer.Width) % layer.Width;
 
                                 // while (sourceTileCellY < 0) sourceTileCellY += layer.Height;
                                 // while (sourceTileCellY >= layer.Height) sourceTileCellY -= layer.Height;
-                                sourceTileCellY = ((sourceTileCellY % layer.Height) + layer.Height) % layer.Height;
+                                sourceTileCellY &= layer.HeightMask;
 
                                 baseX = (ix * tileSize) + tileSizeHalf;
                                 baseY = (iy * tileSize) + tileSizeHalf;
@@ -953,7 +983,7 @@ PUBLIC STATIC void Scene::Render() {
                                 baseX -= baseXOff;
                                 baseY -= baseYOff;
 
-                                tile = layer.Tiles[sourceTileCellX + sourceTileCellY * layer.Width];
+                                tile = layer.Tiles[sourceTileCellX + (sourceTileCellY << layer.WidthInBits)];
                                 flipX = (tile & TILE_FLIPX_MASK);
                                 flipY = (tile & TILE_FLIPY_MASK);
 
@@ -1021,9 +1051,12 @@ PUBLIC STATIC void Scene::Render() {
                     Graphics::Restore();
                 }
             }
+            Graphics::TextureBlend = texBlend;
         }
+        Scene::GameRenderViewRenderTimes[i] = Clock::GetTicks() - Scene::GameRenderViewRenderTimes[i];
 
         // RenderLate
+        Scene::GameRenderLateViewRenderTimes[i] = Clock::GetTicks();
         for (int l = 0; l < Scene::PriorityPerLayer; l++) {
             if (DEV_NoObjectRender)
                 break;
@@ -1034,7 +1067,10 @@ PUBLIC STATIC void Scene::Render() {
                     PriorityLists[l][o]->RenderLate();
             }
         }
+        Scene::GameRenderLateViewRenderTimes[i] = Clock::GetTicks() - Scene::GameRenderLateViewRenderTimes[i];
 
+
+        Scene::PostGameRenderViewRenderTimes[i] = Clock::GetTicks();
         if (currentView->UseDrawTarget && currentView->DrawTarget) {
             if (currentView->Software)
                 Graphics::SoftwareEnd();
@@ -1044,15 +1080,53 @@ PUBLIC STATIC void Scene::Render() {
                 Graphics::UpdateOrthoFlipped(win_w, win_h);
                 Graphics::UpdateProjectionMatrix();
 
+                float out_x = 0.0f;
+                float out_y = 0.0f;
+                float out_w, out_h;
+                switch (1) {
+                    // Stretch
+                    case 0:
+                        out_w = win_w;
+                        out_h = win_h;
+                        break;
+                    // Fit to aspect ratio
+                    case 1:
+                        if (win_w / currentView->Width < win_h / currentView->Height) {
+                            out_w = win_w;
+                            out_h = win_w * currentView->Height / currentView->Width;
+                        }
+                        else {
+                            out_w = win_h * currentView->Width / currentView->Height;
+                            out_h = win_h;
+                        }
+                        out_x = (win_w - out_w) * 0.5f;
+                        out_y = (win_h - out_h) * 0.5f;
+                        break;
+                    // Fill to aspect ratio
+                    case 2:
+                        if (win_w / currentView->Width > win_h / currentView->Height) {
+                            out_w = win_w;
+                            out_h = win_w * currentView->Height / currentView->Width;
+                        }
+                        else {
+                            out_w = win_h * currentView->Width / currentView->Height;
+                            out_h = win_h;
+                        }
+                        out_x = (win_w - out_w) * 0.5f;
+                        out_y = (win_h - out_h) * 0.5f;
+                        break;
+                }
+
                 Graphics::TextureBlend = false;
                 Graphics::SetBlendMode(
                     BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA,
                     BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
                 Graphics::DrawTexture(currentView->DrawTarget,
                     0.0, 0.0, currentView->Width, currentView->Height,
-                    0.0, Graphics::PixelOffset, win_w, win_h + Graphics::PixelOffset);
+                    out_x, out_y + Graphics::PixelOffset, out_w, out_h + Graphics::PixelOffset);
             }
         }
+        Scene::PostGameRenderViewRenderTimes[i] = Clock::GetTicks() - Scene::PostGameRenderViewRenderTimes[i];
     }
 
     /*
@@ -1311,7 +1385,7 @@ PUBLIC STATIC void Scene::Restart() {
     if (Scene::AnyLayerTileChange) {
         // Copy backup tiles into main tiles
         for (int l = 0; l < (int)Layers.size(); l++) {
-            memcpy(Layers[l].Tiles, Layers[l].TilesBackup, Layers[l].Width * Layers[l].Height * sizeof(Uint32));
+            memcpy(Layers[l].Tiles, Layers[l].TilesBackup, (Layers[l].WidthMask + 1) * (Layers[l].HeightMask + 1) * sizeof(Uint32));
         }
         Scene::AnyLayerTileChange = false;
     }
@@ -1677,6 +1751,11 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
             }
         }
 
+        if (TileSprite && Scene::TileCount < (int)TileSprite->Animations[0].Frames.size()) {
+            Log::Print(Log::LOG_ERROR, "Less Tile Collisions (%d) than actual Tiles! (%d)", Scene::TileCount, (int)TileSprite->Animations[0].Frames.size());
+            exit(0);
+        }
+
         for (Uint32 i = 0; i < tileCount; i++) {
             Scene::TileCfgA[i].IsCeiling = Scene::TileCfgB[i].IsCeiling = tileColReader->ReadByte();
             Scene::TileCfgA[i].Config[0] = Scene::TileCfgB[i].Config[0] = tileColReader->ReadByte();
@@ -1690,10 +1769,10 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
             Uint8 angle = Scene::TileCfgA[i].Config[0];
 
             if (angle == 0xFF) {
-                Scene::TileCfgA[i].Config[0] = 0x00;
-                Scene::TileCfgA[i].Config[1] = 0xC0;
-                Scene::TileCfgA[i].Config[2] = 0x40;
-                Scene::TileCfgA[i].Config[3] = 0x80;
+                Scene::TileCfgA[i].Config[0] = 0x00; // Top
+                Scene::TileCfgA[i].Config[1] = 0xC0; // Left
+                Scene::TileCfgA[i].Config[2] = 0x40; // Right
+                Scene::TileCfgA[i].Config[3] = 0x80; // Bottom
             }
             else {
                 if (Scene::TileCfgA[i].IsCeiling) {
@@ -2092,7 +2171,7 @@ PUBLIC STATIC void Scene::UpdateTileBatch(int l, int batchx, int batchy) {
     Memory::Free(buffer);
 }
 PUBLIC STATIC void Scene::SetTile(int layer, int x, int y, int tileID, int flip_x, int flip_y, int collA, int collB) {
-    Uint32* tile = &Scene::Layers[layer].Tiles[x + y * Scene::Layers[layer].Width];
+    Uint32* tile = &Scene::Layers[layer].Tiles[x + (y << Scene::Layers[layer].WidthInBits)];
 
     *tile = tileID & TILE_IDENT_MASK;
     if (flip_x)
@@ -2166,24 +2245,20 @@ PUBLIC STATIC int  Scene::CollisionAt(int x, int y, int collisionField, int coll
 
         // Check Layer Width
         temp = layer.Width << 4;
-        // if ((layer.Flags & SceneLayer::FLAGS_NO_REPEAT_X) && (x < 0 || x >= temp))
-        //     continue;
-        if ((x < 0 || x >= temp))
+        if (x < 0 || x >= temp)
             continue;
-        x = ((x % temp) + temp) % temp;
+        x &= layer.WidthMask << 4 | 0xF; // x = ((x % temp) + temp) % temp;
 
         // Check Layer Height
         temp = layer.Height << 4;
-        // if ((layer.Flags & SceneLayer::FLAGS_NO_REPEAT_Y) && (y < 0 || y >= temp))
-        //     continue;
         if ((y < 0 || y >= temp))
             continue;
-        y = ((y % temp) + temp) % temp;
+        y &= layer.HeightMask << 4 | 0xF; // y = ((y % temp) + temp) % temp;
 
         tileX = x >> 4;
         tileY = y >> 4;
 
-        tileID = layer.Tiles[tileX + tileY * layer.Width];
+        tileID = layer.Tiles[tileX + (tileY << layer.WidthInBits)];
         if ((tileID & TILE_IDENT_MASK) != EmptyTile) {
             flipX      = !!(tileID & TILE_FLIPX_MASK);
             flipY      = !!(tileID & TILE_FLIPY_MASK);
@@ -2207,18 +2282,17 @@ PUBLIC STATIC int  Scene::CollisionAt(int x, int y, int collisionField, int coll
                 continue;
 
             // Check if we can collide with the tile side
-            check = false;
-            check |= (collision & 1) && (collideSide & CollideSide::TOP);
-            check |= wallAsFloorFlag && ((collision & 1) && (collideSide & (CollideSide::LEFT | CollideSide::RIGHT)));
-            check |= (collision & 2) && (collideSide & CollideSide::BOTTOM_SIDES);
+            check = ((collision & 1) && (collideSide & CollideSide::TOP)) ||
+                (wallAsFloorFlag && ((collision & 1) && (collideSide & (CollideSide::LEFT | CollideSide::RIGHT)))) ||
+                ((collision & 2) && (collideSide & CollideSide::BOTTOM_SIDES));
             if (!check)
                 continue;
 
             // Check Y
             tileY = tileY << 4;
-            checkTop    =  (isCeiling ^ flipY) && (y >= tileY && y < tileY + tileSize - height);
-            checkBottom = !(isCeiling ^ flipY) && (y >= tileY + height && y < tileY + tileSize);
-            if (!checkTop && !checkBottom)
+            check = ((isCeiling ^ flipY) && (y >= tileY && y < tileY + tileSize - height)) ||
+                    (!(isCeiling ^ flipY) && (y >= tileY + height && y < tileY + tileSize));
+            if (!check)
                 continue;
 
 

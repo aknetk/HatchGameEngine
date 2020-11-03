@@ -1,6 +1,6 @@
 #if INTERFACE
 #include <Engine/Bytecode/Types.h>
-#include <Engine/Bytecode/Enums.h>
+#include <Engine/Bytecode/CompilerEnums.h>
 
 class Compiler {
 public:
@@ -43,6 +43,8 @@ const char*          Compiler::Magic = "HTVM";
 bool                 Compiler::PrettyPrint = true;
 vector<ObjString*>   Strings;
 
+Enum            Enums[0x100];
+int             EnumsCount = 0;
 
 #define Panic(returnMe) if (parser.PanicMode) { SynchronizeToken(); return returnMe; }
 
@@ -615,29 +617,37 @@ PUBLIC void          Compiler::SynchronizeToken() {
 
 // Error handling
 PUBLIC bool          Compiler::ReportError(int line, const char* string, ...) {
-    va_list args;
-    va_start(args, string);
     char message[1024];
     memset(message, 0, 1024);
+
+    va_list args;
+    va_start(args, string);
     vsprintf(message, string, args);
+    va_end(args);
+
     if (line > 0)
         Log::Print(Log::LOG_ERROR, "in file '%s' on line %d:\n    %s\n\n", scanner.SourceFilename, line, message);
     else
         Log::Print(Log::LOG_ERROR, "in file '%s' on line %d:\n    %s\n\n", scanner.SourceFilename, line, message);
-    exit(-1);
+
+    assert(false);
     return false;
 }
 PUBLIC bool          Compiler::ReportErrorPos(int line, int pos, const char* string, ...) {
-    va_list args;
-    va_start(args, string);
     char message[1024];
     memset(message, 0, 1024);
+
+    va_list args;
+    va_start(args, string);
     vsprintf(message, string, args);
+    va_end(args);
+
     if (line > 0)
         Log::Print(Log::LOG_ERROR, "in file '%s' on line %d, position %d:\n    %s\n\n", scanner.SourceFilename, line, pos, message);
     else
-        Log::Print(Log::LOG_ERROR, "\n    %s\n\n", message);
-    exit(-1);
+        Log::Print(Log::LOG_ERROR, "in file '%s' on line %d, position %d:\n    %s\n\n", scanner.SourceFilename, line, pos, message);
+
+    assert(false);
     return false;
 }
 PUBLIC void          Compiler::ErrorAt(Token* token, const char* message) {
@@ -915,6 +925,36 @@ PUBLIC Uint8 Compiler::GetArgumentList() {
     return argumentCount;
 }
 
+// Enums
+PUBLIC void  Compiler::AddEnum(Token name) {
+    if (EnumsCount == 0xFF) {
+        Error("Too many local variables in function.");
+        return;
+    }
+    Enum* enume = &Enums[EnumsCount++];
+    enume->Name = name;
+    enume->Constant = -1;
+}
+PUBLIC int   Compiler::ResolveEnum(Token* name) {
+    for (int i = EnumsCount - 1; i >= 0; i--) {
+        Enum* enume = &Enums[i];
+        if (IdentifiersEqual(name, &enume->Name)) {
+            return i;
+        }
+    }
+    return -1;
+}
+PUBLIC void  Compiler::DeclareEnum() {
+    Token* name = &parser.Previous;
+    for (int i = LocalCount - 1; i >= 0; i--) {
+        Enum* local = &Enums[i];
+        if (IdentifiersEqual(name, &local->Name))
+            Error("Enumeration with this name already declared.");
+    }
+
+    AddEnum(*name);
+}
+
 PUBLIC void  Compiler::GetThis(bool canAssign) {
     // if (currentClass == NULL) {
     //     Error("Cannot use 'this' outside of a class.");
@@ -1018,6 +1058,7 @@ PUBLIC void  Compiler::GetElement(bool canAssign) {
 }
 
 // Reading expressions
+bool negateConstant = false;
 PUBLIC void Compiler::GetGrouping(bool canAssign) {
     GetExpression();
     ConsumeToken(TOKEN_RIGHT_PAREN, "Expected \")\" after expression.");
@@ -1033,18 +1074,22 @@ PUBLIC void Compiler::GetLiteral(bool canAssign) {
 }
 PUBLIC void Compiler::GetInteger(bool canAssign) {
     int value = 0;
-    if (*parser.Previous.Start == '0' &&
-        (*(parser.Previous.Start + 1) == 'x' || *(parser.Previous.Start + 1) == 'X')) {
-        value = (int)strtol(parser.Previous.Start + 2, NULL, 16);
-    }
-    else {
-        value = (int)atof(parser.Previous.Start);
-    }
+    char* start = parser.Previous.Start;
+    if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
+        value = (int)strtol(start + 2, NULL, 16);
+    else
+        value = (int)atof(start);
+
+    if (negateConstant)
+        value = -value;
     EmitConstant(INTEGER_VAL(value));
 }
 PUBLIC void Compiler::GetDecimal(bool canAssign) {
     float value = 0;
     value = (float)atof(parser.Previous.Start);
+
+    if (negateConstant)
+        value = -value;
     EmitConstant(DECIMAL_VAL(value));
 }
 PUBLIC void Compiler::GetString(bool canAssign) {
@@ -1138,6 +1183,21 @@ PUBLIC void Compiler::GetConstant(bool canAssign) {
         case TOKEN_DECIMAL:
             GetDecimal(canAssign);
             break;
+        case TOKEN_MINUS: {
+            negateConstant = true;
+            switch (NextToken().Type) {
+                case TOKEN_NUMBER:
+                    GetInteger(canAssign);
+                    break;
+                case TOKEN_DECIMAL:
+                    GetDecimal(canAssign);
+                    break;
+                default:
+                    Error("Invalid value after negative sign!");
+                    break;
+            }
+            break;
+        }
         default:
             Error("Invalid value!");
             break;
@@ -1419,9 +1479,6 @@ PUBLIC void Compiler::GetSwitchStatement() {
                 if (integer_max < val)
                     integer_max = val;
             }
-
-            // printf("case ");
-            // PrintValue(value);
         }
         else {
             // printf("default");
@@ -1484,6 +1541,19 @@ PUBLIC void Compiler::GetCaseStatement() {
 
     int position, constant_index;
     position = CodePointer();
+
+    // int enum_index;
+    // Token t = PeekToken();
+    // if ((enum_index = ResolveEnum(&t)) != -1) {
+    //     if (Enums[enum_index].Constant != -1) {
+    //         AdvanceToken();
+    //         ConsumeToken(TOKEN_COLON, "Expected \":\" after \"case\".");
+    //         CurrentChunk()->Count = position;
+    //
+    //         SwitchJumpListStack.top()->push_back(switch_case { position, Enums[enum_index].Constant, 0 });
+    //         return;
+    //     }
+    // }
 
     GetConstant(false);
     ConsumeToken(TOKEN_COLON, "Expected \":\" after \"case\".");
@@ -1565,13 +1635,19 @@ PUBLIC void Compiler::GetBlockStatement() {
     ConsumeToken(TOKEN_RIGHT_BRACE, "Expected \"}\" after block.");
 }
 PUBLIC void Compiler::GetWithStatement() {
+    enum {
+        WITH_STATE_INIT,
+        WITH_STATE_ITERATE,
+        WITH_STATE_FINISH,
+    };
+
     // With "expression"
     ConsumeToken(TOKEN_LEFT_PAREN, "Expect '(' after 'with'.");
     GetExpression();
     ConsumeToken(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
     EmitByte(OP_WITH);
-    EmitByte(0);
+    EmitByte(WITH_STATE_INIT);
     EmitByte(0xFF);
     EmitByte(0xFF);
 
@@ -1591,7 +1667,7 @@ PUBLIC void Compiler::GetWithStatement() {
 
     // Loop back?
     EmitByte(OP_WITH);
-    EmitByte(1);
+    EmitByte(WITH_STATE_ITERATE);
 
     int offset = CurrentChunk()->Count - loopStart + 2;
     if (offset > UINT16_MAX) Error("Loop body too large.");
@@ -1599,12 +1675,18 @@ PUBLIC void Compiler::GetWithStatement() {
     EmitByte(offset & 0xFF);
     EmitByte((offset >> 8) & 0xFF);
 
+    // Pop jump list off break stack, patch all breaks to this code point
+    EndBreakJumpList();
+
+    // End
+    EmitByte(OP_WITH);
+    EmitByte(WITH_STATE_FINISH);
+    EmitByte(0xFF);
+    EmitByte(0xFF);
+
     int jump = CurrentChunk()->Count - loopStart;
     CurrentChunk()->Code[loopStart - 2] = jump & 0xFF;
     CurrentChunk()->Code[loopStart - 1] = (jump >> 8) & 0xFF;
-
-    // Pop jump list off break stack, patch all breaks to this code point
-    EndBreakJumpList();
 }
 PUBLIC void Compiler::GetForStatement() {
     // Start new scope
@@ -1752,6 +1834,11 @@ PUBLIC int  Compiler::GetFunction(int type) {
 
     Compiler* compiler = new Compiler;
     compiler->Initialize(this, 1, type);
+
+    // compiler->EmitByte(OP_FAILSAFE);
+    //
+    // int failsafecompiler->CodePointer();
+    // compiler->EmitUint16(0xFFFFU);
 
     if (type == TYPE_WITH) {
         // With statements shouldn't need brackets
@@ -1905,45 +1992,39 @@ PUBLIC void Compiler::GetEventDeclaration() {
 
 }
 PUBLIC void Compiler::GetEnumDeclaration() {
-    ConsumeToken(TOKEN_IDENTIFIER, "Expected enum identifier.");
+    do {
+        // Uint8 global =
+        ConsumeToken(TOKEN_IDENTIFIER, "Expected enumeration name.");
+        DeclareEnum();
 
-    Token enum_identifier = PrevToken();
+        Token t = parser.Previous;
 
-    ConsumeToken(TOKEN_LEFT_BRACE, "Expected \"{\" after enum identifier.");
+        ConsumeToken(TOKEN_ASSIGNMENT, "Expected \"=\" after enumeration name.");
 
-    EmitByte(OP_ENUM);
-    EmitStringHash(enum_identifier);
-    DefineVariableToken(enum_identifier);
-
-    int value_count = 0;
-    int value_count_ptr = GetPosition();
-    EmitByte(0x00);
-
-    while (!CheckToken(TOKEN_RIGHT_BRACE) && !CheckToken(TOKEN_EOF)) {
-        ConsumeToken(TOKEN_IDENTIFIER, "Expected identifier before value.");
-        Token value_identifier = PrevToken();
-
-        ConsumeToken(TOKEN_ASSIGNMENT, "Expected \"=\" identifier.");
-
-        EmitStringHash(value_identifier);
+        // Get Constant Value
+        int position, constant_index;
+        position = CodePointer();
         GetConstant(false);
+        constant_index = CurrentChunk()->Code[position + 1];
+        CurrentChunk()->Count = position;
 
-        value_count++;
-        if (value_count > 0xFF) {
-            Error("Too many values in enum!");
-            break;
+        int enum_index;
+        if ((enum_index = ResolveEnum(&t)) != -1) {
+            Enums[enum_index].Constant = constant_index;
+            // printf("enum (%.*s) = %d\n", t.Length, t.Start, constant_index);
         }
     }
+    while (MatchToken(TOKEN_COMMA));
 
-    CurrentChunk()->Code[value_count_ptr] = value_count & 0xFF;
-
-    ConsumeToken(TOKEN_RIGHT_BRACE, "Expected \"}\" after enum.");
+    ConsumeToken(TOKEN_SEMICOLON, "Expected \";\" after enum declaration.");
 }
 PUBLIC void Compiler::GetDeclaration() {
     if (MatchToken(TOKEN_CLASS))
         GetClassDeclaration();
     else if (MatchToken(TOKEN_VAR))
         GetVariableDeclaration();
+    else if (MatchToken(TOKEN_ENUM))
+        GetEnumDeclaration();
     else if (MatchToken(TOKEN_EVENT))
         GetEventDeclaration();
     else
@@ -2041,10 +2122,10 @@ PUBLIC void          Compiler::ParsePrecedence(Precedence precedence) {
     }
 }
 PUBLIC Uint32        Compiler::GetHash(char* string) {
-    return FNV1A::EncryptString(string);
+    return Murmur::EncryptString(string);
 }
 PUBLIC Uint32        Compiler::GetHash(Token token) {
-    return FNV1A::EncryptData(token.Start, token.Length);
+    return Murmur::EncryptData(token.Start, token.Length);
 }
 
 PUBLIC Chunk*        Compiler::CurrentChunk() {
@@ -2076,7 +2157,8 @@ PUBLIC void          Compiler::EmitConstant(VMValue value) {
     if (index < 0)
         index = MakeConstant(value);
 
-    EmitBytes(OP_CONSTANT, index);
+    EmitByte(OP_CONSTANT);
+    EmitUint32(index);
 }
 PUBLIC void          Compiler::EmitLoop(int loopStart) {
     EmitByte(OP_JUMP_BACK);
@@ -2184,13 +2266,13 @@ PUBLIC int           Compiler::FindConstant(VMValue value) {
     }
     return -1;
 }
-PUBLIC Uint8         Compiler::MakeConstant(VMValue value) {
+PUBLIC int           Compiler::MakeConstant(VMValue value) {
     int constant = ChunkAddConstant(CurrentChunk(), value);
-    if (constant > UINT8_MAX) {
-        Error("Too many constants in one chunk.");
-        return 0;
-    }
-    return (Uint8)constant;
+    // if (constant > UINT8_MAX) {
+    //     Error("Too many constants in one chunk.");
+    //     return 0;
+    // }
+    return constant;
 }
 
 int  justin_print(char** buffer, int* buf_start, const char *format, ...) {
@@ -2362,18 +2444,18 @@ PUBLIC STATIC int    Compiler::HashInstruction(const char* name, Chunk* chunk, i
     return offset + 5;
 }
 PUBLIC STATIC int    Compiler::ConstantInstruction(const char* name, Chunk* chunk, int offset) {
-    uint8_t constant = chunk->Code[offset + 1];
+    int constant = *(int*)&chunk->Code[offset + 1];
     printf("%-16s %9d '", name, constant);
     PrintValue(NULL, NULL, (*chunk->Constants)[constant]);
     printf("'\n");
-    return offset + 2;
+    return offset + 5;
 }
 PUBLIC STATIC int    Compiler::ConstantInstructionN(const char* name, int n, Chunk* chunk, int offset) {
-    uint8_t constant = chunk->Code[offset + 1];
+    int constant = *(int*)&chunk->Code[offset + 1];
     printf("%s_%-*d %9d '", name, 15 - (int)strlen(name), n, constant);
     PrintValue(NULL, NULL, (*chunk->Constants)[constant]);
     printf("'\n");
-    return offset + 2;
+    return offset + 5;
 }
 PUBLIC STATIC int    Compiler::SimpleInstruction(const char* name, int offset) {
     printf("%s\n", name);
@@ -2653,6 +2735,8 @@ PUBLIC bool          Compiler::Compile(const char* filename, const char* source,
     parser.HadError = false;
     parser.PanicMode = false;
 
+    EnumsCount = 0;
+
     Compiler::Functions.clear();
     Initialize(NULL, 0, TYPE_TOP_LEVEL);
 
@@ -2702,7 +2786,7 @@ PUBLIC bool          Compiler::Compile(const char* filename, const char* source,
 
         stream->WriteUInt32(chunk->Count);
         stream->WriteUInt32(arity);
-        stream->WriteUInt32(FNV1A::EncryptString(Compiler::Functions[c]->Name->Chars));
+        stream->WriteUInt32(Murmur::EncryptString(Compiler::Functions[c]->Name->Chars));
 
         stream->WriteBytes(chunk->Code, chunk->Count);
         if (doLineNumbers) {

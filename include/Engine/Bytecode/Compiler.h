@@ -11,7 +11,7 @@
 class Compiler;
 
 #include <Engine/Bytecode/Types.h>
-#include <Engine/Bytecode/Enums.h>
+#include <Engine/Bytecode/CompilerEnums.h>
 
 class Compiler {
 public:
@@ -86,6 +86,9 @@ public:
     void  AddLocal(Token name);
     int   ResolveLocal(Token* name);
     Uint8 GetArgumentList();
+    void  AddEnum(Token name);
+    int   ResolveEnum(Token* name);
+    void  DeclareEnum();
     void  GetThis(bool canAssign);
     void  GetDot(bool canAssign);
     void  GetElement(bool canAssign);
@@ -157,7 +160,7 @@ public:
     void          StartSwitchJumpList();
     void          EndSwitchJumpList();
     int           FindConstant(VMValue value);
-    Uint8         MakeConstant(VMValue value);
+    int           MakeConstant(VMValue value);
     static void   PrintValue(VMValue value);
     static void   PrintValue(char** buffer, int* buf_start, VMValue value);
     static void   PrintValue(char** buffer, int* buf_start, VMValue value, int indent);

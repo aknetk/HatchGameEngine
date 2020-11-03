@@ -15,7 +15,7 @@ public:
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Memory.h>
 
-#ifndef NO_CURL
+#ifdef USING_CURL
 
 #if !WIN32
 #include <sys/fcntl.h>
@@ -110,7 +110,7 @@ int       _GET_FromThread(void* op) {
 #endif
 
 PUBLIC STATIC bool HTTP::GET(const char* url, Uint8** outBuf, size_t* outLen, ObjBoundMethod* callback) {
-    #ifndef NO_CURL
+    #ifdef USING_CURL
 
     if (!curl) {
         curl = curl_easy_init();

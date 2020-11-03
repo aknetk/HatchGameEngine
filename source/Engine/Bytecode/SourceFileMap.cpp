@@ -31,17 +31,18 @@ PUBLIC STATIC void SourceFileMap::CheckInit() {
     if (SourceFileMap::Initialized) return;
 
     if (SourceFileMap::Checksums == NULL) {
-        SourceFileMap::Checksums = new HashMap<Uint32>(CombinedHash::EncryptString, 16);
+        SourceFileMap::Checksums = new HashMap<Uint32>(CombinedHash::EncryptData, 16);
     }
     if (SourceFileMap::ClassMap == NULL) {
-        SourceFileMap::ClassMap = new HashMap<vector<Uint32>*>(FNV1A::EncryptString, 16);
+        SourceFileMap::ClassMap = new HashMap<vector<Uint32>*>(Murmur::EncryptData, 16);
     }
 
     if (ResourceManager::ResourceExists("Objects/Objects.hcm")) {
         ResourceStream* stream = ResourceStream::New("Objects/Objects.hcm");
         if (stream) {
+            Uint32 magic_got;
             Uint32 magic = *(Uint32*)"HMAP";
-            if (stream->ReadUInt32() == magic) {
+            if ((magic_got = stream->ReadUInt32()) == magic) {
                 stream->ReadByte(); // Version
                 stream->ReadByte(); // Version
                 stream->ReadByte(); // Version
@@ -62,6 +63,9 @@ PUBLIC STATIC void SourceFileMap::CheckInit() {
             }
             stream->Close();
         }
+    }
+    else {
+        Log::Print(Log::LOG_ERROR, "Could not find ClassMap!");
     }
 
     #ifdef DEBUG
@@ -90,13 +94,22 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
     const char* scriptFolder = "Scripts";
     size_t      scriptFolderNameLen = strlen(scriptFolder);
 
+    if (!Directory::Exists(scriptFolder))
+        return;
+
     vector<char*> list;
     Directory::GetFiles(&list, scriptFolder, "*.obj", true);
     Directory::GetFiles(&list, scriptFolder, "*.hsl", true);
 
+    if (list.size() == 0)
+        return;
+
     if (!Directory::Exists("Resources/Objects")) {
         Directory::Create("Resources/Objects");
+        anyChanges = true;
     }
+    if (!ResourceManager::ResourceExists("Objects/Objects.hcm"))
+        anyChanges = true;
 
     Uint32 oldDirectoryChecksum = SourceFileMap::DirectoryChecksum;
 
@@ -106,7 +119,7 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
         SourceFileMap::DirectoryChecksum = FNV1A::EncryptData(filename, (Uint32)strlen(filename), SourceFileMap::DirectoryChecksum);
     }
 
-    if (oldDirectoryChecksum != SourceFileMap::DirectoryChecksum) {
+    if (oldDirectoryChecksum != SourceFileMap::DirectoryChecksum && SourceFileMap::DirectoryChecksum) {
         Log::Print(Log::LOG_VERBOSE, "Detected new/deleted file: (%08X -> %08X)", oldDirectoryChecksum, SourceFileMap::DirectoryChecksum);
         anyChanges = true;
 
@@ -137,7 +150,7 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
 
         char*  source;
         File::ReadAllBytes(list[i], &source);
-        newChecksum = FNV1A::EncryptString(source);
+        newChecksum = Murmur::EncryptString(source);
 
         Memory::Track(source, "SourceFileMap::SourceText");
 

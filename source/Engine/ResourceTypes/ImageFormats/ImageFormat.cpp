@@ -8,6 +8,7 @@ public:
     Uint32  Width = 0;
     Uint32  Height = 0;
     Uint32  TransparentColorIndex = 0;
+    bool    Paletted = false;
 };
 #endif
 
@@ -17,5 +18,5 @@ PUBLIC VIRTUAL bool ImageFormat::Save(const char* filename) {
     return false;
 }
 PUBLIC VIRTUAL      ImageFormat::~ImageFormat() {
-    
+
 }

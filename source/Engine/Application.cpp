@@ -227,7 +227,24 @@ PUBLIC STATIC void Application::GetPerformanceSnapshot() {
             Log::Print(Log::LOG_INFO, typeNames[i], types[i]);
         }
 
-        double total = 0.0;
+        int activeViews = 0;
+        for (int i = 0; i < 8; i++) {
+            View* currentView = &Scene::Views[i];
+            if (currentView->Active) {
+                Log::Print(Log::LOG_INFO, "View %d Render Times (Pre: %3.3f ms, RE: %3.3f ms, R: %3.3f ms, RL: %3.3f ms, Post: %3.3f ms)", i,
+                    Scene::PreGameRenderViewRenderTimes[i],
+                    Scene::GameRenderEarlyViewRenderTimes[i],
+                    Scene::GameRenderViewRenderTimes[i],
+                    Scene::GameRenderLateViewRenderTimes[i], 
+                    Scene::PostGameRenderViewRenderTimes[i]);
+                activeViews++;
+            }
+        }
+        Log::Print(Log::LOG_INFO, "Active Views: %d", activeViews);
+        Log::Print(Log::LOG_INFO, " ");
+
+        double totalUpdate = 0.0;
+        double totalRender = 0.0;
         Log::Print(Log::LOG_IMPORTANT, "Object Performance Snapshot:");
         for (size_t i = 0; i < ListList.size(); i++) {
             ObjectList* list = ListList[i];
@@ -235,9 +252,11 @@ PUBLIC STATIC void Application::GetPerformanceSnapshot() {
                 list->AverageUpdateTime * 1000.0, list->AverageUpdateTime * list->AverageUpdateItemCount * 1000.0, (int)list->AverageUpdateItemCount,
                 list->AverageRenderTime * 1000.0, list->AverageRenderTime * list->AverageRenderItemCount * 1000.0, (int)list->AverageRenderItemCount);
 
-            total += list->AverageRenderTime * list->AverageRenderItemCount * 1000.0;
+            totalUpdate += list->AverageUpdateTime * list->AverageUpdateItemCount * 1000.0;
+            totalRender += list->AverageRenderTime * list->AverageRenderItemCount * 1000.0;
         }
-        Log::Print(Log::LOG_WARN, "Total: %.3f mcs / %.3f ms", total, total / 1000.0);
+        Log::Print(Log::LOG_WARN, "Total Update: %.3f mcs / %.3f ms", totalUpdate, totalUpdate / 1000.0);
+        Log::Print(Log::LOG_WARN, "Total Render: %.3f mcs / %.3f ms", totalRender, totalRender / 1000.0);
 
         Log::Print(Log::LOG_IMPORTANT, "Garbage Size:");
         Log::Print(Log::LOG_INFO, "%u", (Uint32)GarbageCollector::GarbageSize);
@@ -249,7 +268,7 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
     if (!Running)
         return;
 
-    bool    DevMenu = true;
+    bool    DevMenu = false;
     bool    ShowFPS = false;
     bool    TakeSnapshot = false;
     bool    DoNothing = false;
@@ -318,7 +337,9 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                     switch (e.key.keysym.sym) {
                         // Quit game
                         case SDLK_ESCAPE: {
-                            Running = false;
+                            if (DevMenu) {
+                                Running = false;
+                            }
                             break;
                         }
                         // Fullscreen
@@ -433,6 +454,20 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
                         case SDLK_F7: {
                             if (DevMenu) {
                                 Scene::ShowTileCollisionFlag = (Scene::ShowTileCollisionFlag + 1) % 3;
+
+                                char full[512];
+                                switch (Scene::ShowTileCollisionFlag) {
+                                    case 0:
+                                        sprintf(full, "%s", Application::WindowTitle);
+                                        break;
+                                    case 1:
+                                        sprintf(full, "%s%s", Application::WindowTitle, " (Viewing Path A)");
+                                        break;
+                                    case 2:
+                                        sprintf(full, "%s%s", Application::WindowTitle, " (Viewing Path B)");
+                                        break;
+                                }
+                                SDL_SetWindowTitle(Application::Window, full);
                             }
                             break;
                         }

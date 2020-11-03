@@ -16,8 +16,8 @@ public:
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Memory.h>
 
-// #if defined(SWITCH)
-#define NOTRACK
+// #if defined(ANDROID)
+// #define NOTRACK
 // #endif
 
 vector<void*>        Memory::TrackedMemory;

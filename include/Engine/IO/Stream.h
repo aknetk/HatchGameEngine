@@ -44,10 +44,12 @@ public:
             void    WriteUInt16BE(Uint16 data);
             void    WriteUInt32(Uint32 data);
             void    WriteUInt32BE(Uint32 data);
+            void    WriteUInt64(Uint64 data);
             void    WriteInt16(Sint16 data);
             void    WriteInt16BE(Sint16 data);
             void    WriteInt32(Sint32 data);
             void    WriteInt32BE(Sint32 data);
+            void    WriteInt64(Sint64 data);
             void    WriteFloat(float data);
             void    WriteString(const char* string);
             void    WriteHeaderedString(const char* string);

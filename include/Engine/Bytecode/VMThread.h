@@ -40,9 +40,13 @@ public:
     Uint32    ID;
     Uint32    State;
     bool      DebugInfo;
+    static    bool InstructionIgnoreMap[0x100];
+    static    std::jmp_buf JumpBuffer;
 
-    bool    ThrowError(bool fatal, const char* errorMessage, ...);
+    char*   GetToken(Uint32 hash);
+    int     ThrowRuntimeError(bool fatal, const char* errorMessage, ...);
     void    PrintStack();
+    void    ReturnFromNative();
     void    Push(VMValue value);
     VMValue Pop();
     VMValue Peek(int offset);

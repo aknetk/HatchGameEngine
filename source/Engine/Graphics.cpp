@@ -51,6 +51,7 @@ public:
     static float              PixelOffset;
 	static bool 			  NoInternalTextures;
 	static int   			  BlendMode;
+	static bool 			  UsePalettes;
 };
 #endif
 
@@ -98,6 +99,7 @@ const char*        Graphics::Renderer = "default";
 float              Graphics::PixelOffset = 0.0f;
 bool               Graphics::NoInternalTextures = false;
 int   			   Graphics::BlendMode = 0;
+bool               Graphics::UsePalettes = false;
 
 /*
 // Rendering functions
@@ -301,20 +303,16 @@ PUBLIC STATIC Texture* Graphics::CreateTexture(Uint32 format, Uint32 access, Uin
             return NULL;
     }
     else {
-		if (!Graphics::NoInternalTextures) {
-	    	if (width > Graphics::MaxTextureWidth || height > Graphics::MaxTextureHeight) {
-	    		Log::Print(Log::LOG_ERROR, "Texture of size %u x %u is larger than maximum size of %u x %u!", width, height, Graphics::MaxTextureWidth, Graphics::MaxTextureHeight);
-	    		return NULL;
-	    	}
-	        texture = Graphics::GfxFunctions->CreateTexture(format, access, width, height);
-	    	if (!texture)
-	    		return NULL;
-		}
-		else {
-			texture = Texture::New(format, access, width, height);
-	        if (!texture)
-	            return NULL;
-		}
+		if (Graphics::NoInternalTextures) {
+	    	if (width > Graphics::MaxTextureWidth)
+    	        width = Graphics::MaxTextureWidth;
+    		if (height > Graphics::MaxTextureHeight)
+    	        height = Graphics::MaxTextureHeight;
+        }
+
+        texture = Graphics::GfxFunctions->CreateTexture(format, access, width, height);
+    	if (!texture)
+    		return NULL;
     }
 
 	texture->Next = Graphics::TextureHead;
@@ -341,11 +339,7 @@ PUBLIC STATIC int      Graphics::LockTexture(Texture* texture, void** pixels, in
 }
 PUBLIC STATIC int      Graphics::UpdateTexture(Texture* texture, SDL_Rect* src, void* pixels, int pitch) {
 	memcpy(texture->Pixels, pixels, sizeof(Uint32) * texture->Width * texture->Height);
-
-	if (!Graphics::NoInternalTextures)
-		return Graphics::GfxFunctions->UpdateTexture(texture, src, pixels, pitch);
-
-	return 0;
+    return Graphics::GfxFunctions->UpdateTexture(texture, src, pixels, pitch);
 }
 PUBLIC STATIC int      Graphics::UpdateYUVTexture(Texture* texture, SDL_Rect* src, Uint8* pixelsY, int pitchY, Uint8* pixelsU, int pitchU, Uint8* pixelsV, int pitchV) {
 	if (!Graphics::GfxFunctions->UpdateYUVTexture)
@@ -371,8 +365,7 @@ PUBLIC STATIC void     Graphics::DisposeTexture(Texture* texture) {
 
 PUBLIC STATIC void     Graphics::UseShader(void* shader) {
 	Graphics::CurrentShader = shader;
-	if (shader)
-    	Graphics::GfxFunctions->UseShader(shader);
+	Graphics::GfxFunctions->UseShader(shader);
 }
 PUBLIC STATIC void     Graphics::SetTextureInterpolation(bool interpolate) {
     Graphics::TextureInterpolate = interpolate;
@@ -387,6 +380,8 @@ PUBLIC STATIC void     Graphics::Present() {
 
 PUBLIC STATIC void     Graphics::SoftwareStart() {
 	Graphics::GfxFunctions = &SoftwareRenderer::BackendFunctions;
+    for (int i = 0; i < 32; i++)
+        SoftwareRenderer::PaletteColors[i][0] = 0;
 }
 PUBLIC STATIC void     Graphics::SoftwareEnd() {
 	// Present to current view texture

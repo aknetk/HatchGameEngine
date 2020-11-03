@@ -14,6 +14,7 @@ public:
 #endif
 
 #include <Engine/IO/FileStream.h>
+#include <Engine/Includes/StandardSDL2.h>
 
 PUBLIC STATIC FileStream* FileStream::New(const char* filename, Uint32 access) {
     FileStream* stream = new FileStream;
@@ -34,8 +35,19 @@ PUBLIC STATIC FileStream* FileStream::New(const char* filename, Uint32 access) {
     #ifdef SWITCH_ROMFS
     if (!stream->f) {
         char romfsPath[256];
-        sprintf(romfsPath, "romfs:/%s", filename);
+        snprintf(romfsPath, 256, "romfs:/%s", filename);
         stream->f = fopen(romfsPath, accessString);
+    }
+    #endif
+
+    #ifdef ANDROID
+    if (!stream->f) {
+        const char* internalStorage = SDL_AndroidGetInternalStoragePath();
+        if (internalStorage) {
+            char androidPath[256];
+            snprintf(androidPath, 256, "%s/%s", internalStorage, filename);
+            stream->f = fopen(androidPath, accessString);
+        }
     }
     #endif
 

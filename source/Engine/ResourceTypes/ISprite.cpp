@@ -8,15 +8,17 @@ public:
     char              Filename[256];
     bool              Print = false;
 
-    Texture*          Spritesheets[4];
-    bool              SpritesheetsBorrowed[4];
-    char              SpritesheetsFilenames[128][4];
+    Texture*          Spritesheets[32];
+    bool              SpritesheetsBorrowed[32];
+    char              SpritesheetsFilenames[128][32];
     int               SpritesheetCount = 0;
     int               CollisionBoxCount = 0;
 
     vector<Animation> Animations;
 };
 #endif
+
+#define MAX_SPRITESHEETS 32
 
 #include <Engine/ResourceTypes/ISprite.h>
 
@@ -54,6 +56,7 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
     Uint32   width = 0;
     Uint32   height = 0;
 
+    bool paletted = false;
     const char* altered = filename;
 
     if (Graphics::SpriteSheetTextureMap->Exists(altered)) {
@@ -61,15 +64,19 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
         return texture;
     }
 
+    float loadDelta = 0.0f;
     if (strstr(altered, ".png")) {
         Clock::Start();
         PNG* png = PNG::Load(altered);
+        loadDelta = Clock::End();
+
         if (png) {
-            Log::Print(Log::LOG_VERBOSE, "PNG load took %.3f ms", Clock::End());
+            Log::Print(Log::LOG_VERBOSE, "PNG load took %.3f ms", loadDelta);
             width = png->Width;
             height = png->Height;
 
             data = png->Data;
+            paletted = png->Paletted;
             Memory::Track(data, "Texture::Data");
 
             delete png;
@@ -82,12 +89,15 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
     else if (strstr(altered, ".jpg") || strstr(altered, ".jpeg")) {
         Clock::Start();
         JPEG* jpeg = JPEG::Load(altered);
+        loadDelta = Clock::End();
+
         if (jpeg) {
-            Log::Print(Log::LOG_VERBOSE, "JPEG load took %.3f ms", Clock::End());
+            Log::Print(Log::LOG_VERBOSE, "JPEG load took %.3f ms", loadDelta);
             width = jpeg->Width;
             height = jpeg->Height;
 
             data = jpeg->Data;
+            paletted = jpeg->Paletted;
             Memory::Track(data, "Texture::Data");
 
             delete jpeg;
@@ -100,12 +110,15 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
     else if (strstr(altered, ".gif")) {
         Clock::Start();
         GIF* gif = GIF::Load(altered);
+        loadDelta = Clock::End();
+
         if (gif) {
-            Log::Print(Log::LOG_VERBOSE, "GIF load took %.3f ms", Clock::End());
+            Log::Print(Log::LOG_VERBOSE, "GIF load took %.3f ms", loadDelta);
             width = gif->Width;
             height = gif->Height;
 
             data = gif->Data;
+            paletted = gif->Paletted;
             // Palette = gif->Colors;
             // PaletteAlt = (Uint32*)Memory::TrackedCalloc("Sprite::PaletteAlt", 256, sizeof(Uint32));
             // PaletteCount = 1;
@@ -139,6 +152,8 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
         Graphics::NoInternalTextures = true;
 
     texture = Graphics::CreateTextureFromPixels(width, height, data, width * sizeof(Uint32));
+    texture->Paletted = paletted;
+    
     Graphics::NoInternalTextures = false;
 
     Memory::Free(data);
@@ -191,7 +206,7 @@ PUBLIC void ISprite::AddFrame(int duration, int left, int top, int width, int he
 }
 PUBLIC void ISprite::AddFrame(int duration, int left, int top, int width, int height, int pivotX, int pivotY, int id) {
     AnimFrame anfrm;
-    anfrm.ID = id;
+    anfrm.Advance = id;
     anfrm.Duration = duration;
     anfrm.X = left;
     anfrm.Y = top;
@@ -238,6 +253,11 @@ PUBLIC bool ISprite::LoadAnimation(const char* filename) {
 
     // Load textures
     for (int i = 0; i < this->SpritesheetCount; i++) {
+        if (i >= MAX_SPRITESHEETS) {
+            Log::Print(Log::LOG_ERROR, "Too many spritesheets in sprite %s!", filename);
+            exit(-1);
+        }
+
         str = reader->ReadHeaderedString();
         if (Print)
             Log::Print(Log::LOG_VERBOSE, " - %s", str);
@@ -292,7 +312,7 @@ PUBLIC bool ISprite::LoadAnimation(const char* filename) {
                 Log::Print(Log::LOG_ERROR, "Sheet number %d outside of range of sheet count %d! (Animation %d, Frame %d)", anfrm.SheetNumber, SpritesheetCount, a, i);
 
             anfrm.Duration = reader->ReadInt16();
-            anfrm.ID = reader->ReadUInt16();
+            anfrm.Advance = reader->ReadUInt16();
             anfrm.X = reader->ReadUInt16();
             anfrm.Y = reader->ReadUInt16();
             anfrm.Width = reader->ReadUInt16();
@@ -392,7 +412,7 @@ PUBLIC bool ISprite::SaveAnimation(const char* filename) {
             AnimFrame anfrm = an.Frames[i];
             stream->WriteByte(anfrm.SheetNumber);
             stream->WriteUInt16(anfrm.Duration);
-            stream->WriteUInt16(anfrm.ID);
+            stream->WriteUInt16(anfrm.Advance);
             stream->WriteUInt16(anfrm.X);
             stream->WriteUInt16(anfrm.Y);
             stream->WriteUInt16(anfrm.Width);

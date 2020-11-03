@@ -11,6 +11,13 @@ public:
 
     int            Width = 0;
     int            Height = 0;
+    Uint32         WidthMask = 0;
+    Uint32         HeightMask = 0;
+    Uint32         WidthInBits = 0;
+    Uint32         HeightInBits = 0;
+    Uint32         WidthData = 0;
+    Uint32         HeightData = 0;
+    Uint32         DataSize = 0;
 
     int            RelativeY = 0x0100;
     int            ConstantY = 0x0000;
@@ -55,6 +62,35 @@ PUBLIC         SceneLayer::SceneLayer() {
 PUBLIC         SceneLayer::SceneLayer(int w, int h) {
     Width = w;
     Height = h;
+
+    w--;
+    w |= w >> 1;
+    w |= w >> 2;
+    w |= w >> 4;
+    w |= w >> 8;
+    w |= w >> 16;
+    w++;
+    WidthMask = w - 1;
+    WidthInBits = 0;
+    for (int f = w >> 1; f > 0; f >>= 1)
+        WidthInBits++;
+
+    h--;
+    h |= h >> 1;
+    h |= h >> 2;
+    h |= h >> 4;
+    h |= h >> 8;
+    h |= h >> 16;
+    h++;
+    HeightMask = h - 1;
+    HeightInBits = 0;
+    for (int f = h >> 1; f > 0; f >>= 1)
+        HeightInBits++;
+
+    WidthData = w;
+    HeightData = h;
+    DataSize = w * h * sizeof(Uint32);
+
     Tiles = (Uint32*)Memory::TrackedCalloc("SceneLayer::Tiles", w * h, sizeof(Uint32));
     TilesBackup = (Uint32*)Memory::TrackedCalloc("SceneLayer::TilesBackup", w * h, sizeof(Uint32));
     // TileOffsetY = (Uint16*)Memory::Calloc(w, sizeof(Uint16));

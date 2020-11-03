@@ -19,6 +19,12 @@ PUBLIC STATIC float Math::Cos(float n) {
 PUBLIC STATIC float Math::Sin(float n) {
     return std::sin(n);
 }
+PUBLIC STATIC float Math::Asin(float x) {
+    return std::asin(x);
+}
+PUBLIC STATIC float Math::Acos(float x) {
+    return std::acos(x);
+}
 PUBLIC STATIC float Math::Atan(float x, float y) {
     if (x == 0.0f && y == 0.0f) return 0.0f;
 

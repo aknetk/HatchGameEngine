@@ -8,6 +8,11 @@
 #define THREAD_NAME_MAX 64
 
 typedef enum {
+    ERROR_RES_EXIT,
+    ERROR_RES_CONTINUE,
+} ErrorResult;
+
+typedef enum {
     VAL_NULL,
     VAL_INTEGER,
     VAL_DECIMAL,
@@ -33,9 +38,17 @@ struct Chunk {
     int              Count;
     int              Capacity;
     Uint8*           Code;
+    Uint8*           Failsafe;
     int*             Lines;
     vector<VMValue>* Constants;
 };
+
+struct PrintBuffer {
+    char** Buffer;
+    int WriteIndex;
+    int BufferSize;
+};
+int buffer_printf(PrintBuffer* printBuffer, const char *format, ...);
 
 void ChunkInit(Chunk* chunk);
 void ChunkFree(Chunk* chunk);
@@ -302,6 +315,9 @@ enum   OpCode {
     OP_NEW_MAP,
     //
     OP_SWITCH_TABLE,
+    OP_FAILSAFE,
+
+    OP_SYNC = 0xFF,
 };
 
 static const char* vmvalue_type_strings[] = {
@@ -391,6 +407,8 @@ enum   vmopcode {
     VM_RETURN,
     //
     VM_PRINT,
+
+    VM_SYNC = 0xFF,
 };
 
 struct vmvalue_t;

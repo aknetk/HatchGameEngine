@@ -18,6 +18,8 @@ public:
 
     Texture* Prev;
     Texture* Next;
+
+    bool     Paletted;
 };
 #endif
 

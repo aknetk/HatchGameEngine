@@ -1,5 +1,5 @@
-#ifndef ENGINE_HASHING_CRC32_H
-#define ENGINE_HASHING_CRC32_H
+#ifndef ENGINE_HASHING_MURMUR_H
+#define ENGINE_HASHING_MURMUR_H
 
 #define PUBLIC
 #define PRIVATE
@@ -11,12 +11,12 @@
 
 #include <Engine/Includes/Standard.h>
 
-class CRC32 {
+class Murmur {
 public:
-    static Uint32 EncryptString(char* data);
+    static Uint32 EncryptString(char* message);
     static Uint32 EncryptString(const char* message);
     static Uint32 EncryptData(const void* data, Uint32 size);
-    static Uint32 EncryptData(const void* data, Uint32 size, Uint32 crc);
+    static Uint32 EncryptData(const void* key, Uint32 size, Uint32 hash);
 };
 
-#endif /* ENGINE_HASHING_CRC32_H */
+#endif /* ENGINE_HASHING_MURMUR_H */

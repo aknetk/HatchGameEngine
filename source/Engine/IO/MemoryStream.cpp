@@ -3,8 +3,8 @@
 #include <Engine/IO/Stream.h>
 class MemoryStream : public Stream {
 public:
-    unsigned char* pointer = NULL;
-    unsigned char* pointer_start = NULL;
+    Uint8* pointer = NULL;
+    Uint8* pointer_start = NULL;
     size_t         size = 0;
     bool   owns_memory = false;
 };
@@ -28,6 +28,7 @@ PUBLIC STATIC MemoryStream* MemoryStream::New(Stream* other) {
     MemoryStream* stream = MemoryStream::New(other->Length());
     if (stream) {
         other->CopyTo(stream);
+        stream->Seek(0);
     }
     return stream;
 }
@@ -40,7 +41,7 @@ PUBLIC STATIC MemoryStream* MemoryStream::New(void* data, size_t size) {
     if (!data)
         goto FREE;
 
-    stream->pointer_start = (unsigned char*)data;
+    stream->pointer_start = (Uint8*)data;
     stream->pointer = stream->pointer_start;
     stream->size = size;
 

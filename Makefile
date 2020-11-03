@@ -60,6 +60,12 @@ all:
 	@make build
 	@(cd source && exec ./../"$(TARGETDIR)")
 
+s1r:
+	@mkdir -p $(OBJ_DIRS)
+	@./tools/makeheaders source
+	@make build
+	@(cd source_s1r && exec ./../"$(TARGETDIR)")
+
 gal:
 	@mkdir -p $(OBJ_DIRS)
 	@./tools/makeheaders source
@@ -103,6 +109,7 @@ package:
 	@make build
 	@cp "$(TARGETDIR)" "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
 	@[ -f "source/Data.hatch" ] && cp "source/Data.hatch" "$(TARGETDIR).app/Contents/Resources/Data.hatch" || true
+	@[ -f "source/config.ini" ] && cp "source/config.ini" "$(TARGETDIR).app/Contents/Resources/config.ini" || true
 	@[ -f "meta/icon.icns" ] && cp "meta/icon.icns" "$(TARGETDIR).app/Contents/Resources/icon.icns" || true
 	@# Making PkgInfo
 	@echo "APPL????" > "$(TARGETDIR).app/Contents/PkgInfo"

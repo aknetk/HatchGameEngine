@@ -14,8 +14,8 @@
 
 class MemoryStream : public Stream {
 public:
-    unsigned char* pointer = NULL;
-    unsigned char* pointer_start = NULL;
+    Uint8* pointer = NULL;
+    Uint8* pointer_start = NULL;
     size_t         size = 0;
     bool   owns_memory = false;
 

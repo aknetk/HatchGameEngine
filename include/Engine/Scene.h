@@ -60,6 +60,11 @@ public:
     static int                   MainLayer;
     static View                  Views[8];
     static int                   ViewCurrent;
+    static float                 PreGameRenderViewRenderTimes[8];
+    static float                 GameRenderEarlyViewRenderTimes[8];
+    static float                 GameRenderViewRenderTimes[8];
+    static float                 GameRenderLateViewRenderTimes[8];
+    static float                 PostGameRenderViewRenderTimes[8];
     static char                  NextScene[256];
     static char                  CurrentScene[256];
     static bool                  DoRestart;

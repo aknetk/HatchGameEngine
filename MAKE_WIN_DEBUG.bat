@@ -25,14 +25,19 @@ meta\win\bin;
 
 SET TARGET_NAME=HatchGameEngine
 SET TARGET_FOLDER=builds\win\
+SET TARGET_FOLDER=%temp%\HatchGameEngine\builds\win\
 SET TARGET_SUBSYSTEM=/SUBSYSTEM:CONSOLE
+SET TARGET_SUBSYSTEMSSS=/SUBSYSTEM:WINDOWS
 
 SET SRC_FOLDER=%~dp0source\
 SET OBJ_FOLDER=out\win\
 SET OBJ_FOLDER=%temp%\HatchGameEngine\out\win\
 SET OBJ_LIST=
 
-SET LIB_LIBAV=avcodec.lib avformat.lib avutil.lib swscale.lib swresample.lib /DUSING_LIBAV
+SET ICO_FOLDER=meta\
+SET ICO_FOLDER=source_galactic\Meta\win\
+
+SET LIB_LIBAV=avcodec.lib avformat.lib avutil.lib swscale.lib swresample.lib /DUSING_LIBAV libcurl.lib /DUSING_CURL
 
 IF NOT EXIST %OBJ_FOLDER% MKDIR %OBJ_FOLDER%
 IF NOT EXIST %TARGET_FOLDER% MKDIR %TARGET_FOLDER%
@@ -43,11 +48,10 @@ CD "tools"
 "makeheaders.exe" ../source
 CD ..
 
-IF EXIST meta\icon.ico (
-   ECHO 101 ICON "icon.ico"> meta\icon.rc
-   RC /nologo meta\icon.rc
-   SET OBJ_LIST=meta\icon.res !OBJ_LIST!
-   DEL /F meta\icon.rc
+IF EXIST %ICO_FOLDER%icon.ico (
+   DEL /F %ICO_FOLDER%icon.res
+   RC /nologo %ICO_FOLDER%icon.rc
+   SET OBJ_LIST=%ICO_FOLDER%icon.res !OBJ_LIST!
 )
 
 FOR /f %%j IN ('dir /s /b %SRC_FOLDER%*.cpp') DO (
@@ -78,7 +82,6 @@ LINK ^
    Advapi32.lib ^
    Crypt32.lib ^
    Normaliz.lib ^
-   libcurl.lib ^
    zlibstat.lib ^
    glew32s.lib ^
    opengl32.lib ^
@@ -94,5 +97,6 @@ LINK ^
    user32.lib
 
 ECHO Finishing: %TARGET_NAME%.exe
+copy %TARGET_FOLDER%%TARGET_NAME%.exe builds\win\%TARGET_NAME%.exe
 :END_OF_BAT
 PAUSE

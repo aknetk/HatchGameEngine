@@ -363,7 +363,10 @@ PUBLIC STATIC bool   AudioManager::AudioPlayMix(StackNode* audio, Uint8* stream,
             break;
         // Normal
         default:
-            SDL_MixAudioFormat(stream, audio->Audio->Buffer, DeviceFormat.format, (Uint32)bytes, (int)(SDL_MIX_MAXVOLUME * MasterVolume * volume * (FadeOutTimer / FadeOutTimerMax)));
+            if (audio->FadeOut)
+                SDL_MixAudioFormat(stream, audio->Audio->Buffer, DeviceFormat.format, (Uint32)bytes, (int)(SDL_MIX_MAXVOLUME * MasterVolume * volume * (FadeOutTimer / FadeOutTimerMax)));
+            else
+                SDL_MixAudioFormat(stream, audio->Audio->Buffer, DeviceFormat.format, (Uint32)bytes, (int)(SDL_MIX_MAXVOLUME * MasterVolume * volume));
 
             // NOTE: In order to time scale, we need some kind of sample queue system,
             //       and this system needs to intake samples, work a bilinear interpolation
@@ -384,6 +387,7 @@ PUBLIC STATIC void   AudioManager::AudioCallback(void* data, Uint8* stream, int 
             memmove(AudioManager::AudioQueue, AudioManager::AudioQueue + len, AudioManager::AudioQueueSize);
     }
 
+    // Make track system
     if (MusicStack.size() > 0) {
         StackNode* audio = MusicStack[0];
         if (!audio->Paused)
@@ -395,13 +399,7 @@ PUBLIC STATIC void   AudioManager::AudioCallback(void* data, Uint8* stream, int 
 
     for (int i = 0; i < SoundArrayLength; i++) {
         StackNode* audio = &SoundArray[i];
-        if (!audio->Audio)
-            continue;
-
-        if (audio->Stopped)
-            continue;
-
-        if (audio->Paused)
+        if (!audio->Audio || audio->Stopped || audio->Paused)
             continue;
 
         if (AudioManager::AudioPlayMix(audio, stream, len, SoundVolume)) {

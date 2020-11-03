@@ -10,7 +10,7 @@
 
 
 #include <Engine/Includes/Standard.h>
-#include <Engine/Bytecode/Enums.h>
+#include <Engine/Bytecode/CompilerEnums.h>
 #include <Engine/IO/Stream.h>
 #include <Engine/Includes/HashMap.h>
 #include <Engine/TextFormats/XML/XMLNode.h>

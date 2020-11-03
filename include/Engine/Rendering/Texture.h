@@ -26,6 +26,7 @@ public:
     void*    DriverData;
     Texture* Prev;
     Texture* Next;
+    bool     Paletted;
 
     static Texture* New(Uint32 format, Uint32 access, Uint32 width, Uint32 height);
 };

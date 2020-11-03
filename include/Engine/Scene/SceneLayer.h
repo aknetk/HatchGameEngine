@@ -20,6 +20,13 @@ public:
     bool           Visible = true;
     int            Width = 0;
     int            Height = 0;
+    Uint32         WidthMask = 0;
+    Uint32         HeightMask = 0;
+    Uint32         WidthInBits = 0;
+    Uint32         HeightInBits = 0;
+    Uint32         WidthData = 0;
+    Uint32         HeightData = 0;
+    Uint32         DataSize = 0;
     int            RelativeY = 0x0100;
     int            ConstantY = 0x0000;
     int            OffsetX = 0x0000;

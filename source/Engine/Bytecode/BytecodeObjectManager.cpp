@@ -4,6 +4,9 @@ need_t BytecodeObject;
 #include <Engine/Includes/Standard.h>
 #include <Engine/Bytecode/VMThread.h>
 #include <Engine/Bytecode/Types.h>
+#include <Engine/IO/Stream.h>
+#include <Engine/IO/MemoryStream.h>
+#include <Engine/IO/ResourceStream.h>
 #include <Engine/Types/Entity.h>
 
 class BytecodeObjectManager {
@@ -36,8 +39,6 @@ public:
 #include <Engine/Filesystem/File.h>
 #include <Engine/Hashing/CombinedHash.h>
 #include <Engine/Hashing/FNV1A.h>
-#include <Engine/IO/Stream.h>
-#include <Engine/IO/ResourceStream.h>
 #include <Engine/ResourceTypes/ResourceManager.h>
 #include <Engine/TextFormats/XML/XMLParser.h>
 
@@ -60,10 +61,10 @@ vector<char*>        BytecodeObjectManager::TokensList;
 
 SDL_mutex*           BytecodeObjectManager::GlobalLock = NULL;
 
-PUBLIC STATIC bool    BytecodeObjectManager::ThrowError(bool fatal, const char* errorMessage, ...) {
+PUBLIC STATIC bool    BytecodeObjectManager::ThrowRuntimeError(bool fatal, const char* errorMessage, ...) {
     va_list args;
     va_start(args, errorMessage);
-    bool result = Threads[0].ThrowError(fatal, errorMessage, args);
+    bool result = Threads[0].ThrowRuntimeError(fatal, errorMessage, args);
     va_end(args);
     return result;
 }
@@ -111,11 +112,25 @@ PUBLIC STATIC void    BytecodeObjectManager::Init() {
 
     GarbageCollector::RootObject = NULL;
     GarbageCollector::NextGC = 1024 * 1024;
+    memset(VMThread::InstructionIgnoreMap, 0, sizeof(VMThread::InstructionIgnoreMap));
 
     GlobalLock = SDL_CreateMutex();
 
-    memset(Threads, 0x00, sizeof(Threads));
     for (Uint32 i = 0; i < sizeof(Threads) / sizeof(VMThread); i++) {
+        memset(&Threads[i].Stack, 0, sizeof(Threads[i].Stack));
+        memset(&Threads[i].RegisterValue, 0, sizeof(Threads[i].RegisterValue));
+        memset(&Threads[i].Frames, 0, sizeof(Threads[i].Frames));
+
+        memset(&Threads[i].WithReceiverStack, 0, sizeof(Threads[i].WithReceiverStack));
+        memset(&Threads[i].WithIteratorStack, 0, sizeof(Threads[i].WithIteratorStack));
+
+        memset(&Threads[i].Name, 0, sizeof(Threads[i].Name));
+
+        Threads[i].FrameCount = 0;
+        Threads[i].ReturnFrame = 0;
+        Threads[i].State = 0;
+        Threads[i].DebugInfo = false;
+
         Threads[i].ID = i;
         Threads[i].StackTop = Threads[i].Stack;
         Threads[i].WithReceiverStackTop = Threads[i].WithReceiverStack;
@@ -593,31 +608,38 @@ PUBLIC STATIC void    BytecodeObjectManager::LinkExtensions() {
 #endif
 
 // #region ObjectFuncs
-PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(Uint8* head, size_t size) {
+PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, size_t size) {
     FunctionList.clear();
 
-    Uint8* headEnd = head + size;
-
-    if (memcmp(Compiler::Magic, head, 4) != 0) {
+    Uint8 magic[4];
+    stream->ReadBytes(magic, 4);
+    if (memcmp(Compiler::Magic, magic, 4) != 0) {
         printf("Incorrect magic!\n");
         return;
     }
-    head += 4;
 
     bool doLineNumbers;
 
     Uint8 opts;
-    opts = *head++;
-    opts = *head++;
-    doLineNumbers = opts;
-    opts = *head++;
-    opts = *head++;
+    stream->Skip(1); // opts = stream->ReadByte();
+    doLineNumbers = stream->ReadByte();
+    stream->Skip(1); // opts = stream->ReadByte();
+    stream->Skip(1); // opts = stream->ReadByte();
 
-    int chunkCount = *(int*)head; head += 4;
+    int chunkCount = stream->ReadInt32();
     for (int i = 0; i < chunkCount; i++) {
-        int   count = *(int*)head; head += 4;
-        int   arity = *(int*)head; head += 4;
-        Uint32 hash = *(int*)head; head += 4;
+        #ifdef ANDROID
+        // Log::Print(-1, "head: %p", head);
+        #endif
+        int   count = stream->ReadInt32();
+        #ifdef ANDROID
+        // Log::Print(-1, "head: %p", head);
+        #endif
+        int   arity = stream->ReadInt32();
+        #ifdef ANDROID
+        // Log::Print(-1, "head: %p", head);
+        #endif
+        Uint32 hash = stream->ReadUInt32();
 
         ObjFunction* function = NewFunction();
         function->Arity = arity;
@@ -628,34 +650,28 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(Uint8* head, size_t size
         strcpy(function->SourceFilename, CurrentObjectName);
         function->SourceFilename[srcFnLen] = 0;
 
-        function->Chunk.Code = head;
-        head += count * 1;
+        function->Chunk.Code = stream->pointer;
+        stream->Skip(count * sizeof(Uint8));
 
         if (doLineNumbers) {
-            function->Chunk.Lines = (int*)head;
-            head += count * 4;
+            function->Chunk.Lines = (int*)stream->pointer;
+            stream->Skip(count * sizeof(int));
         }
 
-        int constantCount = *(int*)head; head += 4;
+        int constantCount = stream->ReadInt32();
         for (int c = 0; c < constantCount; c++) {
-            Uint8 type = *(Uint8*)head; head++;
+            Uint8 type = stream->ReadByte();
             switch (type) {
                 case VAL_INTEGER:
-                    ChunkAddConstant(&function->Chunk, INTEGER_VAL(*(int*)head));
-                    head += sizeof(int);
+                    ChunkAddConstant(&function->Chunk, INTEGER_VAL(stream->ReadInt32()));
                     break;
                 case VAL_DECIMAL:
-                    ChunkAddConstant(&function->Chunk, DECIMAL_VAL(*(float*)head));
-                    head += sizeof(float);
+                    ChunkAddConstant(&function->Chunk, DECIMAL_VAL(stream->ReadFloat()));
                     break;
                 case VAL_OBJECT:
                     // if (OBJECT_TYPE(constt) == OBJ_STRING) {
-                        Uint8* headCheese = head;
-                        while (*headCheese++ && (headCheese - head < 4092));
-
-                        size_t len = headCheese - head - 1;
-                        ChunkAddConstant(&function->Chunk, OBJECT_VAL(CopyString((char*)head, len)));
-                        head = headCheese;
+                        char* str = stream->ReadString();
+                        ChunkAddConstant(&function->Chunk, OBJECT_VAL(CopyString(str, strlen(str))));
                     // }
                     // else {
                     //     printf("Unsupported object type...Chief.\n");
@@ -665,27 +681,19 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(Uint8* head, size_t size
         }
 
         FunctionList.push_back(function);
-        if (i == 0)
+        if (i == 0) {
             AllFunctionList.push_back(function);
+        }
     }
 
     if (doLineNumbers && Tokens) {
-        int tokenCount = *(int*)head; head += 4;
+        int tokenCount = stream->ReadInt32();
         for (int t = 0; t < tokenCount; t++) {
-            Uint8* headCheese = head;
-            while (*headCheese++ && (headCheese - head < 4092));
-
-            size_t len = headCheese - head - 1;
-
-            Uint32 hash = FNV1A::EncryptData(head, len);
-            char* string = (char*)Memory::Malloc(len + 1);
-            memcpy(string, head, len);
-            string[len] = 0;
+            char* string = stream->ReadString();
+            Uint32 hash = Murmur::EncryptString(string);
 
             Tokens->Put(hash, string);
             TokensList.push_back(string);
-
-            head = headCheese;
         }
     }
 
@@ -721,7 +729,7 @@ PUBLIC STATIC Entity* BytecodeObjectManager::SpawnFunction() {
 
     return object;
 }
-PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameHash, char* objectName) {
+PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameHash, const char* objectName) {
     Uint8* bytecode;
     if (*objectName == 0)
         return NULL;
@@ -730,7 +738,7 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
     strncpy(CurrentObjectName, objectName, 255);
 
     if (!SourceFileMap::ClassMap->Exists(objectName)) {
-        Log::Print(Log::LOG_VERBOSE, "Could not find classmap for %s%s%s! (Hash: 0x%08X)", FG_YELLOW, objectName, FG_RESET, SourceFileMap::ClassMap->HashFunction(objectName));
+        Log::Print(Log::LOG_VERBOSE, "Could not find classmap for %s%s%s! (Hash: 0x%08X)", FG_YELLOW, objectName, FG_RESET, SourceFileMap::ClassMap->HashFunction(objectName, strlen(objectName)));
         return NULL;
     }
 
@@ -767,7 +775,11 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
             if (fn == 0)
                 Log::Print(Log::LOG_VERBOSE, "Loading the object %s%s%s class, %d filenames...", FG_YELLOW, objectName, FG_RESET, (int)filenameHashList->size());
 
-            RunFromIBC(bytecode, size);
+            MemoryStream* bytecodeStream = MemoryStream::New(bytecode, size);
+            if (bytecodeStream) {
+                RunFromIBC(bytecodeStream, size);
+                bytecodeStream->Close();
+            }
 
             // Set native functions for that new object class
             // Log::Print(Log::LOG_VERBOSE, "Setting native functions for that new object class...");
@@ -797,7 +809,7 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
     //     bytecode = Sources->Get(objectNameHash);
     // }
 
-    BytecodeObjectManager::SetCurrentObjectHash(Globals->HashFunction(objectName));
+    BytecodeObjectManager::SetCurrentObjectHash(Globals->HashFunction(objectName, strlen(objectName)));
     return (void*)BytecodeObjectManager::SpawnFunction;
 }
 // #endregion

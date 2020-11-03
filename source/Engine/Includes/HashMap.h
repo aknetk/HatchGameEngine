@@ -3,6 +3,7 @@
 
 #include <Engine/Includes/Standard.h>
 #include <Engine/Hashing/FNV1A.h>
+#include <Engine/Hashing/Murmur.h>
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Memory.h>
 #include <functional>
@@ -21,12 +22,12 @@ public:
     int ChainLength = 16;
     HashMapElement<T>* Data = NULL;
 
-    Uint32 (*HashFunction)(const char*) = NULL;
+    Uint32 (*HashFunction)(const void*, Uint32) = NULL;
 
-    HashMap<T>(Uint32 (*hashFunc)(const char*) = NULL, int capacity = 16) {
+    HashMap<T>(Uint32 (*hashFunc)(const void*, Uint32) = NULL, int capacity = 16) {
         HashFunction = hashFunc;
         if (HashFunction == NULL)
-            HashFunction = FNV1A::EncryptString;
+            HashFunction = Murmur::EncryptData;
 
         Count = 0;
         Capacity = capacity;
@@ -132,7 +133,7 @@ public:
         Data[index].Data = data;
     }
     void   Put(const char* key, T data) {
-        Uint32 hash = HashFunction(key);
+        Uint32 hash = HashFunction(key, strlen(key));
         Put(hash, data);
     }
     T      Get(Uint32 hash) {
@@ -152,7 +153,7 @@ public:
         return T { 0 };
     }
     T      Get(const char* key) {
-        Uint32 hash = HashFunction(key);
+        Uint32 hash = HashFunction(key, strlen(key));
         return Get(hash);
     }
     bool   Exists(Uint32 hash) {
@@ -176,7 +177,7 @@ public:
         return false;
     }
     bool   Exists(const char* key) {
-        Uint32 hash = HashFunction(key);
+        Uint32 hash = HashFunction(key, strlen(key));
         return Exists(hash);
     }
 
@@ -198,7 +199,7 @@ public:
         return false;
     }
     bool   Remove(const char* key) {
-        Uint32 hash = HashFunction(key);
+        Uint32 hash = HashFunction(key, strlen(key));
         return Remove(hash);
     }
 

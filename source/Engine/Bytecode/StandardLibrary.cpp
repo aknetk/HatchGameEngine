@@ -32,6 +32,8 @@ public:
 #include <Engine/Network/WebSocketClient.h>
 #include <Engine/Rendering/GL/GLRenderer.h>
 #include <Engine/Rendering/GL/GLShader.h>
+#include <Engine/Rendering/Software/SoftwareRenderer.h>
+#include <Engine/ResourceTypes/ImageFormats/GIF.h>
 #include <Engine/ResourceTypes/ResourceType.h>
 #include <Engine/TextFormats/JSON/jsmn.h>
 
@@ -40,12 +42,14 @@ public:
 
 #define CHECK_ARGCOUNT(expects) \
     if (argCount != expects) { \
-        BytecodeObjectManager::Threads[threadID].ThrowError(true, "Expected %d arguments but got %d.", expects, argCount); \
+        if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Expected %d arguments but got %d.", expects, argCount) == ERROR_RES_CONTINUE) \
+            return NULL_VAL; \
         return NULL_VAL; \
     }
 #define CHECK_AT_LEAST_ARGCOUNT(expects) \
     if (argCount < expects) { \
-        BytecodeObjectManager::Threads[threadID].ThrowError(true, "Expected at least %d arguments but got %d.", expects, argCount); \
+        if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Expected at least %d arguments but got %d.", expects, argCount) == ERROR_RES_CONTINUE) \
+            return NULL_VAL; \
         return NULL_VAL; \
     }
 
@@ -61,8 +65,9 @@ namespace LOCAL {
                 value = AS_INTEGER(args[index]);
                 break;
             default:
-                BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Integer", GetTypeString(args[index]));
+                if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Integer", GetTypeString(args[index])) == ERROR_RES_CONTINUE)
+                    BytecodeObjectManager::Threads[threadID].ReturnFromNative();
         }
         return value;
     }
@@ -78,8 +83,9 @@ namespace LOCAL {
                 value = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(args[index]));
                 break;
             default:
-                BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Decimal", GetTypeString(args[index]));
+                if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Decimal", GetTypeString(args[index])) == ERROR_RES_CONTINUE)
+                    BytecodeObjectManager::Threads[threadID].ReturnFromNative();
         }
         return value;
     }
@@ -88,9 +94,13 @@ namespace LOCAL {
         char* value = NULL;
 
         if (BytecodeObjectManager::Lock()) {
-            if (!IS_STRING(args[index]))
-                BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type %s instead of %s.", index + 1, "String", GetTypeString(args[index]));
+            if (!IS_STRING(args[index])) {
+                if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "String", GetTypeString(args[index])) == ERROR_RES_CONTINUE) {
+                    BytecodeObjectManager::Unlock();
+                    BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+                }
+            }
 
             value = AS_CSTRING(args[index]);
             BytecodeObjectManager::Unlock();
@@ -100,12 +110,11 @@ namespace LOCAL {
     inline ObjArray*       GetArray(VMValue* args, int index, Uint32 threadID) {
         ObjArray* value = NULL;
         if (BytecodeObjectManager::Lock()) {
-            if (!IS_OBJECT(args[index]))
-                BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Array", GetTypeString(args[index]));
-            if (OBJECT_TYPE(args[index]) != OBJ_ARRAY)
-                BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Array", GetTypeString(args[index]));
+            if (!IS_ARRAY(args[index])) {
+                if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Array", GetTypeString(args[index])) == ERROR_RES_CONTINUE)
+                    BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+            }
 
             value = (ObjArray*)(AS_OBJECT(args[index]));
             BytecodeObjectManager::Unlock();
@@ -115,12 +124,10 @@ namespace LOCAL {
     inline ObjMap*         GetMap(VMValue* args, int index, Uint32 threadID) {
         ObjMap* value = NULL;
         if (BytecodeObjectManager::Lock()) {
-            if (!IS_OBJECT(args[index]))
-                BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Map", GetTypeString(args[index]));
-            if (OBJECT_TYPE(args[index]) != OBJ_MAP)
-                BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Map", GetTypeString(args[index]));
+            if (!IS_MAP(args[index]))
+                if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Map", GetTypeString(args[index])) == ERROR_RES_CONTINUE)
+                    BytecodeObjectManager::Threads[threadID].ReturnFromNative();
 
             value = (ObjMap*)(AS_OBJECT(args[index]));
             BytecodeObjectManager::Unlock();
@@ -130,12 +137,10 @@ namespace LOCAL {
     inline ObjBoundMethod* GetBoundMethod(VMValue* args, int index, Uint32 threadID) {
         ObjBoundMethod* value = NULL;
         if (BytecodeObjectManager::Lock()) {
-            if (!IS_OBJECT(args[index]))
-                BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Event", GetTypeString(args[index]));
-            if (OBJECT_TYPE(args[index]) != OBJ_BOUND_METHOD)
-                BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Event", GetTypeString(args[index]));
+            if (!IS_BOUND_METHOD(args[index]))
+                if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Event", GetTypeString(args[index])) == ERROR_RES_CONTINUE)
+                    BytecodeObjectManager::Threads[threadID].ReturnFromNative();
 
             value = (ObjBoundMethod*)(AS_OBJECT(args[index]));
             BytecodeObjectManager::Unlock();
@@ -145,9 +150,11 @@ namespace LOCAL {
 
     inline ISprite*        GetSprite(VMValue* args, int index, Uint32 threadID) {
         int where = GetInteger(args, index, threadID);
-        if (where < 0 || where > (int)Scene::SpriteList.size())
-            BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                "Sprite index \"%d\" outside bounds of list.", where);
+        if (where < 0 || where > (int)Scene::SpriteList.size()) {
+            if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                "Sprite index \"%d\" outside bounds of list.", where) == ERROR_RES_CONTINUE)
+                BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+        }
 
         if (!Scene::SpriteList[where]) return NULL;
 
@@ -155,9 +162,11 @@ namespace LOCAL {
     }
     inline MediaBag*       GetVideo(VMValue* args, int index, Uint32 threadID) {
         int where = GetInteger(args, index, threadID);
-        if (where < 0 || where > (int)Scene::MediaList.size())
-            BytecodeObjectManager::Threads[threadID].ThrowError(true,
-                "Video index \"%d\" outside bounds of list.", where);
+        if (where < 0 || where > (int)Scene::MediaList.size()) {
+            if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                "Video index \"%d\" outside bounds of list.", where) == ERROR_RES_CONTINUE)
+                BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+        }
 
         if (!Scene::MediaList[where]) return NULL;
 
@@ -192,17 +201,22 @@ PUBLIC STATIC ISprite*  StandardLibrary::GetSprite(VMValue* args, int index) {
 PUBLIC STATIC void      StandardLibrary::CheckArgCount(int argCount, int expects) {
     Uint32 threadID = 0;
     if (argCount != expects) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(true, "Expected %d arguments but got %d.", expects, argCount);
+        if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Expected %d arguments but got %d.", expects, argCount) == ERROR_RES_CONTINUE)
+            BytecodeObjectManager::Threads[threadID].ReturnFromNative();
     }
 }
 PUBLIC STATIC void      StandardLibrary::CheckAtLeastArgCount(int argCount, int expects) {
     Uint32 threadID = 0;
     if (argCount < expects) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(true, "Expected at least %d arguments but got %d.", expects, argCount);
+        if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Expected at least %d arguments but got %d.", expects, argCount) == ERROR_RES_CONTINUE)
+            BytecodeObjectManager::Threads[threadID].ReturnFromNative();
     }
 }
 
 using namespace LOCAL;
+
+Uint8 String_ToUpperCase_Map_ExtendedASCII[0x100];
+Uint8 String_ToLowerCase_Map_ExtendedASCII[0x100];
 
 // #region Array
 /***
@@ -320,7 +334,7 @@ VMValue Array_Erase(int argCount, VMValue* args, Uint32 threadID) {
 }
 /***
  * Array.Clear
- * \desc Clears an array
+ * \desc Clears an array.
  * \param array (Array): Array to clear.
  * \ns Array
  */
@@ -334,13 +348,41 @@ VMValue Array_Clear(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Array.Shift
+ * \desc Clears an array.
+ * \param array (Array): Array to clear.
+ * \ns Array
+ */
+VMValue Array_Shift(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    if (BytecodeObjectManager::Lock()) {
+        ObjArray* array = GetArray(args, 0, threadID);
+        int       toright = GetInteger(args, 1, threadID);
+
+        if (toright) {
+            int lastIndex = array->Values->size() - 1;
+            VMValue temp = (*array->Values)[lastIndex];
+            array->Values->erase(array->Values->begin() + lastIndex);
+            array->Values->insert(array->Values->begin(), temp);
+        }
+        else {
+            VMValue temp = (*array->Values)[0];
+            array->Values->erase(array->Values->begin() + 0);
+            array->Values->push_back(temp);
+        }
+
+        BytecodeObjectManager::Unlock();
+    }
+    return NULL_VAL;
+}
 // #endregion
 
 // #region Date
 /***
  * Date.GetEpoch
- * \desc Gets the amount of seconds from 1 January 1970, 0:00 UTC
- * \return The amount of seconds from epoch
+ * \desc Gets the amount of seconds from 1 January 1970, 0:00 UTC.
+ * \return The amount of seconds from epoch.
  * \ns Date
  */
 VMValue Date_GetEpoch(int argCount, VMValue* args, Uint32 threadID) {
@@ -350,10 +392,22 @@ VMValue Date_GetEpoch(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Device
+/***
+ * Device.GetPlatform
+ * \desc Gets the id of the platform the application is currently running on.
+ * \return ID of the current platform.
+ * \ns Device
+ */
 VMValue Device_GetPlatform(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     return INTEGER_VAL((int)Application::Platform);
 }
+/***
+ * Device.IsMobile
+ * \desc Determines whether or not the application is running on a mobile device.
+ * \return 1 if the device is on a mobile device, 0 if otherwise.
+ * \ns Device
+ */
 VMValue Device_IsMobile(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     bool isMobile =
@@ -364,16 +418,34 @@ VMValue Device_IsMobile(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Directory
+/***
+ * Directory.Create
+ * \desc Creates a folder at the path.
+ * \param path (String):
+ * \return Returns 1 if the folder creation was successful, 0 if otherwise
+ * \ns Directory
+ */
 VMValue Directory_Create(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* directory = GetString(args, 0, threadID);
     return INTEGER_VAL(Directory::Create(directory));
 }
+/***
+ * Directory.Exists
+ * \desc Determines if the folder at the path exists.
+ * \param path (String):
+ * \return Returns 1 if the folder exists, 0 if otherwise
+ * \ns Directory
+ */
 VMValue Directory_Exists(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* directory = GetString(args, 0, threadID);
     return INTEGER_VAL(Directory::Exists(directory));
 }
+/***
+ * Directory.GetFiles
+ * \ns Directory
+ */
 VMValue Directory_GetFiles(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     ObjArray* array     = NULL;
@@ -398,6 +470,10 @@ VMValue Directory_GetFiles(int argCount, VMValue* args, Uint32 threadID) {
 
     return OBJECT_VAL(array);
 }
+/***
+ * Directory.GetDirectories
+ * \ns Directory
+ */
 VMValue Directory_GetDirectories(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     ObjArray* array     = NULL;
@@ -423,12 +499,24 @@ VMValue Directory_GetDirectories(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Display
+/***
+ * Display.GetWidth
+ * \desc Gets the width of the current display
+ * \return Returns the width of the current display
+ * \ns Display
+ */
 VMValue Display_GetWidth(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     SDL_DisplayMode dm;
     SDL_GetCurrentDisplayMode(0, &dm);
     return INTEGER_VAL(dm.w);
 }
+/***
+ * Display.GetHeight
+ * \desc Gets the height of the current display
+ * \return Returns the height of the current display
+ * \ns Display
+ */
 VMValue Display_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     SDL_DisplayMode dm;
@@ -438,6 +526,21 @@ VMValue Display_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Draw
+/***
+ * Draw.Sprite
+ * \desc Draws a sprite
+ * \param sprite (Integer): Index of the loaded sprite.
+ * \param animation (Integer): Index of the animation entry.
+ * \param frame (Integer): Index of the frame in the animation entry.
+ * \param x (Number): X position of where to draw the sprite.
+ * \param y (Number): Y position of where to draw the sprite.
+ * \param flipX (Integer): Whether or not to flip the sprite horizontally.
+ * \param flipY (Integer): Whether or not to flip the sprite vertically.
+ * \param scaleX (Number): Scale multiplier of the sprite horizontally.
+ * \param scaleY (Number): Scale multiplier of the sprite vertically.
+ * \param rotation (Number): Rotation of the drawn sprite in radians.
+ * \ns Draw
+ */
 VMValue Draw_Sprite(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(7);
 
@@ -461,6 +564,60 @@ VMValue Draw_Sprite(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawSprite(sprite, animation, frame, x, y, flipX, flipY, scaleX, scaleY, rotation);
     return NULL_VAL;
 }
+/***
+ * Draw.SpritePart
+ * \desc Draws part of a sprite
+ * \param sprite (Integer): Index of the loaded sprite.
+ * \param animation (Integer): Index of the animation entry.
+ * \param frame (Integer): Index of the frame in the animation entry.
+ * \param x (Number): X position of where to draw the sprite.
+ * \param y (Number): Y position of where to draw the sprite.
+ * \param partX (Integer): X coordinate of part of frame to draw.
+ * \param partY (Integer): Y coordinate of part of frame to draw.
+ * \param partW (Integer): Width of part of frame to draw.
+ * \param partH (Integer): Height of part of frame to draw.
+ * \param flipX (Integer): Whether or not to flip the sprite horizontally.
+ * \param flipY (Integer): Whether or not to flip the sprite vertically.
+ * \param scaleX (Number): Scale multiplier of the sprite horizontally.
+ * \param scaleY (Number): Scale multiplier of the sprite vertically.
+ * \param rotation (Number): Rotation of the drawn sprite in radians.
+ * \ns Draw
+ */
+VMValue Draw_SpritePart(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_AT_LEAST_ARGCOUNT(11);
+
+    ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
+    int animation = GetInteger(args, 1, threadID);
+    int frame = GetInteger(args, 2, threadID);
+    int x = (int)GetDecimal(args, 3, threadID);
+    int y = (int)GetDecimal(args, 4, threadID);
+    int sx = (int)GetDecimal(args, 5, threadID);
+    int sy = (int)GetDecimal(args, 6, threadID);
+    int sw = (int)GetDecimal(args, 7, threadID);
+    int sh = (int)GetDecimal(args, 8, threadID);
+    int flipX = GetInteger(args, 9, threadID);
+    int flipY = GetInteger(args, 10, threadID);
+    float scaleX = 1.0f;
+    float scaleY = 1.0f;
+    float rotation = 0.0f;
+    if (argCount > 11) {
+        scaleX = GetDecimal(args, 11, threadID);
+        scaleY = GetDecimal(args, 12, threadID);
+        rotation = GetDecimal(args, 13, threadID);
+    }
+
+    // Graphics::SetBlendColor(1.0, 1.0, 1.0, 1.0);
+    Graphics::DrawSpritePart(sprite, animation, frame, sx, sy, sw, sh, x, y, flipX, flipY, scaleX, scaleY, rotation);
+    return NULL_VAL;
+}
+/***
+ * Draw.Image
+ * \desc Draws an image
+ * \param image (Integer): Index of the loaded image.
+ * \param x (Number): X position of where to draw the image.
+ * \param y (Number): Y position of where to draw the image.
+ * \ns Draw
+ */
 VMValue Draw_Image(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
 
@@ -475,6 +632,18 @@ VMValue Draw_Image(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(image->TexturePtr, 0, 0, image->TexturePtr->Width, image->TexturePtr->Height, x, y, image->TexturePtr->Width, image->TexturePtr->Height);
     return NULL_VAL;
 }
+/***
+ * Draw.ImagePart
+ * \desc Draws part of an image
+ * \param image (Integer): Index of the loaded image.
+ * \param partX (Integer): X coordinate of part of image to draw.
+ * \param partY (Integer): Y coordinate of part of image to draw.
+ * \param partW (Integer): Width of part of image to draw.
+ * \param partH (Integer): Height of part of image to draw.
+ * \param x (Number): X position of where to draw the image.
+ * \param y (Number): Y position of where to draw the image.
+ * \ns Draw
+ */
 VMValue Draw_ImagePart(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(7);
 
@@ -493,6 +662,15 @@ VMValue Draw_ImagePart(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(image->TexturePtr, sx, sy, sw, sh, x, y, sw, sh);
     return NULL_VAL;
 }
+/***
+ * Draw.ImageSized
+ * \desc Draws an image, but sized
+ * \param x (Number): X position of where to draw the image.
+ * \param y (Number): Y position of where to draw the image.
+ * \param width (Number): Width to draw the image.
+ * \param height (Number): Height to draw the image.
+ * \ns Draw
+ */
 VMValue Draw_ImageSized(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(5);
 
@@ -509,6 +687,12 @@ VMValue Draw_ImageSized(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(image->TexturePtr, 0, 0, image->TexturePtr->Width, image->TexturePtr->Height, x, y, w, h);
     return NULL_VAL;
 }
+/***
+ * Draw.ImagePartSized
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_ImagePartSized(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(9);
 
@@ -529,6 +713,12 @@ VMValue Draw_ImagePartSized(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(image->TexturePtr, sx, sy, sw, sh, x, y, w, h);
     return NULL_VAL;
 }
+/***
+ * Draw.Video
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Video(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
 
@@ -539,6 +729,12 @@ VMValue Draw_Video(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(video->VideoTexture, 0, 0, video->VideoTexture->Width, video->VideoTexture->Height, x, y, video->VideoTexture->Width, video->VideoTexture->Height);
     return NULL_VAL;
 }
+/***
+ * Draw.VideoPart
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_VideoPart(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(7);
 
@@ -553,6 +749,12 @@ VMValue Draw_VideoPart(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(video->VideoTexture, sx, sy, sw, sh, x, y, sw, sh);
     return NULL_VAL;
 }
+/***
+ * Draw.VideoSized
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_VideoSized(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(5);
 
@@ -569,6 +771,12 @@ VMValue Draw_VideoSized(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(video->VideoTexture, 0, 0, video->VideoTexture->Width, video->VideoTexture->Height, x, y, w, h);
     return NULL_VAL;
 }
+/***
+ * Draw.VideoPartSized
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_VideoPartSized(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(9);
 
@@ -585,6 +793,14 @@ VMValue Draw_VideoPartSized(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(video->VideoTexture, sx, sy, sw, sh, x, y, w, h);
     return NULL_VAL;
 }
+/***
+ * Draw.Tile
+ * \param x (Number): X position of where to draw the tile.
+ * \param y (Number): Y position of where to draw the tile.
+ * \param flipX (Integer): Whether or not to flip the tile horizontally.
+ * \param flipY (Integer): Whether or not to flip the tile vertically.
+ * \ns Draw
+ */
 VMValue Draw_Tile(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(5);
 
@@ -600,6 +816,12 @@ VMValue Draw_Tile(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Draw.Texture
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Texture(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
 
@@ -610,6 +832,12 @@ VMValue Draw_Texture(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(texture, 0, 0, texture->Width, texture->Height, x, y, texture->Width, texture->Height);
     return NULL_VAL;
 }
+/***
+ * Draw.TextureSized
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_TextureSized(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(5);
 
@@ -622,6 +850,12 @@ VMValue Draw_TextureSized(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::DrawTexture(texture, 0, 0, texture->Width, texture->Height, x, y, w, h);
     return NULL_VAL;
 }
+/***
+ * Draw.TexturePart
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_TexturePart(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(7);
 
@@ -641,32 +875,68 @@ float textAlign = 0.0f;
 float textBaseline = 0.0f;
 float textAscent = 1.25f;
 float textAdvance = 1.0f;
-char _Text_GetLetter(signed char l) {
+int _Text_GetLetter(int l) {
     if (l < 0)
         return ' ';
-    return (char)l;
+    return l;
 }
+/***
+ * Draw.SetFont
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetFont(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Draw.SetTextAlign
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetTextAlign(int argCount, VMValue* args, Uint32 threadID) { // left, center, right
     textAlign = GetInteger(args, 0, threadID) / 2.0f;
     return NULL_VAL;
 }
+/***
+ * Draw.SetTextBaseline
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetTextBaseline(int argCount, VMValue* args, Uint32 threadID) { // top, baseline, bottom
     textBaseline = GetInteger(args, 0, threadID) / 2.0f;
     return NULL_VAL;
 }
+/***
+ * Draw.SetTextAdvance
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetTextAdvance(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     textAdvance = GetDecimal(args, 0, threadID);
     return NULL_VAL;
 }
+/***
+ * Draw.SetTextLineAscent
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetTextLineAscent(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     textAscent = GetDecimal(args, 0, threadID);
     return NULL_VAL;
 }
+/***
+ * Draw.MeasureText
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_MeasureText(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
 
@@ -702,6 +972,12 @@ VMValue Draw_MeasureText(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Draw.MeasureTextWrapped
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(3);
 
@@ -773,6 +1049,14 @@ VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Draw.Text
+ * \param sprite (Integer): Index of the loaded sprite to be used as text.
+ * \param text (String): Text to draw.
+ * \param x (Number): X position of where to draw the tile.
+ * \param y (Number): Y position of where to draw the tile.
+ * \ns Draw
+ */
 VMValue Draw_Text(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
 
@@ -802,7 +1086,7 @@ VMValue Draw_Text(int argCount, VMValue* args, Uint32 threadID) {
     line = 0;
     x = 0.0f;
     for (char* i = text, l; *i; i++) {
-        l = _Text_GetLetter(*i);
+        l = _Text_GetLetter((Uint8)*i);
         if (l == '\n') {
             lineWidths[line++] = x;
             x = 0.0f;
@@ -817,7 +1101,7 @@ VMValue Draw_Text(int argCount, VMValue* args, Uint32 threadID) {
     x = basex;
     bool lineBack = true;
     for (char* i = text, l; *i; i++) {
-        l = _Text_GetLetter(*i);
+        l = _Text_GetLetter((Uint8)*i);
         if (lineBack) {
             x -= sprite->Animations[0].Frames[l].OffsetX;
             lineBack = false;
@@ -838,6 +1122,16 @@ VMValue Draw_Text(int argCount, VMValue* args, Uint32 threadID) {
     free(lineWidths);
     return NULL_VAL;
 }
+/***
+ * Draw.TextWrapped
+ * \param sprite (Integer): Index of the loaded sprite to be used as text.
+ * \param text (String): Text to draw.
+ * \param x (Number): X position of where to draw the tile.
+ * \param y (Number): Y position of where to draw the tile.
+ * \param maxWidth (Number): Max width the text can draw in.
+ * \param maxLines (Integer): Max lines the text can draw.
+ * \ns Draw
+ */
 VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(5);
 
@@ -860,18 +1154,18 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
     bool  lineBack = true;
     int   lineNo = 1;
     for (char* i = text, l; ; i++) {
-        l = _Text_GetLetter(*i);
+        l = _Text_GetLetter((Uint8)*i);
         if (((l == ' ' || l == 0) && i != wordstart) || l == '\n') {
             float testWidth = 0.0f;
             for (char* o = linestart, lm; o < i; o++) {
-                lm = _Text_GetLetter(*o);
+                lm = _Text_GetLetter((Uint8)*o);
                 testWidth += sprite->Animations[0].Frames[lm].Advance * textAdvance;
             }
 
             if ((testWidth > max_w && word > 0) || l == '\n') {
                 float lineWidth = 0.0f;
                 for (char* o = linestart, lm; o < wordstart - 1; o++) {
-                    lm = _Text_GetLetter(*o);
+                    lm = _Text_GetLetter((Uint8)*o);
                     if (lineBack) {
                         lineWidth -= sprite->Animations[0].Frames[lm].OffsetX;
                         lineBack = false;
@@ -882,7 +1176,7 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
 
                 x = basex - lineWidth * textAlign;
                 for (char* o = linestart, lm; o < wordstart - 1; o++) {
-                    lm = _Text_GetLetter(*o);
+                    lm = _Text_GetLetter((Uint8)*o);
                     if (lineBack) {
                         x -= sprite->Animations[0].Frames[lm].OffsetX;
                         lineBack = false;
@@ -910,7 +1204,7 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
 
     float lineWidth = 0.0f;
     for (char* o = linestart, l; *o; o++) {
-        l = _Text_GetLetter(*o);
+        l = _Text_GetLetter((Uint8)*o);
         if (lineBack) {
             lineWidth -= sprite->Animations[0].Frames[l].OffsetX;
             lineBack = false;
@@ -921,7 +1215,7 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
 
     x = basex - lineWidth * textAlign;
     for (char* o = linestart, l; *o; o++) {
-        l = _Text_GetLetter(*o);
+        l = _Text_GetLetter((Uint8)*o);
         if (lineBack) {
             x -= sprite->Animations[0].Frames[l].OffsetX;
             lineBack = false;
@@ -934,6 +1228,12 @@ VMValue Draw_TextWrapped(int argCount, VMValue* args, Uint32 threadID) {
 
     return NULL_VAL;
 }
+/***
+ * Draw.TextEllipsis
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_TextEllipsis(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(5);
 
@@ -980,6 +1280,12 @@ VMValue Draw_TextEllipsis(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
 
+/***
+ * Draw.SetBlendColor
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetBlendColor(int argCount, VMValue* args, Uint32 threadID) {
     if (argCount <= 2) {
         CHECK_ARGCOUNT(2);
@@ -995,11 +1301,23 @@ VMValue Draw_SetBlendColor(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::SetBlendColor(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.SetTextureBlend
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetTextureBlend(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     Graphics::TextureBlend = !!GetInteger(args, 0, threadID);
     return NULL_VAL;
 }
+/***
+ * Draw.SetBlendMode
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetBlendMode(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     switch (Graphics::BlendMode = GetInteger(args, 0, threadID)) {
@@ -1030,6 +1348,12 @@ VMValue Draw_SetBlendMode(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Draw.SetBlendFactor
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetBlendFactor(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int src = GetInteger(args, 0, threadID);
@@ -1037,6 +1361,12 @@ VMValue Draw_SetBlendFactor(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::SetBlendMode(src, dst, src, dst);
     return NULL_VAL;
 }
+/***
+ * Draw.SetBlendFactorExtended
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetBlendFactorExtended(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     int srcC = GetInteger(args, 0, threadID);
@@ -1046,22 +1376,61 @@ VMValue Draw_SetBlendFactorExtended(int argCount, VMValue* args, Uint32 threadID
     Graphics::SetBlendMode(srcC, dstC, srcA, dstA);
     return NULL_VAL;
 }
+/***
+ * Draw.SetCompareColor
+ * \desc
+ * \return
+ * \ns Draw
+ */
+VMValue Draw_SetCompareColor(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int hex = GetInteger(args, 0, threadID);
+    SoftwareRenderer::CompareColor = 0xFF000000U | hex;
+    return NULL_VAL;
+}
 
+/***
+ * Draw.Line
+ * \param x1 (Number): X position of where to start drawing the line.
+ * \param y1 (Number): Y position of where to start drawing the line.
+ * \param x2 (Number): X position of where to end drawing the line.
+ * \param y2 (Number): Y position of where to end drawing the line.
+ * \ns Draw
+ */
 VMValue Draw_Line(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     Graphics::StrokeLine(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.Circle
+ * \param x (Number): Center X position of where to draw the cricle.
+ * \param y (Number): Center Y position of where to draw the cricle.
+ * \param radius (Number): Radius of the circle.
+ * \ns Draw
+ */
 VMValue Draw_Circle(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     Graphics::FillCircle(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.Ellipse
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Ellipse(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     Graphics::FillEllipse(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.Triangle
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Triangle(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(6);
     Graphics::FillTriangle(
@@ -1070,21 +1439,45 @@ VMValue Draw_Triangle(int argCount, VMValue* args, Uint32 threadID) {
         GetDecimal(args, 4, threadID), GetDecimal(args, 5, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.Rectangle
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Rectangle(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     Graphics::FillRectangle(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.CircleStroke
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_CircleStroke(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     Graphics::StrokeCircle(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.EllipseStroke
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_EllipseStroke(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     Graphics::StrokeEllipse(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.TriangleStroke
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_TriangleStroke(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(6);
     Graphics::StrokeTriangle(
@@ -1093,38 +1486,80 @@ VMValue Draw_TriangleStroke(int argCount, VMValue* args, Uint32 threadID) {
         GetDecimal(args, 4, threadID), GetDecimal(args, 5, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.RectangleStroke
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_RectangleStroke(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     Graphics::StrokeRectangle(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.UseFillSmoothing
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_UseFillSmoothing(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     Graphics::SmoothFill = !!GetInteger(args, 0, threadID);
     return NULL_VAL;
 }
+/***
+ * Draw.UseStrokeSmoothing
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_UseStrokeSmoothing(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     Graphics::SmoothStroke = !!GetInteger(args, 0, threadID);
     return NULL_VAL;
 }
 
+/***
+ * Draw.SetClip
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetClip(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     Graphics::SetClip((int)GetDecimal(args, 0, threadID), (int)GetDecimal(args, 1, threadID), (int)GetDecimal(args, 2, threadID), (int)GetDecimal(args, 3, threadID));
     return NULL_VAL;
 }
+/***
+ * Draw.ClearClip
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_ClearClip(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     Graphics::ClearClip();
     return NULL_VAL;
 }
 
+/***
+ * Draw.Save
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Save(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     Graphics::Save();
     return NULL_VAL;
 }
+/***
+ * Draw.Scale
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Scale(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(2);
     float x = GetDecimal(args, 0, threadID);
@@ -1133,6 +1568,12 @@ VMValue Draw_Scale(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::Scale(x, y, z);
     return NULL_VAL;
 }
+/***
+ * Draw.Rotate
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Rotate(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(1);
     if (argCount == 3) {
@@ -1147,11 +1588,23 @@ VMValue Draw_Rotate(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Draw.Restore
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Restore(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     Graphics::Restore();
     return NULL_VAL;
 }
+/***
+ * Draw.Translate
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Translate(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(2);
     float x = GetDecimal(args, 0, threadID);
@@ -1161,6 +1614,12 @@ VMValue Draw_Translate(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
 
+/***
+ * Draw.SetTextureTarget
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_SetTextureTarget(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
@@ -1168,11 +1627,23 @@ VMValue Draw_SetTextureTarget(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::SetRenderTarget(texture);
     return NULL_VAL;
 }
+/***
+ * Draw.Clear
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_Clear(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     Graphics::Clear();
     return NULL_VAL;
 }
+/***
+ * Draw.ResetTextureTarget
+ * \desc
+ * \return
+ * \ns Draw
+ */
 VMValue Draw_ResetTextureTarget(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     Graphics::SetRenderTarget(!Scene::Views[Scene::ViewCurrent].UseDrawTarget ? NULL : Scene::Views[Scene::ViewCurrent].DrawTarget);
@@ -1189,45 +1660,243 @@ VMValue Draw_ResetTextureTarget(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Ease
+/***
+ * Ease.InSine
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InSine(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InSine(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutSine
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutSine(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutSine(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutSine
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutSine(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutSine(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InQuad
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InQuad(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InQuad(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutQuad
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutQuad(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutQuad(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutQuad
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutQuad(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutQuad(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InCubic
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InCubic(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InCubic(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutCubic
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutCubic(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutCubic(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutCubic
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutCubic(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutCubic(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InQuart
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InQuart(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InQuart(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutQuart
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutQuart(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutQuart(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutQuart
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutQuart(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutQuart(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InQuint
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InQuint(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InQuint(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutQuint
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutQuint(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutQuint(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutQuint
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutQuint(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutQuint(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InExpo
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InExpo(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InExpo(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutExpo
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutExpo(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutExpo(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutExpo
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutExpo(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutExpo(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InCirc
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InCirc(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InCirc(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutCirc
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutCirc(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutCirc(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutCirc
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutCirc(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutCirc(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InBack
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InBack(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InBack(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutBack
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutBack(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutBack(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutBack
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutBack(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutBack(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InElastic
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InElastic(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InElastic(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutElastic
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutElastic(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutElastic(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutElastic
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutElastic(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutElastic(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InBounce
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InBounce(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InBounce(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.OutBounce
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_OutBounce(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::OutBounce(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.InOutBounce
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_InOutBounce(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::InOutBounce(GetDecimal(args, 0, threadID))); }
+/***
+ * Ease.Triangle
+ * \desc
+ * \return
+ * \ns Ease
+ */
 VMValue Ease_Triangle(int argCount, VMValue* args, Uint32 threadID) { CHECK_ARGCOUNT(1); return NUMBER_VAL(Ease::Triangle(GetDecimal(args, 0, threadID))); }
 // #endregion
 
 // #region File
+/***
+ * File.Exists
+ * \desc
+ * \return
+ * \ns File
+ */
 VMValue File_Exists(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* filePath = GetString(args, 0, threadID);
     return INTEGER_VAL(File::Exists(filePath));
 }
+/***
+ * File.ReadAllText
+ * \desc
+ * \return
+ * \ns File
+ */
 VMValue File_ReadAllText(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* filePath = GetString(args, 0, threadID);
@@ -1245,6 +1914,12 @@ VMValue File_ReadAllText(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * File.WriteAllText
+ * \desc
+ * \return
+ * \ns File
+ */
 VMValue File_WriteAllText(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char* filePath = GetString(args, 0, threadID);
@@ -1292,6 +1967,12 @@ int _HTTP_GetToFile(void* opaque) {
     return 0;
 }
 
+/***
+ * HTTP.GetString
+ * \desc
+ * \return
+ * \ns HTTP
+ */
 VMValue HTTP_GetString(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*           url = NULL;
@@ -1315,6 +1996,12 @@ VMValue HTTP_GetString(int argCount, VMValue* args, Uint32 threadID) {
     }
     return obj;
 }
+/***
+ * HTTP.GetToFile
+ * \desc
+ * \return
+ * \ns HTTP
+ */
 VMValue HTTP_GetToFile(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     char* url = GetString(args, 0, threadID);
@@ -1340,71 +2027,149 @@ VMValue HTTP_GetToFile(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Input
+/***
+ * Input.GetMouseX
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_GetMouseX(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     int value; SDL_GetMouseState(&value, NULL);
     return NUMBER_VAL((float)value);
 }
+/***
+ * Input.GetMouseY
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_GetMouseY(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     int value; SDL_GetMouseState(NULL, &value);
     return NUMBER_VAL((float)value);
 }
+/***
+ * Input.IsMouseButtonDown
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_IsMouseButtonDown(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int button = GetInteger(args, 0, threadID);
     return INTEGER_VAL((InputManager::MouseDown >> button) & 1);
 }
+/***
+ * Input.IsMouseButtonPressed
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_IsMouseButtonPressed(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int button = GetInteger(args, 0, threadID);
     return INTEGER_VAL((InputManager::MousePressed >> button) & 1);
 }
+/***
+ * Input.IsMouseButtonReleased
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_IsMouseButtonReleased(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int button = GetInteger(args, 0, threadID);
     return INTEGER_VAL((InputManager::MouseReleased >> button) & 1);
 }
+/***
+ * Input.IsKeyDown
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_IsKeyDown(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int key = GetInteger(args, 0, threadID);
     return INTEGER_VAL(InputManager::KeyboardState[key]);
 }
+/***
+ * Input.IsKeyPressed
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_IsKeyPressed(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int key = GetInteger(args, 0, threadID);
     int down = InputManager::KeyboardState[key] && !InputManager::KeyboardStateLast[key];
     return INTEGER_VAL(down);
 }
+/***
+ * Input.IsKeyReleased
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_IsKeyReleased(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int key = GetInteger(args, 0, threadID);
     int down = !InputManager::KeyboardState[key] && InputManager::KeyboardStateLast[key];
     return INTEGER_VAL(down);
 }
+/***
+ * Input.GetControllerAttached
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_GetControllerAttached(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int controller_index = GetInteger(args, 0, threadID);
     return INTEGER_VAL(InputManager::GetControllerAttached(controller_index));
 }
+/***
+ * Input.GetControllerHat
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_GetControllerHat(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int controller_index = GetInteger(args, 0, threadID);
     int index = GetInteger(args, 1, threadID);
     return INTEGER_VAL(InputManager::GetControllerHat(controller_index, index));
 }
+/***
+ * Input.GetControllerAxis
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_GetControllerAxis(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int controller_index = GetInteger(args, 0, threadID);
     int index = GetInteger(args, 1, threadID);
     return DECIMAL_VAL(InputManager::GetControllerAxis(controller_index, index));
 }
+/***
+ * Input.GetControllerButton
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_GetControllerButton(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int controller_index = GetInteger(args, 0, threadID);
     int index = GetInteger(args, 1, threadID);
     return INTEGER_VAL(InputManager::GetControllerButton(controller_index, index));
 }
+/***
+ * Input.GetControllerName
+ * \desc
+ * \return
+ * \ns Input
+ */
 VMValue Input_GetControllerName(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int controller_index = GetInteger(args, 0, threadID);
@@ -1420,7 +2185,16 @@ VMValue Input_GetControllerName(int argCount, VMValue* args, Uint32 threadID) {
 }
 // #endregion
 
+// #region IO
+// #endregion
+
 // #region Instance
+/***
+ * Instance.Create
+ * \desc
+ * \return
+ * \ns Instance
+ */
 VMValue Instance_Create(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(3);
 
@@ -1442,7 +2216,7 @@ VMValue Instance_Create(int argCount, VMValue* args, Uint32 threadID) {
     }
 
     if (!objectList->SpawnFunction) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "Object \"%s\" does not exist.", objectName);
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Object \"%s\" does not exist.", objectName);
         return NULL_VAL;
     }
 
@@ -1461,6 +2235,12 @@ VMValue Instance_Create(int argCount, VMValue* args, Uint32 threadID) {
 
     return OBJECT_VAL(instance);
 }
+/***
+ * Instance.GetNth
+ * \desc
+ * \return
+ * \ns Instance
+ */
 VMValue Instance_GetNth(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
 
@@ -1480,6 +2260,12 @@ VMValue Instance_GetNth(int argCount, VMValue* args, Uint32 threadID) {
 
     return NULL_VAL;
 }
+/***
+ * Instance.GetCount
+ * \desc
+ * \return
+ * \ns Instance
+ */
 VMValue Instance_GetCount(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
@@ -1492,6 +2278,12 @@ VMValue Instance_GetCount(int argCount, VMValue* args, Uint32 threadID) {
     ObjectList* objectList = Scene::ObjectLists->Get(objectName);
     return INTEGER_VAL(objectList->Count());
 }
+/***
+ * Instance.GetNextInstance
+ * \desc
+ * \return
+ * \ns Instance
+ */
 VMValue Instance_GetNextInstance(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
 
@@ -1527,7 +2319,7 @@ static int _JSON_FillMap(ObjMap* map, const char* text, jsmntok_t* t, size_t cou
     int tokcount = 0;
     for (int i = 0; i < t->size; i++) {
         key = t + 1 + tokcount;
-        keyHash = FNV1A::EncryptData(text + key->start, key->end - key->start);
+        keyHash = map->Keys->HashFunction(text + key->start, key->end - key->start);
         map->Keys->Put(keyHash, HeapCopyString(text + key->start, key->end - key->start));
         tokcount += 1;
         if (key->size > 0) {
@@ -1720,6 +2512,12 @@ static int _JSON_FillArray(ObjArray* arr, const char* text, jsmntok_t* t, size_t
     return tokcount + 1;
 }
 
+/***
+ * JSON.Parse
+ * \desc
+ * \return
+ * \ns JSON
+ */
 VMValue JSON_Parse(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     if (BytecodeObjectManager::Lock()) {
@@ -1760,6 +2558,12 @@ VMValue JSON_Parse(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * JSON.ToString
+ * \desc
+ * \return
+ * \ns JSON
+ */
 VMValue JSON_ToString(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     Compiler::PrettyPrint = !!GetInteger(args, 1, threadID);
@@ -1770,79 +2574,217 @@ VMValue JSON_ToString(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Math
+/***
+ * Math.Cos
+ * \desc Returns the cosine of an angle of x radians.
+ * \param x (Decimal): Angle (in radians) to get the cosine of.
+ * \return The cosine of x radians.
+ * \ns Math
+ */
 VMValue Math_Cos(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(Math::Cos(GetDecimal(args, 0, threadID)));
 }
+/***
+ * Math.Sin
+ * \desc Returns the sine of an angle of x radians.
+ * \param x (Decimal): Angle (in radians) to get the sine of.
+ * \return The sine of x radians.
+ * \ns Math
+ */
 VMValue Math_Sin(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(Math::Sin(GetDecimal(args, 0, threadID)));
 }
+/***
+ * Math.Acos
+ * \desc
+ * \return
+ * \ns Math
+ */
+VMValue Math_Acos(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    return DECIMAL_VAL(Math::Acos(GetDecimal(args, 0, threadID)));
+}
+/***
+ * Math.Asin
+ * \desc
+ * \return
+ * \ns Math
+ */
+VMValue Math_Asin(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    return DECIMAL_VAL(Math::Asin(GetDecimal(args, 0, threadID)));
+}
+/***
+ * Math.Atan
+ * \desc Returns the angle (in radians) from x and y.
+ * \param x (Decimal): x value.
+ * \param y (Decimal): y value.
+ * \return The angle from x and y.
+ * \ns Math
+ */
 VMValue Math_Atan(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     return DECIMAL_VAL(Math::Atan(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID)));
 }
+/***
+ * Math.Distance
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Distance(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     return DECIMAL_VAL(Math::Distance(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID)));
 }
+/***
+ * Math.Direction
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Direction(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     return DECIMAL_VAL(Math::Atan(GetDecimal(args, 2, threadID) - GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID) - GetDecimal(args, 3, threadID)));
 }
+/***
+ * Math.Abs
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Abs(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(Math::Abs(GetDecimal(args, 0, threadID)));
 }
+/***
+ * Math.Min
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Min(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     // respect the type of number
     return DECIMAL_VAL(Math::Min(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID)));
 }
+/***
+ * Math.Max
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Max(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     return DECIMAL_VAL(Math::Max(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID)));
 }
+/***
+ * Math.Clamp
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Clamp(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     return DECIMAL_VAL(Math::Clamp(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID), GetDecimal(args, 2, threadID)));
 }
+/***
+ * Math.Sign
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Sign(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(Math::Sign(GetDecimal(args, 0, threadID)));
 }
+/***
+ * Math.Random
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Random(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     return DECIMAL_VAL(Math::Random());
 }
+/***
+ * Math.RandomMax
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_RandomMax(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(Math::RandomMax(GetDecimal(args, 0, threadID)));
 }
+/***
+ * Math.RandomRange
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_RandomRange(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     return DECIMAL_VAL(Math::RandomRange(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID)));
 }
+/***
+ * Math.Floor
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Floor(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(std::floor(GetDecimal(args, 0, threadID)));
 }
+/***
+ * Math.Ceil
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Ceil(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(std::ceil(GetDecimal(args, 0, threadID)));
 }
+/***
+ * Math.Round
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Round(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(std::round(GetDecimal(args, 0, threadID)));
 }
+/***
+ * Math.Sqrt
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Sqrt(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(sqrt(GetDecimal(args, 0, threadID)));
 }
+/***
+ * Math.Pow
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Pow(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     return DECIMAL_VAL(pow(GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID)));
 }
+/***
+ * Math.Exp
+ * \desc
+ * \return
+ * \ns Math
+ */
 VMValue Math_Exp(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(std::exp(GetDecimal(args, 0, threadID)));
@@ -1850,6 +2792,12 @@ VMValue Math_Exp(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Music
+/***
+ * Music.Play
+ * \desc
+ * \return
+ * \ns Music
+ */
 VMValue Music_Play(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
@@ -1858,12 +2806,37 @@ VMValue Music_Play(int argCount, VMValue* args, Uint32 threadID) {
     AudioManager::PushMusic(audio, false, 0);
     return NULL_VAL;
 }
+/***
+ * Music.Stop
+ * \desc
+ * \return
+ * \ns Music
+ */
 VMValue Music_Stop(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISound* audio = Scene::MusicList[GetInteger(args, 0, threadID)]->AsMusic;
     AudioManager::RemoveMusic(audio);
     return NULL_VAL;
 }
+/***
+ * Music.StopWithFadeOut
+ * \desc
+ * \return
+ * \ns Music
+ */
+VMValue Music_StopWithFadeOut(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    // ISound* audio = Scene::MusicList[GetInteger(args, 0, threadID)]->AsMusic;
+    float seconds = GetDecimal(args, 0, threadID);
+    AudioManager::FadeMusic(seconds);
+    return NULL_VAL;
+}
+/***
+ * Music.Pause
+ * \desc
+ * \return
+ * \ns Music
+ */
 VMValue Music_Pause(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     AudioManager::Lock();
@@ -1872,6 +2845,12 @@ VMValue Music_Pause(int argCount, VMValue* args, Uint32 threadID) {
     AudioManager::Unlock();
     return NULL_VAL;
 }
+/***
+ * Music.Resume
+ * \desc
+ * \return
+ * \ns Music
+ */
 VMValue Music_Resume(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     AudioManager::Lock();
@@ -1880,11 +2859,23 @@ VMValue Music_Resume(int argCount, VMValue* args, Uint32 threadID) {
     AudioManager::Unlock();
     return NULL_VAL;
 }
+/***
+ * Music.Clear
+ * \desc
+ * \return
+ * \ns Music
+ */
 VMValue Music_Clear(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     AudioManager::ClearMusic();
     return NULL_VAL;
 }
+/***
+ * Music.Loop
+ * \desc
+ * \return
+ * \ns Music
+ */
 VMValue Music_Loop(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     ISound* audio = Scene::MusicList[GetInteger(args, 0, threadID)]->AsMusic;
@@ -1894,6 +2885,12 @@ VMValue Music_Loop(int argCount, VMValue* args, Uint32 threadID) {
     AudioManager::PushMusic(audio, true, loop_point);
     return NULL_VAL;
 }
+/***
+ * Music.IsPlaying
+ * \desc
+ * \return
+ * \ns Music
+ */
 VMValue Music_IsPlaying(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISound* audio = Scene::MusicList[GetInteger(args, 0, threadID)]->AsMusic;
@@ -1902,6 +2899,12 @@ VMValue Music_IsPlaying(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Number
+/***
+ * Number.ToString
+ * \desc
+ * \return
+ * \ns Number
+ */
 VMValue Number_ToString(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(1);
 
@@ -1941,19 +2944,309 @@ VMValue Number_ToString(int argCount, VMValue* args, Uint32 threadID) {
             return strng;
         }
         default:
-            BytecodeObjectManager::Threads[threadID].ThrowError(true,
+            BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
                 "Expected argument %d to be of type %s instead of %s.", 0 + 1, "Number", GetTypeString(args[0]));
     }
 
     return NULL_VAL;
 }
+/***
+ * Number.AsInteger
+ * \desc
+ * \return
+ * \ns Number
+ */
 VMValue Number_AsInteger(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return INTEGER_VAL((int)GetDecimal(args, 0, threadID));
 }
+/***
+ * Number.AsDecimal
+ * \desc
+ * \return
+ * \ns Number
+ */
 VMValue Number_AsDecimal(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     return DECIMAL_VAL(GetDecimal(args, 0, threadID));
+}
+// #endregion
+
+// #region Palette
+/***
+ * Palette.EnablePaletteUsage
+ * \desc Sets a color on the specified palette, format 0xAARRGGBB.
+ * \ns Palette
+ */
+VMValue Palette_EnablePaletteUsage(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int usePalettes = GetInteger(args, 0, threadID);
+    Graphics::UsePalettes = usePalettes;
+    return NULL_VAL;
+}
+// .hpal defines color lines that it can load instead of full 256 color .act's
+/***
+ * Palette.LoadFromFile
+ * \desc Loads palette from an .act or a .hpal file.
+ * \param x (Decimal): Angle (in radians) to get the cosine of.
+ * \ns Palette
+ */
+VMValue Palette_LoadFromFile(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    int palIndex = GetInteger(args, 0, threadID);
+    char* filename = GetString(args, 1, threadID);
+    return NULL_VAL;
+}
+/***
+ * Palette.LoadFromResource
+ * \desc Loads palette from an .act or a .hpal resource.
+ * \ns Palette
+ */
+VMValue Palette_LoadFromResource(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    int palIndex = GetInteger(args, 0, threadID);
+    char* filename = GetString(args, 1, threadID);
+
+    ResourceStream* reader;
+    if ((reader = ResourceStream::New(filename))) {
+        MemoryStream* memoryReader;
+        if ((memoryReader = MemoryStream::New(reader))) {
+            // ACT file
+            if (strstr(filename, ".act") || strstr(filename, ".ACT")) {
+                do {
+                    Uint8 Color[3];
+                    for (int d = 0; d < 256; d++) {
+                        memoryReader->ReadBytes(Color, 3);
+                        SoftwareRenderer::PaletteColors[palIndex][d] = 0xFF000000U | Color[0] << 16 | Color[1] << 8 | Color[2];
+                    }
+                    SoftwareRenderer::ConvertFromARGBtoNative(&SoftwareRenderer::PaletteColors[palIndex][0], 256);
+                } while (false);
+            }
+            // HPAL file
+            else if (strstr(filename, ".hpal") || strstr(filename, ".HPAL")) {
+                do {
+                    Uint32 magic = memoryReader->ReadUInt32();
+                    if (magic != 0x4C415048)
+                        break;
+
+                    Uint8 Color[3];
+                    int paletteCount = memoryReader->ReadUInt32();
+
+                    if (paletteCount > 32 - palIndex)
+                        paletteCount = 32 - palIndex;
+
+                    for (int i = 0; i < paletteCount; i++) {
+                        // Palette Set
+                        int bitmap = memoryReader->ReadUInt16();
+                        for (int col = 0; col < 16; col++) {
+                            if ((bitmap & (1 << col)) != 0) {
+                                for (int d = 0; d < 16; d++) {
+                                    memoryReader->ReadBytes(Color, 3);
+                                    SoftwareRenderer::PaletteColors[i][(col << 4) | d] = 0xFF000000U | Color[0] << 16 | Color[1] << 8 | Color[2];
+                                }
+                                SoftwareRenderer::ConvertFromARGBtoNative(&SoftwareRenderer::PaletteColors[i][(col << 4)], 16);
+                            }
+                        }
+                    }
+                } while (false);
+            }
+            // GIF file
+            else if (strstr(filename, ".gif") || strstr(filename, ".GIF")) {
+                bool loadPalette = Graphics::UsePalettes;
+
+                GIF* gif;
+
+                Graphics::UsePalettes = false;
+                gif = GIF::Load(filename);
+                Graphics::UsePalettes = loadPalette;
+
+                if (gif) {
+                    if (gif->Colors) {
+                        for (int p = 0; p < 256; p++)
+                            SoftwareRenderer::PaletteColors[palIndex][p] = gif->Colors[p];
+                        Memory::Free(gif->Colors);
+                    }
+                    delete gif;
+                }
+            }
+            // RSDK StageConfig
+            else if (strstr(filename, "StageConfig.bin")) {
+                do {
+                    Uint32 magic = memoryReader->ReadUInt32();
+                    if (magic != 0x474643)
+                        break;
+
+                    memoryReader->ReadByte(); // useGameObjects
+
+                    int objectNameCount = memoryReader->ReadByte();
+                    for (int i = 0; i < objectNameCount; i++)
+                        memoryReader->ReadHeaderedString();
+
+                    int paletteCount = 8;
+
+                    Uint8 Color[3];
+                    for (int i = 0; i < paletteCount; i++) {
+                        // Palette Set
+                        int bitmap = memoryReader->ReadUInt16();
+                        for (int col = 0; col < 16; col++) {
+                            if ((bitmap & (1 << col)) != 0) {
+                                for (int d = 0; d < 16; d++) {
+                                    memoryReader->ReadBytes(Color, 3);
+                                    if (Color[0] == 0xFF && Color[1] == 0x00 && Color[2] == 0xFF)
+                                        continue;
+
+                                    SoftwareRenderer::PaletteColors[i][(col << 4) | d] = 0xFF000000U | Color[0] << 16 | Color[1] << 8 | Color[2];
+                                }
+                                SoftwareRenderer::ConvertFromARGBtoNative(&SoftwareRenderer::PaletteColors[i][(col << 4)], 16);
+                            }
+                        }
+                    }
+                } while (false);
+            }
+            // RSDK GameConfig
+            else if (strstr(filename, "GameConfig.bin")) {
+
+            }
+
+            memoryReader->Close();
+        }
+        reader->Close();
+    }
+
+    return NULL_VAL;
+}
+/***
+ * Palette.GetColor
+ * \desc Gets a color from the specified palette.
+ * \ns Palette
+ */
+VMValue Palette_GetColor(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    int palIndex = GetInteger(args, 0, threadID);
+    int colorIndex = GetInteger(args, 1, threadID);
+    return INTEGER_VAL((int)(SoftwareRenderer::PaletteColors[palIndex][colorIndex] & 0xFF00FFU));
+}
+/***
+ * Palette.SetColor
+ * \desc Sets a color on the specified palette, format 0xAARRGGBB.
+ * \ns Palette
+ */
+VMValue Palette_SetColor(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(3);
+    int palIndex = GetInteger(args, 0, threadID);
+    int colorIndex = GetInteger(args, 1, threadID);
+    Uint32 hex = (Uint32)GetInteger(args, 2, threadID);
+    SoftwareRenderer::PaletteColors[palIndex][colorIndex] = (hex & 0xFF00FFU) | 0xFF000000U;
+    return NULL_VAL;
+}
+/***
+ * Palette.MixPalettes
+ * \desc Sets a color on the specified palette, format 0xAARRGGBB.
+ * \ns Palette
+ */
+inline Uint32 PMP_ColorBlend(Uint32 color1, Uint32 color2, int percent) {
+    Uint32 rb = color1 & 0xFF00FFU;
+    Uint32 g  = color1 & 0x00FF00U;
+    rb += (((color2 & 0xFF00FFU) - rb) * percent) >> 8;
+    g  += (((color2 & 0x00FF00U) - g) * percent) >> 8;
+    return (rb & 0xFF00FFU) | (g & 0x00FF00U);
+}
+VMValue Palette_MixPalettes(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(6);
+    int palIndexDest = GetInteger(args, 0, threadID);
+    int palIndex1 = GetInteger(args, 1, threadID);
+    int palIndex2 = GetInteger(args, 2, threadID);
+    float mix = GetDecimal(args, 3, threadID);
+    int colorIndexStart = GetInteger(args, 4, threadID);
+    int colorCount = GetInteger(args, 5, threadID);
+
+    int percent = mix * 0x100;
+    for (int c = colorIndexStart; c < colorIndexStart + colorCount; c++) {
+        SoftwareRenderer::PaletteColors[palIndexDest][c] = 0xFF000000U | PMP_ColorBlend(SoftwareRenderer::PaletteColors[palIndex1][c], SoftwareRenderer::PaletteColors[palIndex2][c], percent);
+    }
+    return NULL_VAL;
+}
+/***
+ * Palette.RotateColorsLeft
+ * \desc Sets a color on the specified palette, format 0xAARRGGBB.
+ * \ns Palette
+ */
+VMValue Palette_RotateColorsLeft(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(3);
+    int palIndex = GetInteger(args, 0, threadID);
+    int colorIndexStart = GetInteger(args, 1, threadID);
+    int count = GetInteger(args, 2, threadID);
+
+    if (count > 0x100 - colorIndexStart)
+        count = 0x100 - colorIndexStart;
+
+    Uint32 temp = SoftwareRenderer::PaletteColors[palIndex][colorIndexStart];
+    for (int i = colorIndexStart + 1; i < colorIndexStart + count; i++) {
+        SoftwareRenderer::PaletteColors[palIndex][i - 1] = SoftwareRenderer::PaletteColors[palIndex][i];
+    }
+    SoftwareRenderer::PaletteColors[palIndex][colorIndexStart + count - 1] = temp;
+    return NULL_VAL;
+}
+/***
+ * Palette.RotateColorsRight
+ * \desc Sets a color on the specified palette, format 0xAARRGGBB.
+ * \ns Palette
+ */
+VMValue Palette_RotateColorsRight(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(3);
+    int palIndex = GetInteger(args, 0, threadID);
+    int colorIndexStart = GetInteger(args, 1, threadID);
+    int count = GetInteger(args, 2, threadID);
+
+    if (count > 0x100 - colorIndexStart)
+        count = 0x100 - colorIndexStart;
+
+    Uint32 temp = SoftwareRenderer::PaletteColors[palIndex][colorIndexStart + count - 1];
+    for (int i = colorIndexStart + count - 1; i >= colorIndexStart; i--) {
+        SoftwareRenderer::PaletteColors[palIndex][i] = SoftwareRenderer::PaletteColors[palIndex][i - 1];
+    }
+    SoftwareRenderer::PaletteColors[palIndex][colorIndexStart] = temp;
+    return NULL_VAL;
+}
+/***
+ * Palette.CopyColors
+ * \desc Sets a color on the specified palette, format 0xAARRGGBB.
+ * \ns Palette
+ */
+VMValue Palette_CopyColors(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(5);
+    int palIndexFrom = GetInteger(args, 0, threadID);
+    int colorIndexStartFrom = GetInteger(args, 1, threadID);
+    int palIndexTo = GetInteger(args, 2, threadID);
+    int colorIndexStartTo = GetInteger(args, 3, threadID);
+    int count = GetInteger(args, 4, threadID);
+
+    if (count > 0x100 - colorIndexStartTo)
+        count = 0x100 - colorIndexStartTo;
+    if (count > 0x100 - colorIndexStartFrom)
+        count = 0x100 - colorIndexStartFrom;
+
+    memcpy(&SoftwareRenderer::PaletteColors[palIndexTo][colorIndexStartTo], &SoftwareRenderer::PaletteColors[palIndexFrom][colorIndexStartFrom], count * sizeof(Uint32));
+    return NULL_VAL;
+}
+/***
+ * Palette.SetPaletteIndexLines
+ * \desc Sets a color on the specified palette, format 0xAARRGGBB.
+ * \ns Palette
+ */
+VMValue Palette_SetPaletteIndexLines(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(3);
+    int palIndex = GetInteger(args, 0, threadID);
+    int lineStart = GetInteger(args, 1, threadID);
+    int lineEnd = GetInteger(args, 2, threadID);
+
+    if (lineStart < 0)
+        lineStart = 0;
+
+    for (int i = lineStart; i < lineEnd && i < sizeof(SoftwareRenderer::PaletteIndexLines); i++) {
+        SoftwareRenderer::PaletteIndexLines[i] = (Uint8)palIndex;
+    }
+    return NULL_VAL;
 }
 // #endregion
 
@@ -1977,6 +3270,12 @@ bool    GetResourceListSpace(vector<ResourceType*>* list, ResourceType* resource
     }
     return false;
 }
+/***
+ * Resources.LoadSprite
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_LoadSprite(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GetString(args, 0, threadID);
@@ -1999,6 +3298,12 @@ VMValue Resources_LoadSprite(int argCount, VMValue* args, Uint32 threadID) {
     resource->AsSprite = new ISprite(filename);
     return INTEGER_VAL((int)index);
 }
+/***
+ * Resources.LoadImage
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_LoadImage(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GetString(args, 0, threadID);
@@ -2023,6 +3328,12 @@ VMValue Resources_LoadImage(int argCount, VMValue* args, Uint32 threadID) {
     }
     return INTEGER_VAL((int)index);
 }
+/***
+ * Resources.LoadFont
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_LoadFont(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     char*  filename = GetString(args, 0, threadID);
@@ -2048,6 +3359,12 @@ VMValue Resources_LoadFont(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL((int)index);
 }
+/***
+ * Resources.LoadShader
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_LoadShader(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
 
@@ -2066,7 +3383,10 @@ VMValue Resources_LoadShader(int argCount, VMValue* args, Uint32 threadID) {
     }
     if (found == Scene::ShaderList.size()) {
         ResourceStream* streamV = ResourceStream::New(filename_v);
-        if (!streamV) BytecodeObjectManager::Threads[threadID].ThrowError(true, "Resource File \"%s\" does not exist.", filename_v);
+        if (!streamV) {
+            if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Resource File \"%s\" does not exist.", filename_v) == ERROR_RES_CONTINUE)
+                BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+        }
 
         size_t lenV = streamV->Length();
         char*  sourceV = (char*)malloc(lenV);
@@ -2075,7 +3395,10 @@ VMValue Resources_LoadShader(int argCount, VMValue* args, Uint32 threadID) {
         streamV->Close();
 
         ResourceStream* streamF = ResourceStream::New(filename_f);
-        if (!streamF) BytecodeObjectManager::Threads[threadID].ThrowError(true, "Resource File \"%s\" does not exist.", filename_f);
+        if (!streamF) {
+            if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Resource File \"%s\" does not exist.", filename_f) == ERROR_RES_CONTINUE)
+                BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+        }
 
         size_t lenF = streamF->Length();
         char*  sourceF = (char*)malloc(lenF);
@@ -2110,11 +3433,23 @@ VMValue Resources_LoadShader(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL((int)found);
 }
+/***
+ * Resources.LoadModel
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_LoadModel(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     printf("Filename: %s (%s)\n", GetString(args, 0, threadID), GetDecimal(args, 1, threadID) == 0 ? "SCOPE_SCENE" : "SCOPE_GAME");
     return INTEGER_VAL(-1);
 }
+/***
+ * Resources.LoadMusic
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_LoadMusic(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GetString(args, 0, threadID);
@@ -2133,6 +3468,12 @@ VMValue Resources_LoadMusic(int argCount, VMValue* args, Uint32 threadID) {
     resource->AsMusic = new ISound(filename);
     return INTEGER_VAL((int)index);
 }
+/***
+ * Resources.LoadSound
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_LoadSound(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GetString(args, 0, threadID);
@@ -2151,6 +3492,12 @@ VMValue Resources_LoadSound(int argCount, VMValue* args, Uint32 threadID) {
     resource->AsMusic = new ISound(filename);
     return INTEGER_VAL((int)index);
 }
+/***
+ * Resources.LoadVideo
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_LoadVideo(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GetString(args, 0, threadID);
@@ -2238,6 +3585,12 @@ VMValue Resources_LoadVideo(int argCount, VMValue* args, Uint32 threadID) {
     #endif
     return INTEGER_VAL(-1);
 }
+/***
+ * Resources.FileExists
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_FileExists(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char*  filename = GetString(args, 0, threadID);
@@ -2249,6 +3602,12 @@ VMValue Resources_FileExists(int argCount, VMValue* args, Uint32 threadID) {
     return INTEGER_VAL(false);
 }
 
+/***
+ * Resources.UnloadImage
+ * \desc
+ * \return
+ * \ns Resources
+ */
 VMValue Resources_UnloadImage(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int index = GetInteger(args, 0, threadID);
@@ -2279,6 +3638,12 @@ VMValue Resources_UnloadImage(int argCount, VMValue* args, Uint32 threadID) {
 #define TILE_IDENT_MASK 0x00FFFFFFU
 #define CHECK_TILE_LAYER_POS_BOUNDS() if (layer < 0 || layer >= (int)Scene::Layers.size() || x < 0 || y < 0 || x >= Scene::Layers[layer].Width || y >= Scene::Layers[layer].Height) return NULL_VAL;
 
+/***
+ * Scene.Load
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_Load(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* filename = GetString(args, 0, threadID);
@@ -2288,21 +3653,45 @@ VMValue Scene_Load(int argCount, VMValue* args, Uint32 threadID) {
 
     return NULL_VAL;
 }
+/***
+ * Scene.LoadTileCollisions
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_LoadTileCollisions(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* filename = GetString(args, 0, threadID);
     Scene::LoadTileCollisions(filename);
     return NULL_VAL;
 }
+/***
+ * Scene.Restart
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_Restart(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     Scene::DoRestart = true;
     return NULL_VAL;
 }
+/***
+ * Scene.GetLayerCount
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_GetLayerCount(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     return INTEGER_VAL((int)Scene::Layers.size());
 }
+/***
+ * Scene.GetLayerIndex
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_GetLayerIndex(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* layername = GetString(args, 0, threadID);
@@ -2312,10 +3701,22 @@ VMValue Scene_GetLayerIndex(int argCount, VMValue* args, Uint32 threadID) {
     }
     return INTEGER_VAL(-1);
 }
+/***
+ * Scene.GetName
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_GetName(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     return OBJECT_VAL(CopyString(Scene::CurrentScene, strlen(Scene::CurrentScene)));
 }
+/***
+ * Scene.GetWidth
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_GetWidth(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     int v = 0;
@@ -2329,6 +3730,12 @@ VMValue Scene_GetWidth(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL(v);
 }
+/***
+ * Scene.GetHeight
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     int v = 0;
@@ -2342,10 +3749,22 @@ VMValue Scene_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL(v);
 }
+/***
+ * Scene.GetTileSize
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_GetTileSize(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     return INTEGER_VAL(Scene::TileSize);
 }
+/***
+ * Scene.GetTileID
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_GetTileID(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     int layer  = GetInteger(args, 0, threadID);
@@ -2354,8 +3773,14 @@ VMValue Scene_GetTileID(int argCount, VMValue* args, Uint32 threadID) {
 
     CHECK_TILE_LAYER_POS_BOUNDS();
 
-    return INTEGER_VAL((int)(Scene::Layers[layer].Tiles[x + y * Scene::Layers[layer].Width] & TILE_IDENT_MASK));
+    return INTEGER_VAL((int)(Scene::Layers[layer].Tiles[x + (y << Scene::Layers[layer].WidthInBits)] & TILE_IDENT_MASK));
 }
+/***
+ * Scene.GetTileFlipX
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_GetTileFlipX(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     int layer  = GetInteger(args, 0, threadID);
@@ -2364,8 +3789,14 @@ VMValue Scene_GetTileFlipX(int argCount, VMValue* args, Uint32 threadID) {
 
     CHECK_TILE_LAYER_POS_BOUNDS();
 
-    return INTEGER_VAL(!!(Scene::Layers[layer].Tiles[x + y * Scene::Layers[layer].Width] & TILE_FLIPX_MASK));
+    return INTEGER_VAL(!!(Scene::Layers[layer].Tiles[x + (y << Scene::Layers[layer].WidthInBits)] & TILE_FLIPX_MASK));
 }
+/***
+ * Scene.GetTileFlipY
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_GetTileFlipY(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     int layer  = GetInteger(args, 0, threadID);
@@ -2374,8 +3805,14 @@ VMValue Scene_GetTileFlipY(int argCount, VMValue* args, Uint32 threadID) {
 
     CHECK_TILE_LAYER_POS_BOUNDS();
 
-    return INTEGER_VAL(!!(Scene::Layers[layer].Tiles[x + y * Scene::Layers[layer].Width] & TILE_FLIPY_MASK));
+    return INTEGER_VAL(!!(Scene::Layers[layer].Tiles[x + (y << Scene::Layers[layer].WidthInBits)] & TILE_FLIPY_MASK));
 }
+/***
+ * Scene.SetTile
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_SetTile(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(6);
     int layer  = GetInteger(args, 0, threadID);
@@ -2398,7 +3835,7 @@ VMValue Scene_SetTile(int argCount, VMValue* args, Uint32 threadID) {
 
     CHECK_TILE_LAYER_POS_BOUNDS();
 
-    Uint32* tile = &Scene::Layers[layer].Tiles[x + y * Scene::Layers[layer].Width];
+    Uint32* tile = &Scene::Layers[layer].Tiles[x + (y << Scene::Layers[layer].WidthInBits)];
 
     *tile = tileID & TILE_IDENT_MASK;
     if (flip_x)
@@ -2415,6 +3852,12 @@ VMValue Scene_SetTile(int argCount, VMValue* args, Uint32 threadID) {
 
     return NULL_VAL;
 }
+/***
+ * Scene.SetTileCollisionSides
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_SetTileCollisionSides(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(5);
     int layer  = GetInteger(args, 0, threadID);
@@ -2425,7 +3868,7 @@ VMValue Scene_SetTileCollisionSides(int argCount, VMValue* args, Uint32 threadID
 
     CHECK_TILE_LAYER_POS_BOUNDS();
 
-    Uint32* tile = &Scene::Layers[layer].Tiles[x + y * Scene::Layers[layer].Width];
+    Uint32* tile = &Scene::Layers[layer].Tiles[x + (y << Scene::Layers[layer].WidthInBits)];
 
     *tile &= TILE_FLIPX_MASK | TILE_FLIPY_MASK | TILE_IDENT_MASK;
     *tile |= collA;
@@ -2435,11 +3878,23 @@ VMValue Scene_SetTileCollisionSides(int argCount, VMValue* args, Uint32 threadID
 
     return NULL_VAL;
 }
+/***
+ * Scene.SetPaused
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_SetPaused(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     Scene::Paused = GetInteger(args, 0, threadID);
     return NULL_VAL;
 }
+/***
+ * Scene.SetLayerVisible
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_SetLayerVisible(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int index = GetInteger(args, 0, threadID);
@@ -2451,6 +3906,12 @@ VMValue Scene_SetLayerVisible(int argCount, VMValue* args, Uint32 threadID) {
     Scene::Layers[index].Visible = visible;
     return NULL_VAL;
 }
+/***
+ * Scene.SetLayerOffsetPosition
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_SetLayerOffsetPosition(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     int index = GetInteger(args, 0, threadID);
@@ -2460,6 +3921,12 @@ VMValue Scene_SetLayerOffsetPosition(int argCount, VMValue* args, Uint32 threadI
     Scene::Layers[index].OffsetY = offsetY;
     return NULL_VAL;
 }
+/***
+ * Scene.SetLayerDrawGroup
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_SetLayerDrawGroup(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int index = GetInteger(args, 0, threadID);
@@ -2467,14 +3934,32 @@ VMValue Scene_SetLayerDrawGroup(int argCount, VMValue* args, Uint32 threadID) {
     Scene::Layers[index].DrawGroup = drawg % Scene::PriorityPerLayer;
     return NULL_VAL;
 }
+/***
+ * Scene.IsPaused
+ * \desc
+ * \return
+ * \ns Scene
+ */
 VMValue Scene_IsPaused(int argCount, VMValue* args, Uint32 threadID) {
     return INTEGER_VAL((int)Scene::Paused);
 }
 // #endregion
 
 // #region Shader
+/***
+ * Shader.Set
+ * \desc
+ * \return
+ * \ns Shader
+ */
 VMValue Shader_Set(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
+    if (IS_ARRAY(args[0])) {
+        ObjArray* array = GetArray(args, 0, threadID);
+        Graphics::UseShader(array);
+        return NULL_VAL;
+    }
+
     int   arg1 = GetInteger(args, 0, threadID);
 
 	if (!(arg1 >= 0 && arg1 < (int)Scene::ShaderList.size())) return NULL_VAL;
@@ -2482,6 +3967,12 @@ VMValue Shader_Set(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::UseShader(Scene::ShaderList[arg1]);
     return NULL_VAL;
 }
+/***
+ * Shader.GetUniform
+ * \desc
+ * \return
+ * \ns Shader
+ */
 VMValue Shader_GetUniform(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int   arg1 = GetInteger(args, 0, threadID);
@@ -2491,6 +3982,12 @@ VMValue Shader_GetUniform(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL(Scene::ShaderList[arg1]->GetUniformLocation(arg2));
 }
+/***
+ * Shader.SetUniformI
+ * \desc
+ * \return
+ * \ns Shader
+ */
 VMValue Shader_SetUniformI(int argCount, VMValue* args, Uint32 threadID) {
     // CHECK_AT_LEAST_ARGCOUNT(1);
     // int   arg1 = GetInteger(args, 0, threadID);
@@ -2500,6 +3997,12 @@ VMValue Shader_SetUniformI(int argCount, VMValue* args, Uint32 threadID) {
 
     return NULL_VAL;
 }
+/***
+ * Shader.SetUniformF
+ * \desc
+ * \return
+ * \ns Shader
+ */
 VMValue Shader_SetUniformF(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(1);
     int   arg1 = GetInteger(args, 0, threadID);
@@ -2512,6 +4015,12 @@ VMValue Shader_SetUniformF(int argCount, VMValue* args, Uint32 threadID) {
     free(values);
     return NULL_VAL;
 }
+/***
+ * Shader.SetUniform3x3
+ * \desc
+ * \return
+ * \ns Shader
+ */
 VMValue Shader_SetUniform3x3(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(9);
     for (int i = 0; i < 9; i++) {
@@ -2519,6 +4028,12 @@ VMValue Shader_SetUniform3x3(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Shader.SetUniform4x4
+ * \desc
+ * \return
+ * \ns Shader
+ */
 VMValue Shader_SetUniform4x4(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(16);
     for (int i = 0; i < 16; i++) {
@@ -2526,6 +4041,12 @@ VMValue Shader_SetUniform4x4(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * Shader.SetUniformTexture
+ * \desc
+ * \return
+ * \ns Shader
+ */
 VMValue Shader_SetUniformTexture(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     int   uniform_index = GetInteger(args, 0, threadID);
@@ -2536,6 +4057,12 @@ VMValue Shader_SetUniformTexture(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::Internal.SetUniformTexture(texture, uniform_index, slot);
     return NULL_VAL;
 }
+/***
+ * Shader.Unset
+ * \desc
+ * \return
+ * \ns Shader
+ */
 VMValue Shader_Unset(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     Graphics::UseShader(NULL);
@@ -2545,6 +4072,12 @@ VMValue Shader_Unset(int argCount, VMValue* args, Uint32 threadID) {
 
 // #region SocketClient
 WebSocketClient* client = NULL;
+/***
+ * SocketClient.Open
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_Open(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* url = GetString(args, 0, threadID);
@@ -2555,6 +4088,12 @@ VMValue SocketClient_Open(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL(true);
 }
+/***
+ * SocketClient.Close
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_Close(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     if (!client)
@@ -2565,6 +4104,12 @@ VMValue SocketClient_Close(int argCount, VMValue* args, Uint32 threadID) {
 
     return NULL_VAL;
 }
+/***
+ * SocketClient.IsOpen
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_IsOpen(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     if (!client || client->readyState != WebSocketClient::OPEN)
@@ -2572,6 +4117,12 @@ VMValue SocketClient_IsOpen(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL(true);
 }
+/***
+ * SocketClient.Poll
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_Poll(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int timeout = GetInteger(args, 0, threadID);
@@ -2582,6 +4133,12 @@ VMValue SocketClient_Poll(int argCount, VMValue* args, Uint32 threadID) {
     client->Poll(timeout);
     return INTEGER_VAL(true);
 }
+/***
+ * SocketClient.BytesToRead
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_BytesToRead(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     if (!client)
@@ -2589,6 +4146,12 @@ VMValue SocketClient_BytesToRead(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL((int)client->BytesToRead());
 }
+/***
+ * SocketClient.ReadDecimal
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_ReadDecimal(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     if (!client)
@@ -2596,6 +4159,12 @@ VMValue SocketClient_ReadDecimal(int argCount, VMValue* args, Uint32 threadID) {
 
     return DECIMAL_VAL(client->ReadFloat());
 }
+/***
+ * SocketClient.ReadInteger
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_ReadInteger(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     if (!client)
@@ -2603,6 +4172,12 @@ VMValue SocketClient_ReadInteger(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL(client->ReadSint32());
 }
+/***
+ * SocketClient.ReadString
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_ReadString(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     if (!client)
@@ -2617,6 +4192,12 @@ VMValue SocketClient_ReadString(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * SocketClient.WriteDecimal
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_WriteDecimal(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     float value = GetDecimal(args, 0, threadID);
@@ -2626,6 +4207,12 @@ VMValue SocketClient_WriteDecimal(int argCount, VMValue* args, Uint32 threadID) 
     client->SendBinary(&value, sizeof(value));
     return NULL_VAL;
 }
+/***
+ * SocketClient.WriteInteger
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_WriteInteger(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int value = GetInteger(args, 0, threadID);
@@ -2635,6 +4222,12 @@ VMValue SocketClient_WriteInteger(int argCount, VMValue* args, Uint32 threadID) 
     client->SendBinary(&value, sizeof(value));
     return NULL_VAL;
 }
+/***
+ * SocketClient.WriteString
+ * \desc
+ * \return
+ * \ns SocketClient
+ */
 VMValue SocketClient_WriteString(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* value = GetString(args, 0, threadID);
@@ -2647,6 +4240,12 @@ VMValue SocketClient_WriteString(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Sound
+/***
+ * Sound.Play
+ * \desc
+ * \return
+ * \ns Sound
+ */
 VMValue Sound_Play(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISound* audio = Scene::SoundList[GetInteger(args, 0, threadID)]->AsSound;
@@ -2654,6 +4253,12 @@ VMValue Sound_Play(int argCount, VMValue* args, Uint32 threadID) {
     AudioManager::SetSound(channel % AudioManager::SoundArrayLength, audio);
     return NULL_VAL;
 }
+/***
+ * Sound.Loop
+ * \desc
+ * \return
+ * \ns Sound
+ */
 VMValue Sound_Loop(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISound* audio = Scene::SoundList[GetInteger(args, 0, threadID)]->AsSound;
@@ -2661,6 +4266,12 @@ VMValue Sound_Loop(int argCount, VMValue* args, Uint32 threadID) {
     AudioManager::SetSound(channel % AudioManager::SoundArrayLength, audio, true, 0);
     return NULL_VAL;
 }
+/***
+ * Sound.Stop
+ * \desc
+ * \return
+ * \ns Sound
+ */
 VMValue Sound_Stop(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
@@ -2669,28 +4280,58 @@ VMValue Sound_Stop(int argCount, VMValue* args, Uint32 threadID) {
     AudioManager::AudioStop(channel % AudioManager::SoundArrayLength);
     return NULL_VAL;
 }
+/***
+ * Sound.Pause
+ * \desc
+ * \return
+ * \ns Sound
+ */
 VMValue Sound_Pause(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int channel = GetInteger(args, 0, threadID);
     AudioManager::AudioPause(channel % AudioManager::SoundArrayLength);
     return NULL_VAL;
 }
+/***
+ * Sound.Resume
+ * \desc
+ * \return
+ * \ns Sound
+ */
 VMValue Sound_Resume(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int channel = GetInteger(args, 0, threadID);
     AudioManager::AudioUnpause(channel % AudioManager::SoundArrayLength);
     return NULL_VAL;
 }
+/***
+ * Sound.StopAll
+ * \desc
+ * \return
+ * \ns Sound
+ */
 VMValue Sound_StopAll(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     AudioManager::AudioStopAll();
     return NULL_VAL;
 }
+/***
+ * Sound.PauseAll
+ * \desc
+ * \return
+ * \ns Sound
+ */
 VMValue Sound_PauseAll(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     AudioManager::AudioPauseAll();
     return NULL_VAL;
 }
+/***
+ * Sound.ResumeAll
+ * \desc
+ * \return
+ * \ns Sound
+ */
 VMValue Sound_ResumeAll(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     AudioManager::AudioUnpauseAll();
@@ -2699,23 +4340,47 @@ VMValue Sound_ResumeAll(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Sprite
+/***
+ * Sprite.GetAnimationCount
+ * \desc
+ * \return
+ * \ns Sprite
+ */
 VMValue Sprite_GetAnimationCount(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
     return INTEGER_VAL((int)sprite->Animations.size());
 }
+/***
+ * Sprite.GetFrameLoopIndex
+ * \desc
+ * \return
+ * \ns Sprite
+ */
 VMValue Sprite_GetFrameLoopIndex(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
     int animation = GetInteger(args, 1, threadID);
     return INTEGER_VAL(sprite->Animations[animation].FrameToLoop);
 }
+/***
+ * Sprite.GetFrameCount
+ * \desc
+ * \return
+ * \ns Sprite
+ */
 VMValue Sprite_GetFrameCount(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
     int animation = GetInteger(args, 1, threadID);
     return INTEGER_VAL((int)sprite->Animations[animation].Frames.size());
 }
+/***
+ * Sprite.GetFrameDuration
+ * \desc
+ * \return
+ * \ns Sprite
+ */
 VMValue Sprite_GetFrameDuration(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
@@ -2723,6 +4388,12 @@ VMValue Sprite_GetFrameDuration(int argCount, VMValue* args, Uint32 threadID) {
     int frame = GetInteger(args, 2, threadID);
     return INTEGER_VAL(sprite->Animations[animation].Frames[frame].Duration);
 }
+/***
+ * Sprite.GetFrameSpeed
+ * \desc
+ * \return
+ * \ns Sprite
+ */
 VMValue Sprite_GetFrameSpeed(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     ISprite* sprite = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
@@ -2732,6 +4403,12 @@ VMValue Sprite_GetFrameSpeed(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region String
+/***
+ * String.Split
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_Split(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     // char* string = GetString(args, 0, threadID);
@@ -2750,23 +4427,47 @@ VMValue String_Split(int argCount, VMValue* args, Uint32 threadID) {
     }
     return NULL_VAL;
 }
+/***
+ * String.CharAt
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_CharAt(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char* string = GetString(args, 0, threadID);
     int   n = GetInteger(args, 1, threadID);
-    return INTEGER_VAL((int)string[n]);
+    return INTEGER_VAL((Uint8)string[n]);
 }
+/***
+ * String.Length
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_Length(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* string = GetString(args, 0, threadID);
     return INTEGER_VAL((int)strlen(string));
 }
+/***
+ * String.Compare
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_Compare(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char* stringA = GetString(args, 0, threadID);
     char* stringB = GetString(args, 1, threadID);
     return INTEGER_VAL((int)strcmp(stringA, stringB));
 }
+/***
+ * String.IndexOf
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_IndexOf(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char* string = GetString(args, 0, threadID);
@@ -2776,12 +4477,24 @@ VMValue String_IndexOf(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL(-1);
     return INTEGER_VAL((int)(find - string));
 }
+/***
+ * String.Contains
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_Contains(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char* string = GetString(args, 0, threadID);
     char* substring = GetString(args, 1, threadID);
     return INTEGER_VAL((int)(!!strstr(string, substring)));
 }
+/***
+ * String.Substring
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_Substring(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     char* string = GetString(args, 0, threadID);
@@ -2799,6 +4512,12 @@ VMValue String_Substring(int argCount, VMValue* args, Uint32 threadID) {
     }
     return obj;
 }
+/***
+ * String.ToUpperCase
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_ToUpperCase(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* string = GetString(args, 0, threadID);
@@ -2809,12 +4528,20 @@ VMValue String_ToUpperCase(int argCount, VMValue* args, Uint32 threadID) {
         for (char* a = objStr->Chars; *a; a++) {
             if (*a >= 'a' && *a <= 'z')
                 *a += 'A' - 'a';
+            else if (*a >= 'a' && *a <= 'z')
+                *a += 'A' - 'a';
         }
         obj = OBJECT_VAL(objStr);
         BytecodeObjectManager::Unlock();
     }
     return obj;
 }
+/***
+ * String.ToLowerCase
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_ToLowerCase(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* string = GetString(args, 0, threadID);
@@ -2831,6 +4558,12 @@ VMValue String_ToLowerCase(int argCount, VMValue* args, Uint32 threadID) {
     }
     return obj;
 }
+/***
+ * String.LastIndexOf
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_LastIndexOf(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char* string = GetString(args, 0, threadID);
@@ -2851,11 +4584,23 @@ VMValue String_LastIndexOf(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL(-1);
     return INTEGER_VAL((int)(find - string));
 }
+/***
+ * String.ParseInteger
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_ParseInteger(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* string = GetString(args, 0, threadID);
     return INTEGER_VAL((int)strtol(string, NULL, 10));
 }
+/***
+ * String.ParseDecimal
+ * \desc
+ * \return
+ * \ns String
+ */
 VMValue String_ParseDecimal(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* string = GetString(args, 0, threadID);
@@ -2864,6 +4609,12 @@ VMValue String_ParseDecimal(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Texture
+/***
+ * Texture.Create
+ * \desc
+ * \return
+ * \ns Texture
+ */
 VMValue Texture_Create(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int width = GetInteger(args, 0, threadID);
@@ -2871,16 +4622,34 @@ VMValue Texture_Create(int argCount, VMValue* args, Uint32 threadID) {
     Texture* texture = Graphics::CreateTexture(SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, width, height);
     return INTEGER_VAL((int)texture->ID);
 }
+/***
+ * Texture.FromSprite
+ * \desc
+ * \return
+ * \ns Texture
+ */
 VMValue Texture_FromSprite(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISprite* arg1 = Scene::SpriteList[GetInteger(args, 0, threadID)]->AsSprite;
     return INTEGER_VAL((int)arg1->Spritesheets[0]->ID);
 }
+/***
+ * Texture.FromImage
+ * \desc
+ * \return
+ * \ns Texture
+ */
 VMValue Texture_FromImage(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     Image* arg1 = Scene::ImageList[GetInteger(args, 0, threadID)]->AsImage;
     return INTEGER_VAL((int)arg1->TexturePtr->ID);
 }
+/***
+ * Texture.SetInterpolation
+ * \desc
+ * \return
+ * \ns Texture
+ */
 VMValue Texture_SetInterpolation(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int interpolate = GetInteger(args, 0, threadID);
@@ -2890,22 +4659,52 @@ VMValue Texture_SetInterpolation(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Touch
+/***
+ * Touch.GetX
+ * \desc
+ * \return
+ * \ns Touch
+ */
 VMValue Touch_GetX(int argCount, VMValue* args, Uint32 threadID) {
     int touch_index = GetInteger(args, 0, threadID);
     return DECIMAL_VAL(InputManager::TouchGetX(touch_index));
 }
+/***
+ * Touch.GetY
+ * \desc
+ * \return
+ * \ns Touch
+ */
 VMValue Touch_GetY(int argCount, VMValue* args, Uint32 threadID) {
     int touch_index = GetInteger(args, 0, threadID);
     return DECIMAL_VAL(InputManager::TouchGetY(touch_index));
 }
+/***
+ * Touch.IsDown
+ * \desc
+ * \return
+ * \ns Touch
+ */
 VMValue Touch_IsDown(int argCount, VMValue* args, Uint32 threadID) {
     int touch_index = GetInteger(args, 0, threadID);
     return INTEGER_VAL(InputManager::TouchIsDown(touch_index));
 }
+/***
+ * Touch.IsPressed
+ * \desc
+ * \return
+ * \ns Touch
+ */
 VMValue Touch_IsPressed(int argCount, VMValue* args, Uint32 threadID) {
     int touch_index = GetInteger(args, 0, threadID);
     return INTEGER_VAL(InputManager::TouchIsPressed(touch_index));
 }
+/***
+ * Touch.IsReleased
+ * \desc
+ * \return
+ * \ns Touch
+ */
 VMValue Touch_IsReleased(int argCount, VMValue* args, Uint32 threadID) {
     int touch_index = GetInteger(args, 0, threadID);
     return INTEGER_VAL(InputManager::TouchIsReleased(touch_index));
@@ -2913,6 +4712,12 @@ VMValue Touch_IsReleased(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region TileCollision
+/***
+ * TileCollision.Point
+ * \desc
+ * \return
+ * \ns TileCollision
+ */
 VMValue TileCollision_Point(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int x = (int)std::floor(GetDecimal(args, 0, threadID));
@@ -2921,6 +4726,12 @@ VMValue TileCollision_Point(int argCount, VMValue* args, Uint32 threadID) {
     // 15, or 0b1111
     return INTEGER_VAL(Scene::CollisionAt(x, y, 0, 15, NULL) >= 0);
 }
+/***
+ * TileCollision.PointExtended
+ * \desc
+ * \return
+ * \ns TileCollision
+ */
 VMValue TileCollision_PointExtended(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     int x = (int)std::floor(GetDecimal(args, 0, threadID));
@@ -2933,6 +4744,12 @@ VMValue TileCollision_PointExtended(int argCount, VMValue* args, Uint32 threadID
 // #endregion
 
 // #region TileInfo
+/***
+ * TileInfo.IsEmptySpace
+ * \desc
+ * \return
+ * \ns TileInfo
+ */
 VMValue TileInfo_IsEmptySpace(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int tileID = GetInteger(args, 0, threadID);
@@ -2979,6 +4796,12 @@ int     _Thread_RunEvent(void* op) {
     Log::Print(Log::LOG_IMPORTANT, "Thread %d closed.", BytecodeObjectManager::ThreadCount);
     return 0;
 }
+/***
+ * Thread.RunEvent
+ * \desc
+ * \return
+ * \ns Thread
+ */
 VMValue Thread_RunEvent(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(1);
 
@@ -3012,6 +4835,12 @@ VMValue Thread_RunEvent(int argCount, VMValue* args, Uint32 threadID) {
 
     return NULL_VAL;
 }
+/***
+ * Thread.Sleep
+ * \desc
+ * \return
+ * \ns Thread
+ */
 VMValue Thread_Sleep(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     SDL_Delay(GetInteger(args, 0, threadID));
@@ -3020,6 +4849,12 @@ VMValue Thread_Sleep(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Video
+/***
+ * Video.Play
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_Play(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3028,6 +4863,12 @@ VMValue Video_Play(int argCount, VMValue* args, Uint32 threadID) {
     #endif
     return NULL_VAL;
 }
+/***
+ * Video.Pause
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_Pause(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3036,6 +4877,12 @@ VMValue Video_Pause(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.Resume
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_Resume(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3044,6 +4891,12 @@ VMValue Video_Resume(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.Stop
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_Stop(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3053,6 +4906,12 @@ VMValue Video_Stop(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.Close
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_Close(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3077,6 +4936,12 @@ VMValue Video_Close(int argCount, VMValue* args, Uint32 threadID) {
 
     return NULL_VAL;
 }
+/***
+ * Video.IsBuffering
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_IsBuffering(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3085,6 +4950,12 @@ VMValue Video_IsBuffering(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.IsPlaying
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_IsPlaying(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3093,6 +4964,12 @@ VMValue Video_IsPlaying(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.IsPaused
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_IsPaused(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3101,6 +4978,12 @@ VMValue Video_IsPaused(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.SetPosition
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_SetPosition(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3110,12 +4993,30 @@ VMValue Video_SetPosition(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.SetBufferDuration
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_SetBufferDuration(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.SetTrackEnabled
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_SetTrackEnabled(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.GetPosition
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetPosition(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3124,6 +5025,12 @@ VMValue Video_GetPosition(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.GetDuration
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetDuration(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3132,9 +5039,21 @@ VMValue Video_GetDuration(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.GetBufferDuration
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetBufferDuration(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.GetBufferEnd
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetBufferEnd(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3143,27 +5062,75 @@ VMValue Video_GetBufferEnd(int argCount, VMValue* args, Uint32 threadID) {
 #endif
     return NULL_VAL;
 }
+/***
+ * Video.GetTrackCount
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetTrackCount(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.GetTrackEnabled
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetTrackEnabled(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.GetTrackName
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetTrackName(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.GetTrackLanguage
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetTrackLanguage(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.GetDefaultVideoTrack
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetDefaultVideoTrack(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.GetDefaultAudioTrack
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetDefaultAudioTrack(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.GetDefaultSubtitleTrack
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetDefaultSubtitleTrack(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
+/***
+ * Video.GetWidth
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetWidth(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3172,6 +5139,12 @@ VMValue Video_GetWidth(int argCount, VMValue* args, Uint32 threadID) {
 
     return INTEGER_VAL(-1);
 }
+/***
+ * Video.GetHeight
+ * \desc
+ * \return
+ * \ns Video
+ */
 VMValue Video_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     MediaBag* video = GetVideo(args, 0, threadID);
@@ -3183,44 +5156,68 @@ VMValue Video_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region View
+/***
+ * View.SetX
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetX(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int   view_index = GetInteger(args, 0, threadID);
     float value = GetDecimal(args, 1, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].X = value;
     return NULL_VAL;
 }
+/***
+ * View.SetY
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetY(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int   view_index = GetInteger(args, 0, threadID);
     float value = GetDecimal(args, 1, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].Y = value;
     return NULL_VAL;
 }
+/***
+ * View.SetZ
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetZ(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int   view_index = GetInteger(args, 0, threadID);
     float value = GetDecimal(args, 1, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].Z = value;
     return NULL_VAL;
 }
+/***
+ * View.SetPosition
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetPosition(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(3);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].X = GetDecimal(args, 1, threadID);
@@ -3229,11 +5226,17 @@ VMValue View_SetPosition(int argCount, VMValue* args, Uint32 threadID) {
         Scene::Views[view_index].Z = GetDecimal(args, 3, threadID);
     return NULL_VAL;
 }
+/***
+ * View.SetAngle
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetAngle(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].RotateX = GetDecimal(args, 1, threadID);
@@ -3241,104 +5244,170 @@ VMValue View_SetAngle(int argCount, VMValue* args, Uint32 threadID) {
     Scene::Views[view_index].RotateZ = GetDecimal(args, 3, threadID);
     return NULL_VAL;
 }
+/***
+ * View.GetX
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_GetX(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     return DECIMAL_VAL(Scene::Views[view_index].X);
 }
+/***
+ * View.GetY
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_GetY(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     return DECIMAL_VAL(Scene::Views[GetInteger(args, 0, threadID)].Y);
 }
+/***
+ * View.GetZ
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_GetZ(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     return DECIMAL_VAL(Scene::Views[GetInteger(args, 0, threadID)].Z);
 }
+/***
+ * View.GetWidth
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_GetWidth(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     return DECIMAL_VAL(Scene::Views[view_index].Width);
 }
+/***
+ * View.GetHeight
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     return DECIMAL_VAL(Scene::Views[view_index].Height);
 }
+/***
+ * View.SetSize
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetSize(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(3);
     int view_index = GetInteger(args, 0, threadID);
     float view_w = GetDecimal(args, 1, threadID);
     float view_h = GetDecimal(args, 2, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].Width = view_w;
     Scene::Views[view_index].Height = view_h;
     return NULL_VAL;
 }
+/***
+ * View.IsUsingDrawTarget
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_IsUsingDrawTarget(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     return INTEGER_VAL((int)Scene::Views[view_index].UseDrawTarget);
 }
+/***
+ * View.SetUseDrawTarget
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetUseDrawTarget(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int view_index = GetInteger(args, 0, threadID);
     int usedrawtar = GetInteger(args, 1, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].UseDrawTarget = !!usedrawtar;
     return NULL_VAL;
 }
+/***
+ * View.IsUsingSoftwareRenderer
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_IsUsingSoftwareRenderer(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     return INTEGER_VAL((int)Scene::Views[view_index].Software);
 }
+/***
+ * View.SetUseSoftwareRenderer
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetUseSoftwareRenderer(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int view_index = GetInteger(args, 0, threadID);
     int usedswrend = GetInteger(args, 1, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].Software = !!usedswrend;
     return NULL_VAL;
 }
+/***
+ * View.SetUsePerspective
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetUsePerspective(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     int view_index = GetInteger(args, 0, threadID);
@@ -3346,7 +5415,7 @@ VMValue View_SetUsePerspective(int argCount, VMValue* args, Uint32 threadID) {
     float nearPlane = GetDecimal(args, 2, threadID);
     float farPlane = GetDecimal(args, 3, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].UsePerspective = !!useperspec;
@@ -3354,37 +5423,61 @@ VMValue View_SetUsePerspective(int argCount, VMValue* args, Uint32 threadID) {
     Scene::Views[view_index].FarPlane = farPlane;
     return NULL_VAL;
 }
+/***
+ * View.IsEnabled
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_IsEnabled(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     int view_index = GetInteger(args, 0, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     return INTEGER_VAL(Scene::Views[view_index].Active);
 }
+/***
+ * View.SetEnabled
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetEnabled(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int view_index = GetInteger(args, 0, threadID);
     int enabledddd = GetInteger(args, 1, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].Active = !!enabledddd;
     return NULL_VAL;
 }
+/***
+ * View.SetFieldOfView
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_SetFieldOfView(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     int view_index = GetInteger(args, 0, threadID);
     float fovy = GetDecimal(args, 1, threadID);
     if (view_index < 0 || view_index > 7) {
-        BytecodeObjectManager::Threads[threadID].ThrowError(false, "View Index out of range 0 through 8");
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
         return NULL_VAL;
     }
     Scene::Views[view_index].FOV = fovy;
     return NULL_VAL;
 }
+/***
+ * View.GetCurrent
+ * \desc
+ * \return
+ * \ns View
+ */
 VMValue View_GetCurrent(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     return INTEGER_VAL(Scene::ViewCurrent);
@@ -3392,6 +5485,12 @@ VMValue View_GetCurrent(int argCount, VMValue* args, Uint32 threadID) {
 // #endregion
 
 // #region Window
+/***
+ * Window.SetSize
+ * \desc
+ * \return
+ * \ns Window
+ */
 VMValue Window_SetSize(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     // HACK: Make variable "IsWindowResizeable"
@@ -3413,6 +5512,12 @@ VMValue Window_SetSize(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::Resize(window_w, window_h);
     return NULL_VAL;
 }
+/***
+ * Window.SetFullscreen
+ * \desc
+ * \return
+ * \ns Window
+ */
 VMValue Window_SetFullscreen(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
 
@@ -3424,21 +5529,45 @@ VMValue Window_SetFullscreen(int argCount, VMValue* args, Uint32 threadID) {
     Graphics::Resize(window_w, window_h);
     return NULL_VAL;
 }
+/***
+ * Window.SetBorderless
+ * \desc
+ * \return
+ * \ns Window
+ */
 VMValue Window_SetBorderless(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     SDL_SetWindowBordered(Application::Window, (SDL_bool)!GetInteger(args, 0, threadID));
     return NULL_VAL;
 }
+/***
+ * Window.SetPosition
+ * \desc
+ * \return
+ * \ns Window
+ */
 VMValue Window_SetPosition(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     SDL_SetWindowPosition(Application::Window, GetInteger(args, 0, threadID), GetInteger(args, 1, threadID));
     return NULL_VAL;
 }
+/***
+ * Window.SetPositionCentered
+ * \desc
+ * \return
+ * \ns Window
+ */
 VMValue Window_SetPositionCentered(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     SDL_SetWindowPosition(Application::Window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     return NULL_VAL;
 }
+/***
+ * Window.SetTitle
+ * \desc
+ * \return
+ * \ns Window
+ */
 VMValue Window_SetTitle(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* string = GetString(args, 0, threadID);
@@ -3447,24 +5576,70 @@ VMValue Window_SetTitle(int argCount, VMValue* args, Uint32 threadID) {
     SDL_SetWindowTitle(Application::Window, Application::WindowTitle);
     return NULL_VAL;
 }
+/***
+ * Window.GetWidth
+ * \desc
+ * \return
+ * \ns Window
+ */
 VMValue Window_GetWidth(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     int v; SDL_GetWindowSize(Application::Window, &v, NULL);
     return INTEGER_VAL(v);
 }
+/***
+ * Window.GetHeight
+ * \desc
+ * \return
+ * \ns Window
+ */
 VMValue Window_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(0);
     int v; SDL_GetWindowSize(Application::Window, NULL, &v);
     return INTEGER_VAL(v);
 }
+/***
+ * Window.GetFullscreen
+ * \desc
+ * \return
+ * \ns Window
+ */
+VMValue Window_GetFullscreen(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(0);
+    int v = !!(SDL_GetWindowFlags(Application::Window) & SDL_WINDOW_FULLSCREEN_DESKTOP);
+    return INTEGER_VAL(v);
+}
 // #endregion
+
+#define String_CaseMapBind(lowerCase, upperCase) \
+    String_ToUpperCase_Map_ExtendedASCII[(Uint8)lowerCase] = (Uint8)upperCase; \
+    String_ToLowerCase_Map_ExtendedASCII[(Uint8)upperCase] = (Uint8)lowerCase;
 
 PUBLIC STATIC void StandardLibrary::Link() {
     VMValue val;
     ObjClass* klass;
 
+    for (int i = 0; i < 0x100; i++) {
+        String_ToUpperCase_Map_ExtendedASCII[i] = (Uint8)i;
+        String_ToLowerCase_Map_ExtendedASCII[i] = (Uint8)i;
+    }
+    for (int i = 'a'; i <= 'z'; i++) {
+        int upperCase = i + ('A' - 'a');
+        String_ToUpperCase_Map_ExtendedASCII[i] = (Uint8)upperCase;
+        String_ToLowerCase_Map_ExtendedASCII[upperCase] = (Uint8)i;
+    }
+    String_CaseMapBind(L'ç', L'Ç');
+    String_CaseMapBind(L'ü', L'Ü');
+    String_CaseMapBind(L'á', L'Ç');
+    String_CaseMapBind(L'é', L'É');
+    String_CaseMapBind(L'ç', L'Ç');
+    String_CaseMapBind(L'ç', L'Ç');
+    String_CaseMapBind(L'ç', L'Ç');
+    String_CaseMapBind(L'ç', L'Ç');
+    String_CaseMapBind(L'ç', L'Ç');
+
     #define INIT_CLASS(className) \
-        klass = NewClass(FNV1A::EncryptString(#className)); \
+        klass = NewClass(Murmur::EncryptString(#className)); \
         klass->Name = CopyString(#className, strlen(#className)); \
         val = OBJECT_VAL(klass); \
         BytecodeObjectManager::Globals->Put(klass->Hash, OBJECT_VAL(klass));
@@ -3480,6 +5655,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Array, Insert);
     DEF_NATIVE(Array, Erase);
     DEF_NATIVE(Array, Clear);
+    DEF_NATIVE(Array, Shift);
     // #endregion
 
     // #region Date
@@ -3518,6 +5694,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     // #region Draw
     INIT_CLASS(Draw);
     DEF_NATIVE(Draw, Sprite);
+    DEF_NATIVE(Draw, SpritePart);
     DEF_NATIVE(Draw, Image);
     DEF_NATIVE(Draw, ImagePart);
     DEF_NATIVE(Draw, ImageSized);
@@ -3545,6 +5722,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Draw, SetBlendMode);
     DEF_NATIVE(Draw, SetBlendFactor);
     DEF_NATIVE(Draw, SetBlendFactorExtended);
+    DEF_NATIVE(Draw, SetCompareColor);
     DEF_NATIVE(Draw, Line);
     DEF_NATIVE(Draw, Circle);
     DEF_NATIVE(Draw, Ellipse);
@@ -3682,6 +5860,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     INIT_CLASS(Math);
     DEF_NATIVE(Math, Cos);
     DEF_NATIVE(Math, Sin);
+    DEF_NATIVE(Math, Acos);
+    DEF_NATIVE(Math, Asin);
     DEF_NATIVE(Math, Atan);
     DEF_NATIVE(Math, Distance);
     DEF_NATIVE(Math, Direction);
@@ -3705,6 +5885,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     INIT_CLASS(Music);
     DEF_NATIVE(Music, Play);
     DEF_NATIVE(Music, Stop);
+    DEF_NATIVE(Music, StopWithFadeOut);
     DEF_NATIVE(Music, Pause);
     DEF_NATIVE(Music, Resume);
     DEF_NATIVE(Music, Clear);
@@ -3717,6 +5898,20 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Number, ToString);
     DEF_NATIVE(Number, AsInteger);
     DEF_NATIVE(Number, AsDecimal);
+    // #endregion
+
+    // #region Palette
+    INIT_CLASS(Palette);
+    DEF_NATIVE(Palette, EnablePaletteUsage);
+    DEF_NATIVE(Palette, LoadFromFile);
+    DEF_NATIVE(Palette, LoadFromResource);
+    DEF_NATIVE(Palette, GetColor);
+    DEF_NATIVE(Palette, SetColor);
+    DEF_NATIVE(Palette, MixPalettes);
+    DEF_NATIVE(Palette, RotateColorsLeft);
+    DEF_NATIVE(Palette, RotateColorsRight);
+    DEF_NATIVE(Palette, CopyColors);
+    DEF_NATIVE(Palette, SetPaletteIndexLines);
     // #endregion
 
     // #region Resources
@@ -3920,6 +6115,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Window, SetTitle);
     DEF_NATIVE(Window, GetWidth);
     DEF_NATIVE(Window, GetHeight);
+    DEF_NATIVE(Window, GetFullscreen);
     // #endregion
 
     #undef DEF_NATIVE

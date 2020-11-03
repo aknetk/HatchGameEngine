@@ -933,6 +933,13 @@ PUBLIC STATIC int      D3DRenderer::UpdateTexture(Texture* texture, SDL_Rect* r,
         inputPixelsH = r->h;
     }
 
+    if (Graphics::NoInternalTextures) {
+        if (inputPixelsW > Graphics::MaxTextureWidth)
+            inputPixelsW = Graphics::MaxTextureWidth;
+        if (inputPixelsH > Graphics::MaxTextureHeight)
+            inputPixelsH = Graphics::MaxTextureHeight;
+    }
+
     D3D_TextureData* textureData = (D3D_TextureData*)texture->DriverData;
 
     RECT d3drect;

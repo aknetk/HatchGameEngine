@@ -52,6 +52,7 @@ public:
     static float              PixelOffset;
     static bool 			  NoInternalTextures;
     static int   			  BlendMode;
+    static bool 			  UsePalettes;
 
     static void     Init();
     static void     ChooseBackend();
