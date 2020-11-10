@@ -473,6 +473,16 @@ PUBLIC int     VMThread::RunInstruction() {
                     break;
                 }
 
+                ObjClass* klass = instance->Class;
+                if (klass->ParentHash && !klass->Parent) {
+                    Uint32 shash = klass->ParentHash;
+                    if (BytecodeObjectManager::Globals->Exists(shash)) {
+                        VMValue val = BytecodeObjectManager::Globals->Get(shash);
+                        if (IS_CLASS(val))
+                            klass->Parent = AS_CLASS(val);
+                    }
+                }
+
                 if (BindMethod(instance->Class, hash)) {
                     BytecodeObjectManager::Unlock();
                     break;
@@ -1034,6 +1044,7 @@ PUBLIC int     VMThread::RunInstruction() {
         case OP_INVOKE: {
             Uint32 argCount = ReadByte(frame);
             Uint32 hash = ReadUInt32(frame);
+            Uint32 isSuper = ReadByte(frame);
 
             VMValue receiver = Peek(argCount);
             if (IS_CLASS(receiver)) {
@@ -1077,7 +1088,7 @@ PUBLIC int     VMThread::RunInstruction() {
                 break;
             }
 
-            if (!Invoke(hash, argCount)) {
+            if (!Invoke(hash, argCount, isSuper)) {
                 if (__Tokens__ && __Tokens__->Exists(hash))
                     if (ThrowRuntimeError(false, "Could not invoke %s value!", __Tokens__->Get(hash)) == ERROR_RES_CONTINUE)
                         goto FAIL_OP_INVOKE;
@@ -1107,6 +1118,20 @@ PUBLIC int     VMThread::RunInstruction() {
             // }
 
             Push(OBJECT_VAL(klass));
+
+            // printf("OP_CLASS:\n");
+            // PrintStack();
+            break;
+        }
+        case OP_INHERIT: {
+            ObjClass* klass = AS_CLASS(Peek(0));
+            // Uint32 hashClass = ReadUInt32(frame);
+            Uint32 hashSuper = ReadUInt32(frame);
+
+            // printf("OP_INHERIT:    hashSuper %08X\n", hashSuper);
+            // PrintStack();
+
+            klass->ParentHash = hashSuper;
             break;
         }
         case OP_METHOD: {
@@ -1169,7 +1194,7 @@ PUBLIC void    VMThread::RunInvoke(Uint32 hash, int argCount) {
 
     ReturnFrame = FrameCount;
 
-    Invoke(hash, argCount);
+    Invoke(hash, argCount, false);
     RunInstructionSet();
 
     ReturnFrame = lastReturnFrame;
@@ -1179,7 +1204,13 @@ PUBLIC void    VMThread::RunInvoke(Uint32 hash, int argCount) {
 PUBLIC bool    VMThread::BindMethod(ObjClass* klass, Uint32 hash) {
     if (BytecodeObjectManager::Lock()) {
         VMValue method;
-        if (!klass->Methods->Exists(hash)) {
+        if (klass->Methods->Exists(hash)) {
+            method = klass->Methods->Get(hash);
+        }
+        else if (klass->Parent && klass->Parent->Methods->Exists(hash)) {
+            method = klass->Parent->Methods->Get(hash);
+        }
+        else {
             if (!__Tokens__ || !__Tokens__->Exists(hash))
                 ThrowRuntimeError(false, "Undefined property $[%08X].", hash);
             else
@@ -1188,8 +1219,6 @@ PUBLIC bool    VMThread::BindMethod(ObjClass* klass, Uint32 hash) {
             Push(NULL_VAL);
             return false;
         }
-
-        method = klass->Methods->Get(hash);
 
         // ObjBoundMethod* bound = NewBoundMethod(Peek(0), AS_FUNCTION(method));
         Pop(); // Instance.
@@ -1294,7 +1323,23 @@ PUBLIC bool    VMThread::Call(ObjFunction* function, int argCount) {
 PUBLIC bool    VMThread::InvokeFromClass(ObjClass* klass, Uint32 hash, int argCount) {
     if (BytecodeObjectManager::Lock()) {
         VMValue method;
-        if (!klass->Methods->Exists(hash)) {
+
+        if (klass->ParentHash && !klass->Parent) {
+            Uint32 shash = klass->ParentHash;
+            if (BytecodeObjectManager::Globals->Exists(shash)) {
+                VMValue val = BytecodeObjectManager::Globals->Get(shash);
+                if (IS_CLASS(val))
+                    klass->Parent = AS_CLASS(val);
+            }
+        }
+
+        if (klass->Methods->Exists(hash)) {
+            method = klass->Methods->Get(hash);
+        }
+        else if (klass->Parent && klass->Parent->Methods->Exists(hash)) {
+            method = klass->Parent->Methods->Get(hash);
+        }
+        else {
             // if (!__Tokens__ || !__Tokens__->Exists(hash))
             //     ThrowRuntimeError(true, "Undefined property $[%08X].", hash);
             // else
@@ -1302,7 +1347,6 @@ PUBLIC bool    VMThread::InvokeFromClass(ObjClass* klass, Uint32 hash, int argCo
             BytecodeObjectManager::Unlock();
             return false;
         }
-        method = klass->Methods->Get(hash);
 
         if (IS_NATIVE(method)) {
             NativeFn native = AS_NATIVE(method);
@@ -1318,7 +1362,7 @@ PUBLIC bool    VMThread::InvokeFromClass(ObjClass* klass, Uint32 hash, int argCo
     }
     return false;
 }
-PUBLIC bool    VMThread::Invoke(Uint32 hash, int argCount) {
+PUBLIC bool    VMThread::Invoke(Uint32 hash, int argCount, bool isSuper) {
     VMValue receiver = Peek(argCount);
 
     if (!IS_INSTANCE(receiver)) {
@@ -1328,28 +1372,48 @@ PUBLIC bool    VMThread::Invoke(Uint32 hash, int argCount) {
 
     ObjInstance* instance = AS_INSTANCE(receiver);
 
-    // First look for a field which may shadow a method.
-    VMValue value;
-    bool exists = false;
-    if (BytecodeObjectManager::Lock()) {
-        if ((exists = instance->Fields->Exists(hash)))
-            value = instance->Fields->Get(hash);
+    if (!isSuper) {
+        // First look for a field which may shadow a method.
+        VMValue value;
+        bool exists = false;
+        if (BytecodeObjectManager::Lock()) {
+            if ((exists = instance->Fields->Exists(hash)))
+                value = instance->Fields->Get(hash);
 
-        BytecodeObjectManager::Unlock();
+            BytecodeObjectManager::Unlock();
 
-        // if (IS_OBJECT(value)) {
-        //     printf("instance.%s: ", __Tokens__->Get(hash));
-        //     Compiler::PrintValue(value);
-        //     printf(" exists: %d argCount: %d\n", exists, argCount);
-        //
-        //     PrintStack();
-        // }
+            // if (IS_OBJECT(value)) {
+            //     printf("instance.%s: ", __Tokens__->Get(hash));
+            //     Compiler::PrintValue(value);
+            //     printf(" exists: %d argCount: %d\n", exists, argCount);
+            //
+            //     PrintStack();
+            // }
+        }
+        if (exists) {
+            // StackTop[-argCount] = value;
+            return CallValue(value, argCount);
+        }
     }
-    if (exists) {
-        // StackTop[-argCount] = value;
-        return CallValue(value, argCount);
-    }
 
+    if (isSuper) {
+        ObjClass* klass = instance->Class;
+        if (klass->ParentHash && !klass->Parent) {
+            Uint32 shash = klass->ParentHash;
+            if (BytecodeObjectManager::Globals->Exists(shash)) {
+                VMValue val = BytecodeObjectManager::Globals->Get(shash);
+                if (IS_CLASS(val))
+                    klass->Parent = AS_CLASS(val);
+            }
+        }
+
+        if (instance->Class->Parent) {
+            return InvokeFromClass(instance->Class->Parent, hash, argCount);
+        }
+
+        ThrowRuntimeError(false, "Instance's class does not have a parent to call method from.");
+        return false;
+    }
     return InvokeFromClass(instance->Class, hash, argCount);
 }
 

@@ -123,6 +123,8 @@ ObjClass*         NewClass(Uint32 hash) {
     klass->Hash = hash;
     klass->Methods = new Table(NULL, 4);
     klass->Extended = false;
+    klass->ParentHash = 0;
+    klass->Parent = NULL;
     return klass;
 }
 ObjInstance*      NewInstance(ObjClass* klass) {

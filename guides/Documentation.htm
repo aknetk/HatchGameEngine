@@ -1,7 +1,6 @@
 <html>
     <head>
         <title>Hatch Game Engine Documentation</title>
-
         <style>
             body {
                 background-color: white;
@@ -28,401 +27,2152 @@
         </style>
     </head>
     <body>
-        <div style="position: fixed; margin-top: -32px; margin-left: -96px; width: 100%; text-align: right;"><a href="#Reference_top">Back to top</a></div>
-        <h1 id="Reference_top">Hatch Game Engine Documentation</h1>
-
-        <p>All of this is subject to change, and function links currently go nowhere. If more information is needed, ask about Goblin.</p>
-
+        <div style="position: fixed; margin-top: -32px; margin-left: -96px; width: 100%; text-align: right; ">
+            <a href="#Reference_top">Back to top</a>
+        </div>
+        <h1 id="Reference_top">Hatch Game Engine Reference</h1>
+        <h3>Function Namespaces</h3>
         <ul>
-            <li><a href="#Reference_Resources">Resources</a></li>
-            <li><a href="#Reference_Draw">Draw</a></li>
-            <li><a href="#Reference_Shader">Shader</a></li>
-            <li><a href="#Reference_Texture">Texture</a></li>
-            <li><a href="#Reference_Ease">Ease</a></li>
-            <li><a href="#Reference_Math">Math</a></li>
-            <li><a href="#Reference_Number">Number</a></li>
-            <li><a href="#Reference_Window">Window</a></li>
-            <li><a href="#Reference_Display">Display</a></li>
-            <li><a href="#Reference_View">View</a></li>
-            <li><a href="#Reference_Input">Input</a></li>
-            <li><a href="#Reference_Touch">Touch</a></li>
-            <li><a href="#Reference_Instance">Instance</a></li>
-            <li><a href="#Reference_TileCollision">TileCollision</a></li>
-            <li><a href="#Reference_Music">Music</a></li>
-            <li><a href="#Reference_Sound">Sound</a></li>
+            <li><a href="#Reference_Array">Array</a></li>
+            <li><a href="#Reference_Date">Date</a></li>
             <li><a href="#Reference_Device">Device</a></li>
+            <li><a href="#Reference_Directory">Directory</a></li>
+            <li><a href="#Reference_Display">Display</a></li>
+            <li><a href="#Reference_Draw">Draw</a></li>
+            <li><a href="#Reference_Ease">Ease</a></li>
+            <li><a href="#Reference_File">File</a></li>
+            <li><a href="#Reference_HTTP">HTTP</a></li>
+            <li><a href="#Reference_Input">Input</a></li>
+            <li><a href="#Reference_Instance">Instance</a></li>
+            <li><a href="#Reference_JSON">JSON</a></li>
+            <li><a href="#Reference_Math">Math</a></li>
+            <li><a href="#Reference_Music">Music</a></li>
+            <li><a href="#Reference_Number">Number</a></li>
+            <li><a href="#Reference_Palette">Palette</a></li>
+            <li><a href="#Reference_Resources">Resources</a></li>
+            <li><a href="#Reference_Scene">Scene</a></li>
+            <li><a href="#Reference_Shader">Shader</a></li>
+            <li><a href="#Reference_SocketClient">SocketClient</a></li>
+            <li><a href="#Reference_Sound">Sound</a></li>
+            <li><a href="#Reference_Sprite">Sprite</a></li>
+            <li><a href="#Reference_String">String</a></li>
+            <li><a href="#Reference_Texture">Texture</a></li>
+            <li><a href="#Reference_Thread">Thread</a></li>
+            <li><a href="#Reference_TileCollision">TileCollision</a></li>
+            <li><a href="#Reference_TileInfo">TileInfo</a></li>
+            <li><a href="#Reference_Touch">Touch</a></li>
+            <li><a href="#Reference_Video">Video</a></li>
+            <li><a href="#Reference_View">View</a></li>
+            <li><a href="#Reference_Window">Window</a></li>
         </ul>
-
-        <!-- Resources -->
-        <p id="Reference_Resources">
-            <h2>Resources</h2>
-
-            <p>
-            Resources are the main assets to be used to interface with the game. By using the
-            function for each resource type, that resource is loaded to be used within the scope
-            that is specified for it. Each function returns a index to be used for any other function
-            that uses it. If you have a resource that you only want to be loaded during the current scene,
-            use <codefrag>SCOPE_SCENE</codefrag> for the <codefrag>scope</codefrag> parameter, otherwise use <codefrag>SCOPE_GAME</codefrag>
-            for resources you can have loaded across all scenes.
+            <p id="Reference_Array">
+                <h2>Array</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Array_Create">Array.Create</a></li>
+                    <li><a href="#Reference_Array_Length">Array.Length</a></li>
+                    <li><a href="#Reference_Array_Push">Array.Push</a></li>
+                    <li><a href="#Reference_Array_Pop">Array.Pop</a></li>
+                    <li><a href="#Reference_Array_Insert">Array.Insert</a></li>
+                    <li><a href="#Reference_Array_Erase">Array.Erase</a></li>
+                    <li><a href="#Reference_Array_Clear">Array.Clear</a></li>
+                    <li><a href="#Reference_Array_Shift">Array.Shift</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Resources_LoadSprite">Resources.LoadSprite(filename, scope)</a></li>
-                <li><a href="#Reference_Resources_LoadImage">Resources.LoadImage(filename, scope)</a></li>
-                <li><a href="#Reference_Resources_LoadShader">Resources.LoadShader(fragment_filename, vertex_filename, scope)</a></li>
-                <li><a href="#Reference_Resources_LoadModel">Resources.LoadModel(filename, scope)</a></li>
-                <li><a href="#Reference_Resources_LoadMusic">Resources.LoadMusic(filename, scope)</a></li>
-                <li><a href="#Reference_Resources_LoadSound">Resources.LoadSound(filename, scope)</a></li>
-            </ul>
-        </p>
-
-        <!-- Draw -->
-        <p id="Reference_Draw">
-            <h2>Draw</h2>
-
-            <p>
-            Anything you want to see on screen is provided by one of the below functions.
+            <p id="Reference_Date">
+                <h2>Date</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Date_GetEpoch">Date.GetEpoch</a></li>
+                </ul>
             </p>
-
-            <i>Constants:</i>
-            <ul class="function_list">
-                <li>BlendMode_NORMAL</li>
-                <li>BlendMode_ADD</li>
-                <li>BlendMode_MAX</li>
-                <li>BlendMode_SUBTRACT</li>
-
-                <li>BlendFactor_ZERO</li>
-                <li>BlendFactor_ONE</li>
-                <li>BlendFactor_SRC_COLOR</li>
-                <li>BlendFactor_INV_SRC_COLOR</li>
-                <li>BlendFactor_SRC_ALPHA</li>
-                <li>BlendFactor_INV_SRC_ALPHA</li>
-                <li>BlendFactor_DST_COLOR</li>
-                <li>BlendFactor_INV_DST_COLOR</li>
-                <li>BlendFactor_DST_ALPHA</li>
-                <li>BlendFactor_INV_DST_ALPHA</li>
-            </ul>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Draw_Sprite">Draw.Sprite(sprite_index, animation_index, frame, x, y)</a></li>
-                <li><a href="#Reference_Draw_Image">Draw.Image(image_index, x, y)</a></li>
-                <!-- <li><a href="#Reference_Draw_Text">Draw.Text(string, x, y)</a></li> -->
-                <li><a href="#Reference_Draw_Texture">Draw.Texture(texture_index, x, y)</a></li>
-                <li><a href="#Reference_Draw_TextureSized">Draw.TextureSized(texture_index, x, y, w, h)</a></li>
-                <li><a href="#Reference_Draw_TexturePart">Draw.TexturePart(texture_index, source_x, source_y, source_w, source_h, x, y, w, h)</a></li>
-                <li><a href="#Reference_Draw_SetBlendColor">Draw.SetBlendColor(r, g, b, a)</a></li>
-                <li><a href="#Reference_Draw_SetBlendMode">Draw.SetBlendMode(mode)</a></li>
-                <li><a href="#Reference_Draw_SetBlendFactor">Draw.SetBlendFactor(source, dest)</a></li>
-                <li><a href="#Reference_Draw_SetBlendFactorExtended">Draw.SetBlendFactorExtended(sourceColor, destColor, sourceAlpha, destAlpha)</a></li>
-                <li><a href="#Reference_Draw_Line">Draw.Line(x1, y1, x2, y2)</a></li>
-                <li><a href="#Reference_Draw_Circle">Draw.Circle(x, y, rad)</a></li>
-                <li><a href="#Reference_Draw_Ellipse">Draw.Ellipse(x, y, w, h)</a></li>
-                <li><a href="#Reference_Draw_Rectangle">Draw.Rectangle(x, y, w, h)</a></li>
-                <li><a href="#Reference_Draw_CircleStroke">Draw.CircleStroke(x, y, rad)</a></li>
-                <li><a href="#Reference_Draw_EllipseStroke">Draw.EllipseStroke(x, y, w, h)</a></li>
-                <li><a href="#Reference_Draw_RectangleStroke">Draw.RectangleStroke(x, y, w, h)</a></li>
-                <li><a href="#Reference_Draw_Save">Draw.Save()</a></li>
-                <li><a href="#Reference_Draw_Translate">Draw.Translate(x, y, z)</a></li>
-                <li><a href="#Reference_Draw_Rotate">Draw.Rotate(x, y, z)</a></li>
-                <li><a href="#Reference_Draw_Scale">Draw.Scale(x, y, z)</a></li>
-                <li><a href="#Reference_Draw_Restore">Draw.Restore()</a></li>
-                <li><a href="#Reference_Draw_Clear">Draw.Clear()</a></li>
-                <li><a href="#Reference_Draw_SetTextureTarget">Draw.SetTextureTarget(texture_index)</a></li>
-                <li><a href="#Reference_Draw_ResetTextureTarget">Draw.ResetTextureTarget()</a></li>
-            </ul>
-        </p>
-
-        <!-- Shader -->
-        <p id="Reference_Shader">
-            <h2>Shader</h2>
-
-            <p>
+            <p id="Reference_Device">
+                <h2>Device</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Device_GetPlatform">Device.GetPlatform</a></li>
+                    <li><a href="#Reference_Device_IsMobile">Device.IsMobile</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Shader_Set">Shader.Set(shader_index)</a></li>
-                <li><a href="#Reference_Shader_GetUniform">Shader.GetUniform(shader_index, uniform_name)</a></li>
-                <li><a href="#Reference_Shader_SetUniformI">Shader.SetUniformI(uniform_index, value, ...)</a></li>
-                <li><a href="#Reference_Shader_SetUniformF">Shader.SetUniformF(uniform_index, value, ...)</a></li>
-                <li><a href="#Reference_Shader_SetUniform3x3">Shader.SetUniform3x3(uniform_index, value1, ..., value9)</a></li>
-                <li><a href="#Reference_Shader_SetUniform4x4">Shader.SetUniform4x4(uniform_index, value1, ..., value16)</a></li>
-                <li><a href="#Reference_Shader_SetUniformTexture">Shader.SetUniformTexture(uniform_index, texture_index, slot)</a></li>
-                <li><a href="#Reference_Shader_Unset">Shader.Unset()</a></li>
-            </ul>
-        </p>
-
-        <!-- Texture -->
-        <p id="Reference_Texture">
-            <h2>Texture</h2>
-
-            <p>
+            <p id="Reference_Directory">
+                <h2>Directory</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Directory_Create">Directory.Create</a></li>
+                    <li><a href="#Reference_Directory_Exists">Directory.Exists</a></li>
+                    <li><a href="#Reference_Directory_GetFiles">Directory.GetFiles</a></li>
+                    <li><a href="#Reference_Directory_GetDirectories">Directory.GetDirectories</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Texture_FromSprite">Texture.FromSprite(sprite_index)</a></li>
-                <li><a href="#Reference_Texture_Create">Texture.Create(w, h)</a></li>
-            </ul>
-        </p>
-
-        <!-- Ease -->
-        <p id="Reference_Ease">
-            <h2>Ease</h2>
-
-            <p>
+            <p id="Reference_Display">
+                <h2>Display</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Display_GetWidth">Display.GetWidth</a></li>
+                    <li><a href="#Reference_Display_GetHeight">Display.GetHeight</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Ease_InSine">Ease.InSine(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutSine">Ease.OutSine(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutSine">Ease.InOutSine(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InQuad">Ease.InQuad(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutQuad">Ease.OutQuad(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutQuad">Ease.InOutQuad(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InCubic">Ease.InCubic(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutCubic">Ease.OutCubic(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutCubic">Ease.InOutCubic(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InQuart">Ease.InQuart(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutQuart">Ease.OutQuart(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutQuart">Ease.InOutQuart(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InQuint">Ease.InQuint(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutQuint">Ease.OutQuint(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutQuint">Ease.InOutQuint(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InExpo">Ease.InExpo(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutExpo">Ease.OutExpo(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutExpo">Ease.InOutExpo(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InCirc">Ease.InCirc(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutCirc">Ease.OutCirc(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutCirc">Ease.InOutCirc(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InBack">Ease.InBack(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutBack">Ease.OutBack(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutBack">Ease.InOutBack(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InElastic">Ease.InElastic(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutElastic">Ease.OutElastic(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutElastic">Ease.InOutElastic(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InBounce">Ease.InBounce(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_OutBounce">Ease.OutBounce(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_InOutBounce">Ease.InOutBounce(normalized_time)</a></li>
-                <li><a href="#Reference_Ease_Triangle">Ease.Triangle(normalized_time)</a></li>
-            </ul>
-        </p>
-
-        <!-- Math -->
-        <p id="Reference_Math">
-            <h2>Math</h2>
-
-            <p>
-            Math.
+            <p id="Reference_Draw">
+                <h2>Draw</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Draw_Sprite">Draw.Sprite</a></li>
+                    <li><a href="#Reference_Draw_SpritePart">Draw.SpritePart</a></li>
+                    <li><a href="#Reference_Draw_Image">Draw.Image</a></li>
+                    <li><a href="#Reference_Draw_ImagePart">Draw.ImagePart</a></li>
+                    <li><a href="#Reference_Draw_ImageSized">Draw.ImageSized</a></li>
+                    <li><a href="#Reference_Draw_ImagePartSized">Draw.ImagePartSized</a></li>
+                    <li><a href="#Reference_Draw_Video">Draw.Video</a></li>
+                    <li><a href="#Reference_Draw_VideoPart">Draw.VideoPart</a></li>
+                    <li><a href="#Reference_Draw_VideoSized">Draw.VideoSized</a></li>
+                    <li><a href="#Reference_Draw_VideoPartSized">Draw.VideoPartSized</a></li>
+                    <li><a href="#Reference_Draw_Tile">Draw.Tile</a></li>
+                    <li><a href="#Reference_Draw_Texture">Draw.Texture</a></li>
+                    <li><a href="#Reference_Draw_TextureSized">Draw.TextureSized</a></li>
+                    <li><a href="#Reference_Draw_TexturePart">Draw.TexturePart</a></li>
+                    <li><a href="#Reference_Draw_SetFont">Draw.SetFont</a></li>
+                    <li><a href="#Reference_Draw_SetTextAlign">Draw.SetTextAlign</a></li>
+                    <li><a href="#Reference_Draw_SetTextBaseline">Draw.SetTextBaseline</a></li>
+                    <li><a href="#Reference_Draw_SetTextAdvance">Draw.SetTextAdvance</a></li>
+                    <li><a href="#Reference_Draw_SetTextLineAscent">Draw.SetTextLineAscent</a></li>
+                    <li><a href="#Reference_Draw_MeasureText">Draw.MeasureText</a></li>
+                    <li><a href="#Reference_Draw_MeasureTextWrapped">Draw.MeasureTextWrapped</a></li>
+                    <li><a href="#Reference_Draw_Text">Draw.Text</a></li>
+                    <li><a href="#Reference_Draw_TextWrapped">Draw.TextWrapped</a></li>
+                    <li><a href="#Reference_Draw_TextEllipsis">Draw.TextEllipsis</a></li>
+                    <li><a href="#Reference_Draw_SetBlendColor">Draw.SetBlendColor</a></li>
+                    <li><a href="#Reference_Draw_SetTextureBlend">Draw.SetTextureBlend</a></li>
+                    <li><a href="#Reference_Draw_SetBlendMode">Draw.SetBlendMode</a></li>
+                    <li><a href="#Reference_Draw_SetBlendFactor">Draw.SetBlendFactor</a></li>
+                    <li><a href="#Reference_Draw_SetBlendFactorExtended">Draw.SetBlendFactorExtended</a></li>
+                    <li><a href="#Reference_Draw_SetCompareColor">Draw.SetCompareColor</a></li>
+                    <li><a href="#Reference_Draw_Line">Draw.Line</a></li>
+                    <li><a href="#Reference_Draw_Circle">Draw.Circle</a></li>
+                    <li><a href="#Reference_Draw_Ellipse">Draw.Ellipse</a></li>
+                    <li><a href="#Reference_Draw_Triangle">Draw.Triangle</a></li>
+                    <li><a href="#Reference_Draw_Rectangle">Draw.Rectangle</a></li>
+                    <li><a href="#Reference_Draw_CircleStroke">Draw.CircleStroke</a></li>
+                    <li><a href="#Reference_Draw_EllipseStroke">Draw.EllipseStroke</a></li>
+                    <li><a href="#Reference_Draw_TriangleStroke">Draw.TriangleStroke</a></li>
+                    <li><a href="#Reference_Draw_RectangleStroke">Draw.RectangleStroke</a></li>
+                    <li><a href="#Reference_Draw_UseFillSmoothing">Draw.UseFillSmoothing</a></li>
+                    <li><a href="#Reference_Draw_UseStrokeSmoothing">Draw.UseStrokeSmoothing</a></li>
+                    <li><a href="#Reference_Draw_SetClip">Draw.SetClip</a></li>
+                    <li><a href="#Reference_Draw_ClearClip">Draw.ClearClip</a></li>
+                    <li><a href="#Reference_Draw_Save">Draw.Save</a></li>
+                    <li><a href="#Reference_Draw_Scale">Draw.Scale</a></li>
+                    <li><a href="#Reference_Draw_Rotate">Draw.Rotate</a></li>
+                    <li><a href="#Reference_Draw_Restore">Draw.Restore</a></li>
+                    <li><a href="#Reference_Draw_Translate">Draw.Translate</a></li>
+                    <li><a href="#Reference_Draw_SetTextureTarget">Draw.SetTextureTarget</a></li>
+                    <li><a href="#Reference_Draw_Clear">Draw.Clear</a></li>
+                    <li><a href="#Reference_Draw_ResetTextureTarget">Draw.ResetTextureTarget</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Math_Cos">Math.Cos(value)</a></li>
-                <li><a href="#Reference_Math_Sin">Math.Sin(value)</a></li>
-                <li><a href="#Reference_Math_Atan">Math.Atan(y, x)</a></li>
-                <li><a href="#Reference_Math_Distance">Math.Distance(x1, y1, x2, y2)</a></li>
-                <li><a href="#Reference_Math_Direction">Math.Direction(x1, y1, x2, y2)</a></li>
-                <li><a href="#Reference_Math_Abs">Math.Abs(value)</a></li>
-                <li><a href="#Reference_Math_Min">Math.Min(value1, value2)</a></li>
-                <li><a href="#Reference_Math_Max">Math.Max(value1, value2)</a></li>
-                <li><a href="#Reference_Math_Clamp">Math.Clamp(value, min, max)</a></li>
-                <li><a href="#Reference_Math_Sign">Math.Sign(value)</a></li>
-                <li><a href="#Reference_Math_Random">Math.Random()</a></li>
-                <li><a href="#Reference_Math_RandomMax">Math.RandomMax(max)</a></li>
-                <li><a href="#Reference_Math_RandomRange">Math.RandomRange(min, max)</a></li>
-                <li><a href="#Reference_Math_Floor">Math.Floor(value)</a></li>
-                <li><a href="#Reference_Math_Ceil">Math.Ceil(value)</a></li>
-                <li><a href="#Reference_Math_Round">Math.Round(value)</a></li>
-            </ul>
-        </p>
-
-        <!-- Number -->
-        <p id="Reference_Number">
-            <h2>Number</h2>
-
-            <p>
+            <p id="Reference_Ease">
+                <h2>Ease</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Ease_InSine">Ease.InSine</a></li>
+                    <li><a href="#Reference_Ease_OutSine">Ease.OutSine</a></li>
+                    <li><a href="#Reference_Ease_InOutSine">Ease.InOutSine</a></li>
+                    <li><a href="#Reference_Ease_InQuad">Ease.InQuad</a></li>
+                    <li><a href="#Reference_Ease_OutQuad">Ease.OutQuad</a></li>
+                    <li><a href="#Reference_Ease_InOutQuad">Ease.InOutQuad</a></li>
+                    <li><a href="#Reference_Ease_InCubic">Ease.InCubic</a></li>
+                    <li><a href="#Reference_Ease_OutCubic">Ease.OutCubic</a></li>
+                    <li><a href="#Reference_Ease_InOutCubic">Ease.InOutCubic</a></li>
+                    <li><a href="#Reference_Ease_InQuart">Ease.InQuart</a></li>
+                    <li><a href="#Reference_Ease_OutQuart">Ease.OutQuart</a></li>
+                    <li><a href="#Reference_Ease_InOutQuart">Ease.InOutQuart</a></li>
+                    <li><a href="#Reference_Ease_InQuint">Ease.InQuint</a></li>
+                    <li><a href="#Reference_Ease_OutQuint">Ease.OutQuint</a></li>
+                    <li><a href="#Reference_Ease_InOutQuint">Ease.InOutQuint</a></li>
+                    <li><a href="#Reference_Ease_InExpo">Ease.InExpo</a></li>
+                    <li><a href="#Reference_Ease_OutExpo">Ease.OutExpo</a></li>
+                    <li><a href="#Reference_Ease_InOutExpo">Ease.InOutExpo</a></li>
+                    <li><a href="#Reference_Ease_InCirc">Ease.InCirc</a></li>
+                    <li><a href="#Reference_Ease_OutCirc">Ease.OutCirc</a></li>
+                    <li><a href="#Reference_Ease_InOutCirc">Ease.InOutCirc</a></li>
+                    <li><a href="#Reference_Ease_InBack">Ease.InBack</a></li>
+                    <li><a href="#Reference_Ease_OutBack">Ease.OutBack</a></li>
+                    <li><a href="#Reference_Ease_InOutBack">Ease.InOutBack</a></li>
+                    <li><a href="#Reference_Ease_InElastic">Ease.InElastic</a></li>
+                    <li><a href="#Reference_Ease_OutElastic">Ease.OutElastic</a></li>
+                    <li><a href="#Reference_Ease_InOutElastic">Ease.InOutElastic</a></li>
+                    <li><a href="#Reference_Ease_InBounce">Ease.InBounce</a></li>
+                    <li><a href="#Reference_Ease_OutBounce">Ease.OutBounce</a></li>
+                    <li><a href="#Reference_Ease_InOutBounce">Ease.InOutBounce</a></li>
+                    <li><a href="#Reference_Ease_Triangle">Ease.Triangle</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Number_ToString">Number.ToString(value)</a></li>
-                <li><a href="#Reference_Number_AsInteger">Number.AsInteger(value)</a></li>
-                <li><a href="#Reference_Number_AsDecimal">Number.AsDecimal(value)</a></li>
-            </ul>
-        </p>
-
-        <!-- Window -->
-        <p id="Reference_Window">
-            <h2>Window</h2>
-
-            <p>
+            <p id="Reference_File">
+                <h2>File</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_File_Exists">File.Exists</a></li>
+                    <li><a href="#Reference_File_ReadAllText">File.ReadAllText</a></li>
+                    <li><a href="#Reference_File_WriteAllText">File.WriteAllText</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Window_SetSize">Window.SetSize(width, height)</a></li>
-                <li><a href="#Reference_Window_GetWidth">Window.GetWidth()</a></li>
-                <li><a href="#Reference_Window_GetHeight">Window.GetHeight()</a></li>
-            </ul>
-        </p>
-
-        <!-- Display -->
-        <p id="Reference_Display">
-            <h2>Display</h2>
-
-            <p>
+            <p id="Reference_HTTP">
+                <h2>HTTP</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_HTTP_GetString">HTTP.GetString</a></li>
+                    <li><a href="#Reference_HTTP_GetToFile">HTTP.GetToFile</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Display_GetWidth">Display.GetWidth()</a></li>
-                <li><a href="#Reference_Display_GetHeight">Display.GetHeight()</a></li>
-            </ul>
-        </p>
-
-        <!-- View -->
-        <p id="Reference_View">
-            <h2>View</h2>
-
-            <p>
+            <p id="Reference_Input">
+                <h2>Input</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Input_GetMouseX">Input.GetMouseX</a></li>
+                    <li><a href="#Reference_Input_GetMouseY">Input.GetMouseY</a></li>
+                    <li><a href="#Reference_Input_IsMouseButtonDown">Input.IsMouseButtonDown</a></li>
+                    <li><a href="#Reference_Input_IsMouseButtonPressed">Input.IsMouseButtonPressed</a></li>
+                    <li><a href="#Reference_Input_IsMouseButtonReleased">Input.IsMouseButtonReleased</a></li>
+                    <li><a href="#Reference_Input_IsKeyDown">Input.IsKeyDown</a></li>
+                    <li><a href="#Reference_Input_IsKeyPressed">Input.IsKeyPressed</a></li>
+                    <li><a href="#Reference_Input_IsKeyReleased">Input.IsKeyReleased</a></li>
+                    <li><a href="#Reference_Input_GetControllerAttached">Input.GetControllerAttached</a></li>
+                    <li><a href="#Reference_Input_GetControllerHat">Input.GetControllerHat</a></li>
+                    <li><a href="#Reference_Input_GetControllerAxis">Input.GetControllerAxis</a></li>
+                    <li><a href="#Reference_Input_GetControllerButton">Input.GetControllerButton</a></li>
+                    <li><a href="#Reference_Input_GetControllerName">Input.GetControllerName</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_View_SetSize">View.SetSize(view_index, width, height)</a></li>
-                <li><a href="#Reference_View_GetWidth">View.GetWidth(view_index)</a></li>
-                <li><a href="#Reference_View_GetHeight">View.GetHeight(view_index)</a></li>
-            </ul>
-        </p>
-
-        <!-- Input -->
-        <p id="Reference_Input">
-            <h2>Input</h2>
-
-            <p>
+            <p id="Reference_Instance">
+                <h2>Instance</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Instance_Create">Instance.Create</a></li>
+                    <li><a href="#Reference_Instance_GetNth">Instance.GetNth</a></li>
+                    <li><a href="#Reference_Instance_GetCount">Instance.GetCount</a></li>
+                    <li><a href="#Reference_Instance_GetNextInstance">Instance.GetNextInstance</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Input_GetMouseX">Input.GetMouseX()</a></li>
-                <li><a href="#Reference_Input_GetMouseY">Input.GetMouseY()</a></li>
-                <li><a href="#Reference_Input_IsMouseButtonDown">Input.IsMouseButtonDown(button)</a></li>
-                <li><a href="#Reference_Input_IsMouseButtonPressed">Input.IsMouseButtonPressed(button)</a></li>
-                <li><a href="#Reference_Input_IsMouseButtonReleased">Input.IsMouseButtonReleased(button)</a></li>
-                <li><a href="#Reference_Input_IsKeyDown">Input.IsKeyDown(key)</a></li>
-                <li><a href="#Reference_Input_IsKeyPressed">Input.IsKeyPressed(key)</a></li>
-                <li><a href="#Reference_Input_IsKeyReleased">Input.IsKeyReleased(key)</a></li>
-                <li><a href="#Reference_Input_GetControllerAttached">Input.GetControllerAttached(controller_index)</a></li>
-                <li><a href="#Reference_Input_GetControllerHat">Input.GetControllerHat(controller_index, hat_index)</a></li>
-                <li><a href="#Reference_Input_GetControllerAxis">Input.GetControllerAxis(controller_index, axis_index)</a></li>
-                <li><a href="#Reference_Input_GetControllerButton">Input.GetControllerButton(controller_index, button_index)</a></li>
-                <li><a href="#Reference_Input_GetControllerName">Input.GetControllerName(controller_index)</a></li>
-            </ul>
-        </p>
-
-        <!-- Touch -->
-        <p id="Reference_Touch">
-            <h2>Touch</h2>
-
-            <p>
+            <p id="Reference_JSON">
+                <h2>JSON</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_JSON_Parse">JSON.Parse</a></li>
+                    <li><a href="#Reference_JSON_ToString">JSON.ToString</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Touch_IsDown">Touch.IsDown(touch_index)</a></li>
-                <li><a href="#Reference_Touch_IsPressed">Touch.IsPressed(touch_index)</a></li>
-                <li><a href="#Reference_Touch_IsReleased">Touch.IsReleased(touch_index)</a></li>
-                <li><a href="#Reference_Touch_GetX">Touch.GetX(touch_index)</a></li>
-                <li><a href="#Reference_Touch_GetY">Touch.GetY(touch_index)</a></li>
-            </ul>
-        </p>
-
-        <!-- Instance -->
-        <p id="Reference_Instance">
-            <h2>Instance</h2>
-
-            <p>
+            <p id="Reference_Math">
+                <h2>Math</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Math_Cos">Math.Cos</a></li>
+                    <li><a href="#Reference_Math_Sin">Math.Sin</a></li>
+                    <li><a href="#Reference_Math_Acos">Math.Acos</a></li>
+                    <li><a href="#Reference_Math_Asin">Math.Asin</a></li>
+                    <li><a href="#Reference_Math_Atan">Math.Atan</a></li>
+                    <li><a href="#Reference_Math_Distance">Math.Distance</a></li>
+                    <li><a href="#Reference_Math_Direction">Math.Direction</a></li>
+                    <li><a href="#Reference_Math_Abs">Math.Abs</a></li>
+                    <li><a href="#Reference_Math_Min">Math.Min</a></li>
+                    <li><a href="#Reference_Math_Max">Math.Max</a></li>
+                    <li><a href="#Reference_Math_Clamp">Math.Clamp</a></li>
+                    <li><a href="#Reference_Math_Sign">Math.Sign</a></li>
+                    <li><a href="#Reference_Math_Random">Math.Random</a></li>
+                    <li><a href="#Reference_Math_RandomMax">Math.RandomMax</a></li>
+                    <li><a href="#Reference_Math_RandomRange">Math.RandomRange</a></li>
+                    <li><a href="#Reference_Math_Floor">Math.Floor</a></li>
+                    <li><a href="#Reference_Math_Ceil">Math.Ceil</a></li>
+                    <li><a href="#Reference_Math_Round">Math.Round</a></li>
+                    <li><a href="#Reference_Math_Sqrt">Math.Sqrt</a></li>
+                    <li><a href="#Reference_Math_Pow">Math.Pow</a></li>
+                    <li><a href="#Reference_Math_Exp">Math.Exp</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Instance_Create">Instance.Create(object_name, x, y)</a></li>
-                <li><a href="#Reference_Instance_GetNth">Instance.GetNth(object_name, n)</a></li>
-                <li><a href="#Reference_Instance_GetCount">Instance.GetCount(object_name)</a></li>
-            </ul>
-        </p>
-
-        <!-- TileCollision -->
-        <p id="Reference_TileCollision">
-            <h2>TileCollision</h2>
-
-            <p>
+            <p id="Reference_Music">
+                <h2>Music</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Music_Play">Music.Play</a></li>
+                    <li><a href="#Reference_Music_Stop">Music.Stop</a></li>
+                    <li><a href="#Reference_Music_StopWithFadeOut">Music.StopWithFadeOut</a></li>
+                    <li><a href="#Reference_Music_Pause">Music.Pause</a></li>
+                    <li><a href="#Reference_Music_Resume">Music.Resume</a></li>
+                    <li><a href="#Reference_Music_Clear">Music.Clear</a></li>
+                    <li><a href="#Reference_Music_Loop">Music.Loop</a></li>
+                    <li><a href="#Reference_Music_IsPlaying">Music.IsPlaying</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_TileCollision_Point">TileCollision.Point(x, y)</a></li>
-                <li><a href="#Reference_TileCollision_PointExtended">TileCollision.PointExtended(x, y, collision_plane, collision_side)</a></li>
-            </ul>
-        </p>
-
-        <!-- Music -->
-        <p id="Reference_Music">
-            <h2>Music</h2>
-
-            <p>
+            <p id="Reference_Number">
+                <h2>Number</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Number_ToString">Number.ToString</a></li>
+                    <li><a href="#Reference_Number_AsInteger">Number.AsInteger</a></li>
+                    <li><a href="#Reference_Number_AsDecimal">Number.AsDecimal</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Music_Play">Music.Play(music_index)</a></li>
-                <li><a href="#Reference_Music_Stop">Music.Stop(music_index)</a></li>
-                <li><a href="#Reference_Music_Loop">Music.Loop(music_index, do_loop, loop_start_in_samples)</a></li>
-                <li><a href="#Reference_Music_IsPlaying">Music.IsPlaying(music_index)</a></li>
-            </ul>
-        </p>
-
-        <!-- Sound -->
-        <p id="Reference_Sound">
-            <h2>Sound</h2>
-
-            <p>
+            <p id="Reference_Palette">
+                <h2>Palette</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Palette_EnablePaletteUsage">Palette.EnablePaletteUsage</a></li>
+                    <li><a href="#Reference_Palette_LoadFromFile">Palette.LoadFromFile</a></li>
+                    <li><a href="#Reference_Palette_LoadFromResource">Palette.LoadFromResource</a></li>
+                    <li><a href="#Reference_Palette_GetColor">Palette.GetColor</a></li>
+                    <li><a href="#Reference_Palette_SetColor">Palette.SetColor</a></li>
+                    <li><a href="#Reference_Palette_MixPalettes">Palette.MixPalettes</a></li>
+                    <li><a href="#Reference_Palette_RotateColorsLeft">Palette.RotateColorsLeft</a></li>
+                    <li><a href="#Reference_Palette_RotateColorsRight">Palette.RotateColorsRight</a></li>
+                    <li><a href="#Reference_Palette_CopyColors">Palette.CopyColors</a></li>
+                    <li><a href="#Reference_Palette_SetPaletteIndexLines">Palette.SetPaletteIndexLines</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Sound_Play">Sound.Play(sound_index)</a></li>
-                <li><a href="#Reference_Sound_Stop">Sound.Stop(sound_index)</a></li>
-                <li><a href="#Reference_Sound_StopAll">Sound.StopAll()</a></li>
-            </ul>
-        </p>
-
-        <!-- Device -->
-        <p id="Reference_Device">
-            <h2>Device</h2>
-
-            <p>
-                <codefrag>Platform_Windows</codefrag><br/>
-                <codefrag>Platform_MacOSX</codefrag><br/>
-                <codefrag>Platform_Linux</codefrag><br/>
-                <codefrag>Platform_Ubuntu</codefrag><br/>
-                <codefrag>Platform_Switch</codefrag><br/>
-                <codefrag>Platform_iOS</codefrag><br/>
-                <codefrag>Platform_Android</codefrag><br/>
-                <codefrag>Platform_Default</codefrag>
+            <p id="Reference_Resources">
+                <h2>Resources</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Resources_LoadSprite">Resources.LoadSprite</a></li>
+                    <li><a href="#Reference_Resources_LoadImage">Resources.LoadImage</a></li>
+                    <li><a href="#Reference_Resources_LoadFont">Resources.LoadFont</a></li>
+                    <li><a href="#Reference_Resources_LoadShader">Resources.LoadShader</a></li>
+                    <li><a href="#Reference_Resources_LoadModel">Resources.LoadModel</a></li>
+                    <li><a href="#Reference_Resources_LoadMusic">Resources.LoadMusic</a></li>
+                    <li><a href="#Reference_Resources_LoadSound">Resources.LoadSound</a></li>
+                    <li><a href="#Reference_Resources_LoadVideo">Resources.LoadVideo</a></li>
+                    <li><a href="#Reference_Resources_FileExists">Resources.FileExists</a></li>
+                    <li><a href="#Reference_Resources_UnloadImage">Resources.UnloadImage</a></li>
+                </ul>
             </p>
-
-            <i>Functions:</i>
-            <ul class="function_list">
-                <li><a href="#Reference_Device_GetPlatform">Device.GetPlatform()</a></li>
-            </ul>
+            <p id="Reference_Scene">
+                <h2>Scene</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Scene_Load">Scene.Load</a></li>
+                    <li><a href="#Reference_Scene_LoadTileCollisions">Scene.LoadTileCollisions</a></li>
+                    <li><a href="#Reference_Scene_Restart">Scene.Restart</a></li>
+                    <li><a href="#Reference_Scene_GetLayerCount">Scene.GetLayerCount</a></li>
+                    <li><a href="#Reference_Scene_GetLayerIndex">Scene.GetLayerIndex</a></li>
+                    <li><a href="#Reference_Scene_GetName">Scene.GetName</a></li>
+                    <li><a href="#Reference_Scene_GetWidth">Scene.GetWidth</a></li>
+                    <li><a href="#Reference_Scene_GetHeight">Scene.GetHeight</a></li>
+                    <li><a href="#Reference_Scene_GetTileSize">Scene.GetTileSize</a></li>
+                    <li><a href="#Reference_Scene_GetTileID">Scene.GetTileID</a></li>
+                    <li><a href="#Reference_Scene_GetTileFlipX">Scene.GetTileFlipX</a></li>
+                    <li><a href="#Reference_Scene_GetTileFlipY">Scene.GetTileFlipY</a></li>
+                    <li><a href="#Reference_Scene_SetTile">Scene.SetTile</a></li>
+                    <li><a href="#Reference_Scene_SetTileCollisionSides">Scene.SetTileCollisionSides</a></li>
+                    <li><a href="#Reference_Scene_SetPaused">Scene.SetPaused</a></li>
+                    <li><a href="#Reference_Scene_SetLayerVisible">Scene.SetLayerVisible</a></li>
+                    <li><a href="#Reference_Scene_SetLayerOffsetPosition">Scene.SetLayerOffsetPosition</a></li>
+                    <li><a href="#Reference_Scene_SetLayerDrawGroup">Scene.SetLayerDrawGroup</a></li>
+                    <li><a href="#Reference_Scene_IsPaused">Scene.IsPaused</a></li>
+                </ul>
+            </p>
+            <p id="Reference_Shader">
+                <h2>Shader</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Shader_Set">Shader.Set</a></li>
+                    <li><a href="#Reference_Shader_GetUniform">Shader.GetUniform</a></li>
+                    <li><a href="#Reference_Shader_SetUniformI">Shader.SetUniformI</a></li>
+                    <li><a href="#Reference_Shader_SetUniformF">Shader.SetUniformF</a></li>
+                    <li><a href="#Reference_Shader_SetUniform3x3">Shader.SetUniform3x3</a></li>
+                    <li><a href="#Reference_Shader_SetUniform4x4">Shader.SetUniform4x4</a></li>
+                    <li><a href="#Reference_Shader_SetUniformTexture">Shader.SetUniformTexture</a></li>
+                    <li><a href="#Reference_Shader_Unset">Shader.Unset</a></li>
+                </ul>
+            </p>
+            <p id="Reference_SocketClient">
+                <h2>SocketClient</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_SocketClient_Open">SocketClient.Open</a></li>
+                    <li><a href="#Reference_SocketClient_Close">SocketClient.Close</a></li>
+                    <li><a href="#Reference_SocketClient_IsOpen">SocketClient.IsOpen</a></li>
+                    <li><a href="#Reference_SocketClient_Poll">SocketClient.Poll</a></li>
+                    <li><a href="#Reference_SocketClient_BytesToRead">SocketClient.BytesToRead</a></li>
+                    <li><a href="#Reference_SocketClient_ReadDecimal">SocketClient.ReadDecimal</a></li>
+                    <li><a href="#Reference_SocketClient_ReadInteger">SocketClient.ReadInteger</a></li>
+                    <li><a href="#Reference_SocketClient_ReadString">SocketClient.ReadString</a></li>
+                    <li><a href="#Reference_SocketClient_WriteDecimal">SocketClient.WriteDecimal</a></li>
+                    <li><a href="#Reference_SocketClient_WriteInteger">SocketClient.WriteInteger</a></li>
+                    <li><a href="#Reference_SocketClient_WriteString">SocketClient.WriteString</a></li>
+                </ul>
+            </p>
+            <p id="Reference_Sound">
+                <h2>Sound</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Sound_Play">Sound.Play</a></li>
+                    <li><a href="#Reference_Sound_Loop">Sound.Loop</a></li>
+                    <li><a href="#Reference_Sound_Stop">Sound.Stop</a></li>
+                    <li><a href="#Reference_Sound_Pause">Sound.Pause</a></li>
+                    <li><a href="#Reference_Sound_Resume">Sound.Resume</a></li>
+                    <li><a href="#Reference_Sound_StopAll">Sound.StopAll</a></li>
+                    <li><a href="#Reference_Sound_PauseAll">Sound.PauseAll</a></li>
+                    <li><a href="#Reference_Sound_ResumeAll">Sound.ResumeAll</a></li>
+                </ul>
+            </p>
+            <p id="Reference_Sprite">
+                <h2>Sprite</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Sprite_GetAnimationCount">Sprite.GetAnimationCount</a></li>
+                    <li><a href="#Reference_Sprite_GetFrameLoopIndex">Sprite.GetFrameLoopIndex</a></li>
+                    <li><a href="#Reference_Sprite_GetFrameCount">Sprite.GetFrameCount</a></li>
+                    <li><a href="#Reference_Sprite_GetFrameDuration">Sprite.GetFrameDuration</a></li>
+                    <li><a href="#Reference_Sprite_GetFrameSpeed">Sprite.GetFrameSpeed</a></li>
+                </ul>
+            </p>
+            <p id="Reference_String">
+                <h2>String</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_String_Split">String.Split</a></li>
+                    <li><a href="#Reference_String_CharAt">String.CharAt</a></li>
+                    <li><a href="#Reference_String_Length">String.Length</a></li>
+                    <li><a href="#Reference_String_Compare">String.Compare</a></li>
+                    <li><a href="#Reference_String_IndexOf">String.IndexOf</a></li>
+                    <li><a href="#Reference_String_Contains">String.Contains</a></li>
+                    <li><a href="#Reference_String_Substring">String.Substring</a></li>
+                    <li><a href="#Reference_String_ToUpperCase">String.ToUpperCase</a></li>
+                    <li><a href="#Reference_String_ToLowerCase">String.ToLowerCase</a></li>
+                    <li><a href="#Reference_String_LastIndexOf">String.LastIndexOf</a></li>
+                    <li><a href="#Reference_String_ParseInteger">String.ParseInteger</a></li>
+                    <li><a href="#Reference_String_ParseDecimal">String.ParseDecimal</a></li>
+                </ul>
+            </p>
+            <p id="Reference_Texture">
+                <h2>Texture</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Texture_Create">Texture.Create</a></li>
+                    <li><a href="#Reference_Texture_FromSprite">Texture.FromSprite</a></li>
+                    <li><a href="#Reference_Texture_FromImage">Texture.FromImage</a></li>
+                    <li><a href="#Reference_Texture_SetInterpolation">Texture.SetInterpolation</a></li>
+                </ul>
+            </p>
+            <p id="Reference_Thread">
+                <h2>Thread</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Thread_RunEvent">Thread.RunEvent</a></li>
+                    <li><a href="#Reference_Thread_Sleep">Thread.Sleep</a></li>
+                </ul>
+            </p>
+            <p id="Reference_TileCollision">
+                <h2>TileCollision</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_TileCollision_Point">TileCollision.Point</a></li>
+                    <li><a href="#Reference_TileCollision_PointExtended">TileCollision.PointExtended</a></li>
+                </ul>
+            </p>
+            <p id="Reference_TileInfo">
+                <h2>TileInfo</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_TileInfo_IsEmptySpace">TileInfo.IsEmptySpace</a></li>
+                </ul>
+            </p>
+            <p id="Reference_Touch">
+                <h2>Touch</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Touch_GetX">Touch.GetX</a></li>
+                    <li><a href="#Reference_Touch_GetY">Touch.GetY</a></li>
+                    <li><a href="#Reference_Touch_IsDown">Touch.IsDown</a></li>
+                    <li><a href="#Reference_Touch_IsPressed">Touch.IsPressed</a></li>
+                    <li><a href="#Reference_Touch_IsReleased">Touch.IsReleased</a></li>
+                </ul>
+            </p>
+            <p id="Reference_Video">
+                <h2>Video</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Video_Play">Video.Play</a></li>
+                    <li><a href="#Reference_Video_Pause">Video.Pause</a></li>
+                    <li><a href="#Reference_Video_Resume">Video.Resume</a></li>
+                    <li><a href="#Reference_Video_Stop">Video.Stop</a></li>
+                    <li><a href="#Reference_Video_Close">Video.Close</a></li>
+                    <li><a href="#Reference_Video_IsBuffering">Video.IsBuffering</a></li>
+                    <li><a href="#Reference_Video_IsPlaying">Video.IsPlaying</a></li>
+                    <li><a href="#Reference_Video_IsPaused">Video.IsPaused</a></li>
+                    <li><a href="#Reference_Video_SetPosition">Video.SetPosition</a></li>
+                    <li><a href="#Reference_Video_SetBufferDuration">Video.SetBufferDuration</a></li>
+                    <li><a href="#Reference_Video_SetTrackEnabled">Video.SetTrackEnabled</a></li>
+                    <li><a href="#Reference_Video_GetPosition">Video.GetPosition</a></li>
+                    <li><a href="#Reference_Video_GetDuration">Video.GetDuration</a></li>
+                    <li><a href="#Reference_Video_GetBufferDuration">Video.GetBufferDuration</a></li>
+                    <li><a href="#Reference_Video_GetBufferEnd">Video.GetBufferEnd</a></li>
+                    <li><a href="#Reference_Video_GetTrackCount">Video.GetTrackCount</a></li>
+                    <li><a href="#Reference_Video_GetTrackEnabled">Video.GetTrackEnabled</a></li>
+                    <li><a href="#Reference_Video_GetTrackName">Video.GetTrackName</a></li>
+                    <li><a href="#Reference_Video_GetTrackLanguage">Video.GetTrackLanguage</a></li>
+                    <li><a href="#Reference_Video_GetDefaultVideoTrack">Video.GetDefaultVideoTrack</a></li>
+                    <li><a href="#Reference_Video_GetDefaultAudioTrack">Video.GetDefaultAudioTrack</a></li>
+                    <li><a href="#Reference_Video_GetDefaultSubtitleTrack">Video.GetDefaultSubtitleTrack</a></li>
+                    <li><a href="#Reference_Video_GetWidth">Video.GetWidth</a></li>
+                    <li><a href="#Reference_Video_GetHeight">Video.GetHeight</a></li>
+                </ul>
+            </p>
+            <p id="Reference_View">
+                <h2>View</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_View_SetX">View.SetX</a></li>
+                    <li><a href="#Reference_View_SetY">View.SetY</a></li>
+                    <li><a href="#Reference_View_SetZ">View.SetZ</a></li>
+                    <li><a href="#Reference_View_SetPosition">View.SetPosition</a></li>
+                    <li><a href="#Reference_View_SetAngle">View.SetAngle</a></li>
+                    <li><a href="#Reference_View_GetX">View.GetX</a></li>
+                    <li><a href="#Reference_View_GetY">View.GetY</a></li>
+                    <li><a href="#Reference_View_GetZ">View.GetZ</a></li>
+                    <li><a href="#Reference_View_GetWidth">View.GetWidth</a></li>
+                    <li><a href="#Reference_View_GetHeight">View.GetHeight</a></li>
+                    <li><a href="#Reference_View_SetSize">View.SetSize</a></li>
+                    <li><a href="#Reference_View_IsUsingDrawTarget">View.IsUsingDrawTarget</a></li>
+                    <li><a href="#Reference_View_SetUseDrawTarget">View.SetUseDrawTarget</a></li>
+                    <li><a href="#Reference_View_IsUsingSoftwareRenderer">View.IsUsingSoftwareRenderer</a></li>
+                    <li><a href="#Reference_View_SetUseSoftwareRenderer">View.SetUseSoftwareRenderer</a></li>
+                    <li><a href="#Reference_View_SetUsePerspective">View.SetUsePerspective</a></li>
+                    <li><a href="#Reference_View_IsEnabled">View.IsEnabled</a></li>
+                    <li><a href="#Reference_View_SetEnabled">View.SetEnabled</a></li>
+                    <li><a href="#Reference_View_SetFieldOfView">View.SetFieldOfView</a></li>
+                    <li><a href="#Reference_View_GetCurrent">View.GetCurrent</a></li>
+                </ul>
+            </p>
+            <p id="Reference_Window">
+                <h2>Window</h2>
+                <i>Functions:</i>
+                <ul>
+                    <li><a href="#Reference_Window_SetSize">Window.SetSize</a></li>
+                    <li><a href="#Reference_Window_SetFullscreen">Window.SetFullscreen</a></li>
+                    <li><a href="#Reference_Window_SetBorderless">Window.SetBorderless</a></li>
+                    <li><a href="#Reference_Window_SetPosition">Window.SetPosition</a></li>
+                    <li><a href="#Reference_Window_SetPositionCentered">Window.SetPositionCentered</a></li>
+                    <li><a href="#Reference_Window_SetTitle">Window.SetTitle</a></li>
+                    <li><a href="#Reference_Window_GetWidth">Window.GetWidth</a></li>
+                    <li><a href="#Reference_Window_GetHeight">Window.GetHeight</a></li>
+                    <li><a href="#Reference_Window_GetFullscreen">Window.GetFullscreen</a></li>
+                </ul>
+            </p>
+        <h3>Functions</h3>
+        <p>Note: Please use Find (Ctrl+F) there are way too many functions</p>
+        <p id="Reference_Array_Create">
+        <h2 style="margin-bottom: 0px;">Array.Create</h2>
+        <i style="margin-bottom: 16px; display: block;">Array.Create(size)</i>
+        <div>Creates an array.</div>
+        <div>size (Integer): Size of the array.</div>
+        <div>Returns A reference value to the array.</div>
         </p>
-
-        <!-- <!\-\-\- ([A-Za-z0-9]+)\.([A-Za-z0-9]+) \-\-> -->
-        <!-- <li><a href="#Reference_$1_$2">$1.$2</a></li> -->
+        <p id="Reference_Array_Length">
+        <h2 style="margin-bottom: 0px;">Array.Length</h2>
+        <i style="margin-bottom: 16px; display: block;">Array.Length(array)</i>
+        <div>Gets the length of an array.</div>
+        <div>array (Array): Array to get the length of.</div>
+        <div>Returns Length of the array.</div>
+        </p>
+        <p id="Reference_Array_Push">
+        <h2 style="margin-bottom: 0px;">Array.Push</h2>
+        <i style="margin-bottom: 16px; display: block;">Array.Push(array, value)</i>
+        <div>Adds a value to the end of an array.</div>
+        <div>array (Array): Array to get the length of.</div>
+        <div>value (Value): Value to add to the array.</div>
+        </p>
+        <p id="Reference_Array_Pop">
+        <h2 style="margin-bottom: 0px;">Array.Pop</h2>
+        <i style="margin-bottom: 16px; display: block;">Array.Pop(array)</i>
+        <div>Gets the value at the end of an array, and removes it.</div>
+        <div>array (Array): Array to get the length of.</div>
+        <div>Returns The value from the end of the array.</div>
+        </p>
+        <p id="Reference_Array_Insert">
+        <h2 style="margin-bottom: 0px;">Array.Insert</h2>
+        <i style="margin-bottom: 16px; display: block;">Array.Insert(array, index, value)</i>
+        <div>Inserts a value at an index of an array.</div>
+        <div>array (Array): Array to insert value.</div>
+        <div>index (Integer): Index to insert value.</div>
+        <div>value (Value): Value to insert.</div>
+        </p>
+        <p id="Reference_Array_Erase">
+        <h2 style="margin-bottom: 0px;">Array.Erase</h2>
+        <i style="margin-bottom: 16px; display: block;">Array.Erase(array, index)</i>
+        <div>Erases a value at an index of an array.</div>
+        <div>array (Array): Array to erase value.</div>
+        <div>index (Integer): Index to erase value.</div>
+        </p>
+        <p id="Reference_Array_Clear">
+        <h2 style="margin-bottom: 0px;">Array.Clear</h2>
+        <i style="margin-bottom: 16px; display: block;">Array.Clear(array)</i>
+        <div>Clears an array.</div>
+        <div>array (Array): Array to clear.</div>
+        </p>
+        <p id="Reference_Array_Shift">
+        <h2 style="margin-bottom: 0px;">Array.Shift</h2>
+        <i style="margin-bottom: 16px; display: block;">Array.Shift(array)</i>
+        <div>Clears an array.</div>
+        <div>array (Array): Array to clear.</div>
+        </p>
+        <p id="Reference_Date_GetEpoch">
+        <h2 style="margin-bottom: 0px;">Date.GetEpoch</h2>
+        <i style="margin-bottom: 16px; display: block;">Date.GetEpoch()</i>
+        <div>Gets the amount of seconds from 1 January 1970, 0:00 UTC.</div>
+        <div>Returns The amount of seconds from epoch.</div>
+        </p>
+        <p id="Reference_Device_GetPlatform">
+        <h2 style="margin-bottom: 0px;">Device.GetPlatform</h2>
+        <i style="margin-bottom: 16px; display: block;">Device.GetPlatform()</i>
+        <div>Gets the id of the platform the application is currently running on.</div>
+        <div>Returns ID of the current platform.</div>
+        </p>
+        <p id="Reference_Device_IsMobile">
+        <h2 style="margin-bottom: 0px;">Device.IsMobile</h2>
+        <i style="margin-bottom: 16px; display: block;">Device.IsMobile()</i>
+        <div>Determines whether or not the application is running on a mobile device.</div>
+        <div>Returns 1 if the device is on a mobile device, 0 if otherwise.</div>
+        </p>
+        <p id="Reference_Directory_Create">
+        <h2 style="margin-bottom: 0px;">Directory.Create</h2>
+        <i style="margin-bottom: 16px; display: block;">Directory.Create(path)</i>
+        <div>Creates a folder at the path.</div>
+        <div>path (String):</div>
+        <div>Returns Returns 1 if the folder creation was successful, 0 if otherwise</div>
+        </p>
+        <p id="Reference_Directory_Exists">
+        <h2 style="margin-bottom: 0px;">Directory.Exists</h2>
+        <i style="margin-bottom: 16px; display: block;">Directory.Exists(path)</i>
+        <div>Determines if the folder at the path exists.</div>
+        <div>path (String):</div>
+        <div>Returns Returns 1 if the folder exists, 0 if otherwise</div>
+        </p>
+        <p id="Reference_Directory_GetFiles">
+        <h2 style="margin-bottom: 0px;">Directory.GetFiles</h2>
+        <i style="margin-bottom: 16px; display: block;">Directory.GetFiles()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Directory_GetDirectories">
+        <h2 style="margin-bottom: 0px;">Directory.GetDirectories</h2>
+        <i style="margin-bottom: 16px; display: block;">Directory.GetDirectories()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Display_GetWidth">
+        <h2 style="margin-bottom: 0px;">Display.GetWidth</h2>
+        <i style="margin-bottom: 16px; display: block;">Display.GetWidth()</i>
+        <div>Gets the width of the current display</div>
+        <div>Returns Returns the width of the current display</div>
+        </p>
+        <p id="Reference_Display_GetHeight">
+        <h2 style="margin-bottom: 0px;">Display.GetHeight</h2>
+        <i style="margin-bottom: 16px; display: block;">Display.GetHeight()</i>
+        <div>Gets the height of the current display</div>
+        <div>Returns Returns the height of the current display</div>
+        </p>
+        <p id="Reference_Draw_Sprite">
+        <h2 style="margin-bottom: 0px;">Draw.Sprite</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Sprite(sprite, animation, frame, x, y, flipX, flipY, scaleX, scaleY, rotation)</i>
+        <div>Draws a sprite</div>
+        <div>sprite (Integer): Index of the loaded sprite.</div>
+        <div>animation (Integer): Index of the animation entry.</div>
+        <div>frame (Integer): Index of the frame in the animation entry.</div>
+        <div>x (Number): X position of where to draw the sprite.</div>
+        <div>y (Number): Y position of where to draw the sprite.</div>
+        <div>flipX (Integer): Whether or not to flip the sprite horizontally.</div>
+        <div>flipY (Integer): Whether or not to flip the sprite vertically.</div>
+        <div>scaleX (Number): Scale multiplier of the sprite horizontally.</div>
+        <div>scaleY (Number): Scale multiplier of the sprite vertically.</div>
+        <div>rotation (Number): Rotation of the drawn sprite in radians.</div>
+        </p>
+        <p id="Reference_Draw_SpritePart">
+        <h2 style="margin-bottom: 0px;">Draw.SpritePart</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SpritePart(sprite, animation, frame, x, y, partX, partY, partW, partH, flipX, flipY, scaleX, scaleY, rotation)</i>
+        <div>Draws part of a sprite</div>
+        <div>sprite (Integer): Index of the loaded sprite.</div>
+        <div>animation (Integer): Index of the animation entry.</div>
+        <div>frame (Integer): Index of the frame in the animation entry.</div>
+        <div>x (Number): X position of where to draw the sprite.</div>
+        <div>y (Number): Y position of where to draw the sprite.</div>
+        <div>partX (Integer): X coordinate of part of frame to draw.</div>
+        <div>partY (Integer): Y coordinate of part of frame to draw.</div>
+        <div>partW (Integer): Width of part of frame to draw.</div>
+        <div>partH (Integer): Height of part of frame to draw.</div>
+        <div>flipX (Integer): Whether or not to flip the sprite horizontally.</div>
+        <div>flipY (Integer): Whether or not to flip the sprite vertically.</div>
+        <div>scaleX (Number): Scale multiplier of the sprite horizontally.</div>
+        <div>scaleY (Number): Scale multiplier of the sprite vertically.</div>
+        <div>rotation (Number): Rotation of the drawn sprite in radians.</div>
+        </p>
+        <p id="Reference_Draw_Image">
+        <h2 style="margin-bottom: 0px;">Draw.Image</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Image(image, x, y)</i>
+        <div>Draws an image</div>
+        <div>image (Integer): Index of the loaded image.</div>
+        <div>x (Number): X position of where to draw the image.</div>
+        <div>y (Number): Y position of where to draw the image.</div>
+        </p>
+        <p id="Reference_Draw_ImagePart">
+        <h2 style="margin-bottom: 0px;">Draw.ImagePart</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.ImagePart(image, partX, partY, partW, partH, x, y)</i>
+        <div>Draws part of an image</div>
+        <div>image (Integer): Index of the loaded image.</div>
+        <div>partX (Integer): X coordinate of part of image to draw.</div>
+        <div>partY (Integer): Y coordinate of part of image to draw.</div>
+        <div>partW (Integer): Width of part of image to draw.</div>
+        <div>partH (Integer): Height of part of image to draw.</div>
+        <div>x (Number): X position of where to draw the image.</div>
+        <div>y (Number): Y position of where to draw the image.</div>
+        </p>
+        <p id="Reference_Draw_ImageSized">
+        <h2 style="margin-bottom: 0px;">Draw.ImageSized</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.ImageSized(x, y, width, height)</i>
+        <div>Draws an image, but sized</div>
+        <div>x (Number): X position of where to draw the image.</div>
+        <div>y (Number): Y position of where to draw the image.</div>
+        <div>width (Number): Width to draw the image.</div>
+        <div>height (Number): Height to draw the image.</div>
+        </p>
+        <p id="Reference_Draw_ImagePartSized">
+        <h2 style="margin-bottom: 0px;">Draw.ImagePartSized</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.ImagePartSized()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Video">
+        <h2 style="margin-bottom: 0px;">Draw.Video</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Video()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_VideoPart">
+        <h2 style="margin-bottom: 0px;">Draw.VideoPart</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.VideoPart()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_VideoSized">
+        <h2 style="margin-bottom: 0px;">Draw.VideoSized</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.VideoSized()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_VideoPartSized">
+        <h2 style="margin-bottom: 0px;">Draw.VideoPartSized</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.VideoPartSized()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Tile">
+        <h2 style="margin-bottom: 0px;">Draw.Tile</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Tile(x, y, flipX, flipY)</i>
+        <div></div>
+        <div>x (Number): X position of where to draw the tile.</div>
+        <div>y (Number): Y position of where to draw the tile.</div>
+        <div>flipX (Integer): Whether or not to flip the tile horizontally.</div>
+        <div>flipY (Integer): Whether or not to flip the tile vertically.</div>
+        </p>
+        <p id="Reference_Draw_Texture">
+        <h2 style="margin-bottom: 0px;">Draw.Texture</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Texture()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_TextureSized">
+        <h2 style="margin-bottom: 0px;">Draw.TextureSized</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.TextureSized()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_TexturePart">
+        <h2 style="margin-bottom: 0px;">Draw.TexturePart</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.TexturePart()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetFont">
+        <h2 style="margin-bottom: 0px;">Draw.SetFont</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetFont()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetTextAlign">
+        <h2 style="margin-bottom: 0px;">Draw.SetTextAlign</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetTextAlign()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetTextBaseline">
+        <h2 style="margin-bottom: 0px;">Draw.SetTextBaseline</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetTextBaseline()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetTextAdvance">
+        <h2 style="margin-bottom: 0px;">Draw.SetTextAdvance</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetTextAdvance()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetTextLineAscent">
+        <h2 style="margin-bottom: 0px;">Draw.SetTextLineAscent</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetTextLineAscent()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_MeasureText">
+        <h2 style="margin-bottom: 0px;">Draw.MeasureText</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.MeasureText()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_MeasureTextWrapped">
+        <h2 style="margin-bottom: 0px;">Draw.MeasureTextWrapped</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.MeasureTextWrapped()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Text">
+        <h2 style="margin-bottom: 0px;">Draw.Text</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Text(sprite, text, x, y)</i>
+        <div></div>
+        <div>sprite (Integer): Index of the loaded sprite to be used as text.</div>
+        <div>text (String): Text to draw.</div>
+        <div>x (Number): X position of where to draw the tile.</div>
+        <div>y (Number): Y position of where to draw the tile.</div>
+        </p>
+        <p id="Reference_Draw_TextWrapped">
+        <h2 style="margin-bottom: 0px;">Draw.TextWrapped</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.TextWrapped(sprite, text, x, y, maxWidth, maxLines)</i>
+        <div></div>
+        <div>sprite (Integer): Index of the loaded sprite to be used as text.</div>
+        <div>text (String): Text to draw.</div>
+        <div>x (Number): X position of where to draw the tile.</div>
+        <div>y (Number): Y position of where to draw the tile.</div>
+        <div>maxWidth (Number): Max width the text can draw in.</div>
+        <div>maxLines (Integer): Max lines the text can draw.</div>
+        </p>
+        <p id="Reference_Draw_TextEllipsis">
+        <h2 style="margin-bottom: 0px;">Draw.TextEllipsis</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.TextEllipsis()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetBlendColor">
+        <h2 style="margin-bottom: 0px;">Draw.SetBlendColor</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetBlendColor()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetTextureBlend">
+        <h2 style="margin-bottom: 0px;">Draw.SetTextureBlend</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetTextureBlend()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetBlendMode">
+        <h2 style="margin-bottom: 0px;">Draw.SetBlendMode</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetBlendMode()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetBlendFactor">
+        <h2 style="margin-bottom: 0px;">Draw.SetBlendFactor</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetBlendFactor()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetBlendFactorExtended">
+        <h2 style="margin-bottom: 0px;">Draw.SetBlendFactorExtended</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetBlendFactorExtended()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetCompareColor">
+        <h2 style="margin-bottom: 0px;">Draw.SetCompareColor</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetCompareColor()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Line">
+        <h2 style="margin-bottom: 0px;">Draw.Line</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Line(x1, y1, x2, y2)</i>
+        <div></div>
+        <div>x1 (Number): X position of where to start drawing the line.</div>
+        <div>y1 (Number): Y position of where to start drawing the line.</div>
+        <div>x2 (Number): X position of where to end drawing the line.</div>
+        <div>y2 (Number): Y position of where to end drawing the line.</div>
+        </p>
+        <p id="Reference_Draw_Circle">
+        <h2 style="margin-bottom: 0px;">Draw.Circle</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Circle(x, y, radius)</i>
+        <div></div>
+        <div>x (Number): Center X position of where to draw the cricle.</div>
+        <div>y (Number): Center Y position of where to draw the cricle.</div>
+        <div>radius (Number): Radius of the circle.</div>
+        </p>
+        <p id="Reference_Draw_Ellipse">
+        <h2 style="margin-bottom: 0px;">Draw.Ellipse</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Ellipse()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Triangle">
+        <h2 style="margin-bottom: 0px;">Draw.Triangle</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Triangle()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Rectangle">
+        <h2 style="margin-bottom: 0px;">Draw.Rectangle</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Rectangle()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_CircleStroke">
+        <h2 style="margin-bottom: 0px;">Draw.CircleStroke</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.CircleStroke()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_EllipseStroke">
+        <h2 style="margin-bottom: 0px;">Draw.EllipseStroke</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.EllipseStroke()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_TriangleStroke">
+        <h2 style="margin-bottom: 0px;">Draw.TriangleStroke</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.TriangleStroke()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_RectangleStroke">
+        <h2 style="margin-bottom: 0px;">Draw.RectangleStroke</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.RectangleStroke()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_UseFillSmoothing">
+        <h2 style="margin-bottom: 0px;">Draw.UseFillSmoothing</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.UseFillSmoothing()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_UseStrokeSmoothing">
+        <h2 style="margin-bottom: 0px;">Draw.UseStrokeSmoothing</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.UseStrokeSmoothing()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetClip">
+        <h2 style="margin-bottom: 0px;">Draw.SetClip</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetClip()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_ClearClip">
+        <h2 style="margin-bottom: 0px;">Draw.ClearClip</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.ClearClip()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Save">
+        <h2 style="margin-bottom: 0px;">Draw.Save</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Save()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Scale">
+        <h2 style="margin-bottom: 0px;">Draw.Scale</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Scale()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Rotate">
+        <h2 style="margin-bottom: 0px;">Draw.Rotate</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Rotate()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Restore">
+        <h2 style="margin-bottom: 0px;">Draw.Restore</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Restore()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Translate">
+        <h2 style="margin-bottom: 0px;">Draw.Translate</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Translate()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_SetTextureTarget">
+        <h2 style="margin-bottom: 0px;">Draw.SetTextureTarget</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.SetTextureTarget()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_Clear">
+        <h2 style="margin-bottom: 0px;">Draw.Clear</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.Clear()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Draw_ResetTextureTarget">
+        <h2 style="margin-bottom: 0px;">Draw.ResetTextureTarget</h2>
+        <i style="margin-bottom: 16px; display: block;">Draw.ResetTextureTarget()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InSine">
+        <h2 style="margin-bottom: 0px;">Ease.InSine</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InSine()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutSine">
+        <h2 style="margin-bottom: 0px;">Ease.OutSine</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutSine()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutSine">
+        <h2 style="margin-bottom: 0px;">Ease.InOutSine</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutSine()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InQuad">
+        <h2 style="margin-bottom: 0px;">Ease.InQuad</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InQuad()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutQuad">
+        <h2 style="margin-bottom: 0px;">Ease.OutQuad</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutQuad()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutQuad">
+        <h2 style="margin-bottom: 0px;">Ease.InOutQuad</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutQuad()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InCubic">
+        <h2 style="margin-bottom: 0px;">Ease.InCubic</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InCubic()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutCubic">
+        <h2 style="margin-bottom: 0px;">Ease.OutCubic</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutCubic()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutCubic">
+        <h2 style="margin-bottom: 0px;">Ease.InOutCubic</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutCubic()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InQuart">
+        <h2 style="margin-bottom: 0px;">Ease.InQuart</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InQuart()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutQuart">
+        <h2 style="margin-bottom: 0px;">Ease.OutQuart</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutQuart()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutQuart">
+        <h2 style="margin-bottom: 0px;">Ease.InOutQuart</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutQuart()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InQuint">
+        <h2 style="margin-bottom: 0px;">Ease.InQuint</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InQuint()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutQuint">
+        <h2 style="margin-bottom: 0px;">Ease.OutQuint</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutQuint()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutQuint">
+        <h2 style="margin-bottom: 0px;">Ease.InOutQuint</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutQuint()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InExpo">
+        <h2 style="margin-bottom: 0px;">Ease.InExpo</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InExpo()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutExpo">
+        <h2 style="margin-bottom: 0px;">Ease.OutExpo</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutExpo()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutExpo">
+        <h2 style="margin-bottom: 0px;">Ease.InOutExpo</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutExpo()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InCirc">
+        <h2 style="margin-bottom: 0px;">Ease.InCirc</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InCirc()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutCirc">
+        <h2 style="margin-bottom: 0px;">Ease.OutCirc</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutCirc()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutCirc">
+        <h2 style="margin-bottom: 0px;">Ease.InOutCirc</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutCirc()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InBack">
+        <h2 style="margin-bottom: 0px;">Ease.InBack</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InBack()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutBack">
+        <h2 style="margin-bottom: 0px;">Ease.OutBack</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutBack()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutBack">
+        <h2 style="margin-bottom: 0px;">Ease.InOutBack</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutBack()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InElastic">
+        <h2 style="margin-bottom: 0px;">Ease.InElastic</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InElastic()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutElastic">
+        <h2 style="margin-bottom: 0px;">Ease.OutElastic</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutElastic()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutElastic">
+        <h2 style="margin-bottom: 0px;">Ease.InOutElastic</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutElastic()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InBounce">
+        <h2 style="margin-bottom: 0px;">Ease.InBounce</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InBounce()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_OutBounce">
+        <h2 style="margin-bottom: 0px;">Ease.OutBounce</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.OutBounce()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_InOutBounce">
+        <h2 style="margin-bottom: 0px;">Ease.InOutBounce</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.InOutBounce()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Ease_Triangle">
+        <h2 style="margin-bottom: 0px;">Ease.Triangle</h2>
+        <i style="margin-bottom: 16px; display: block;">Ease.Triangle()</i>
+        <div></div>
+        </p>
+        <p id="Reference_File_Exists">
+        <h2 style="margin-bottom: 0px;">File.Exists</h2>
+        <i style="margin-bottom: 16px; display: block;">File.Exists()</i>
+        <div></div>
+        </p>
+        <p id="Reference_File_ReadAllText">
+        <h2 style="margin-bottom: 0px;">File.ReadAllText</h2>
+        <i style="margin-bottom: 16px; display: block;">File.ReadAllText()</i>
+        <div></div>
+        </p>
+        <p id="Reference_File_WriteAllText">
+        <h2 style="margin-bottom: 0px;">File.WriteAllText</h2>
+        <i style="margin-bottom: 16px; display: block;">File.WriteAllText()</i>
+        <div></div>
+        </p>
+        <p id="Reference_HTTP_GetString">
+        <h2 style="margin-bottom: 0px;">HTTP.GetString</h2>
+        <i style="margin-bottom: 16px; display: block;">HTTP.GetString()</i>
+        <div></div>
+        </p>
+        <p id="Reference_HTTP_GetToFile">
+        <h2 style="margin-bottom: 0px;">HTTP.GetToFile</h2>
+        <i style="margin-bottom: 16px; display: block;">HTTP.GetToFile()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_GetMouseX">
+        <h2 style="margin-bottom: 0px;">Input.GetMouseX</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.GetMouseX()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_GetMouseY">
+        <h2 style="margin-bottom: 0px;">Input.GetMouseY</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.GetMouseY()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_IsMouseButtonDown">
+        <h2 style="margin-bottom: 0px;">Input.IsMouseButtonDown</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.IsMouseButtonDown()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_IsMouseButtonPressed">
+        <h2 style="margin-bottom: 0px;">Input.IsMouseButtonPressed</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.IsMouseButtonPressed()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_IsMouseButtonReleased">
+        <h2 style="margin-bottom: 0px;">Input.IsMouseButtonReleased</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.IsMouseButtonReleased()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_IsKeyDown">
+        <h2 style="margin-bottom: 0px;">Input.IsKeyDown</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.IsKeyDown()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_IsKeyPressed">
+        <h2 style="margin-bottom: 0px;">Input.IsKeyPressed</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.IsKeyPressed()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_IsKeyReleased">
+        <h2 style="margin-bottom: 0px;">Input.IsKeyReleased</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.IsKeyReleased()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_GetControllerAttached">
+        <h2 style="margin-bottom: 0px;">Input.GetControllerAttached</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.GetControllerAttached()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_GetControllerHat">
+        <h2 style="margin-bottom: 0px;">Input.GetControllerHat</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.GetControllerHat()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_GetControllerAxis">
+        <h2 style="margin-bottom: 0px;">Input.GetControllerAxis</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.GetControllerAxis()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_GetControllerButton">
+        <h2 style="margin-bottom: 0px;">Input.GetControllerButton</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.GetControllerButton()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Input_GetControllerName">
+        <h2 style="margin-bottom: 0px;">Input.GetControllerName</h2>
+        <i style="margin-bottom: 16px; display: block;">Input.GetControllerName()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Instance_Create">
+        <h2 style="margin-bottom: 0px;">Instance.Create</h2>
+        <i style="margin-bottom: 16px; display: block;">Instance.Create()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Instance_GetNth">
+        <h2 style="margin-bottom: 0px;">Instance.GetNth</h2>
+        <i style="margin-bottom: 16px; display: block;">Instance.GetNth()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Instance_GetCount">
+        <h2 style="margin-bottom: 0px;">Instance.GetCount</h2>
+        <i style="margin-bottom: 16px; display: block;">Instance.GetCount()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Instance_GetNextInstance">
+        <h2 style="margin-bottom: 0px;">Instance.GetNextInstance</h2>
+        <i style="margin-bottom: 16px; display: block;">Instance.GetNextInstance()</i>
+        <div></div>
+        </p>
+        <p id="Reference_JSON_Parse">
+        <h2 style="margin-bottom: 0px;">JSON.Parse</h2>
+        <i style="margin-bottom: 16px; display: block;">JSON.Parse()</i>
+        <div></div>
+        </p>
+        <p id="Reference_JSON_ToString">
+        <h2 style="margin-bottom: 0px;">JSON.ToString</h2>
+        <i style="margin-bottom: 16px; display: block;">JSON.ToString()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Cos">
+        <h2 style="margin-bottom: 0px;">Math.Cos</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Cos(x)</i>
+        <div>Returns the cosine of an angle of x radians.</div>
+        <div>x (Decimal): Angle (in radians) to get the cosine of.</div>
+        <div>Returns The cosine of x radians.</div>
+        </p>
+        <p id="Reference_Math_Sin">
+        <h2 style="margin-bottom: 0px;">Math.Sin</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Sin(x)</i>
+        <div>Returns the sine of an angle of x radians.</div>
+        <div>x (Decimal): Angle (in radians) to get the sine of.</div>
+        <div>Returns The sine of x radians.</div>
+        </p>
+        <p id="Reference_Math_Acos">
+        <h2 style="margin-bottom: 0px;">Math.Acos</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Acos()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Asin">
+        <h2 style="margin-bottom: 0px;">Math.Asin</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Asin()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Atan">
+        <h2 style="margin-bottom: 0px;">Math.Atan</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Atan(x, y)</i>
+        <div>Returns the angle (in radians) from x and y.</div>
+        <div>x (Decimal): x value.</div>
+        <div>y (Decimal): y value.</div>
+        <div>Returns The angle from x and y.</div>
+        </p>
+        <p id="Reference_Math_Distance">
+        <h2 style="margin-bottom: 0px;">Math.Distance</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Distance()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Direction">
+        <h2 style="margin-bottom: 0px;">Math.Direction</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Direction()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Abs">
+        <h2 style="margin-bottom: 0px;">Math.Abs</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Abs()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Min">
+        <h2 style="margin-bottom: 0px;">Math.Min</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Min()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Max">
+        <h2 style="margin-bottom: 0px;">Math.Max</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Max()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Clamp">
+        <h2 style="margin-bottom: 0px;">Math.Clamp</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Clamp()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Sign">
+        <h2 style="margin-bottom: 0px;">Math.Sign</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Sign()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Random">
+        <h2 style="margin-bottom: 0px;">Math.Random</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Random()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_RandomMax">
+        <h2 style="margin-bottom: 0px;">Math.RandomMax</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.RandomMax()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_RandomRange">
+        <h2 style="margin-bottom: 0px;">Math.RandomRange</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.RandomRange()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Floor">
+        <h2 style="margin-bottom: 0px;">Math.Floor</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Floor()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Ceil">
+        <h2 style="margin-bottom: 0px;">Math.Ceil</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Ceil()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Round">
+        <h2 style="margin-bottom: 0px;">Math.Round</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Round()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Sqrt">
+        <h2 style="margin-bottom: 0px;">Math.Sqrt</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Sqrt()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Pow">
+        <h2 style="margin-bottom: 0px;">Math.Pow</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Pow()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Math_Exp">
+        <h2 style="margin-bottom: 0px;">Math.Exp</h2>
+        <i style="margin-bottom: 16px; display: block;">Math.Exp()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Music_Play">
+        <h2 style="margin-bottom: 0px;">Music.Play</h2>
+        <i style="margin-bottom: 16px; display: block;">Music.Play()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Music_Stop">
+        <h2 style="margin-bottom: 0px;">Music.Stop</h2>
+        <i style="margin-bottom: 16px; display: block;">Music.Stop()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Music_StopWithFadeOut">
+        <h2 style="margin-bottom: 0px;">Music.StopWithFadeOut</h2>
+        <i style="margin-bottom: 16px; display: block;">Music.StopWithFadeOut()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Music_Pause">
+        <h2 style="margin-bottom: 0px;">Music.Pause</h2>
+        <i style="margin-bottom: 16px; display: block;">Music.Pause()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Music_Resume">
+        <h2 style="margin-bottom: 0px;">Music.Resume</h2>
+        <i style="margin-bottom: 16px; display: block;">Music.Resume()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Music_Clear">
+        <h2 style="margin-bottom: 0px;">Music.Clear</h2>
+        <i style="margin-bottom: 16px; display: block;">Music.Clear()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Music_Loop">
+        <h2 style="margin-bottom: 0px;">Music.Loop</h2>
+        <i style="margin-bottom: 16px; display: block;">Music.Loop()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Music_IsPlaying">
+        <h2 style="margin-bottom: 0px;">Music.IsPlaying</h2>
+        <i style="margin-bottom: 16px; display: block;">Music.IsPlaying()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Number_ToString">
+        <h2 style="margin-bottom: 0px;">Number.ToString</h2>
+        <i style="margin-bottom: 16px; display: block;">Number.ToString()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Number_AsInteger">
+        <h2 style="margin-bottom: 0px;">Number.AsInteger</h2>
+        <i style="margin-bottom: 16px; display: block;">Number.AsInteger()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Number_AsDecimal">
+        <h2 style="margin-bottom: 0px;">Number.AsDecimal</h2>
+        <i style="margin-bottom: 16px; display: block;">Number.AsDecimal()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Palette_EnablePaletteUsage">
+        <h2 style="margin-bottom: 0px;">Palette.EnablePaletteUsage</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.EnablePaletteUsage()</i>
+        <div>Sets a color on the specified palette, format 0xAARRGGBB.</div>
+        </p>
+        <p id="Reference_Palette_LoadFromFile">
+        <h2 style="margin-bottom: 0px;">Palette.LoadFromFile</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.LoadFromFile(x)</i>
+        <div>Loads palette from an .act or a .hpal file.</div>
+        <div>x (Decimal): Angle (in radians) to get the cosine of.</div>
+        </p>
+        <p id="Reference_Palette_LoadFromResource">
+        <h2 style="margin-bottom: 0px;">Palette.LoadFromResource</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.LoadFromResource()</i>
+        <div>Loads palette from an .act or a .hpal resource.</div>
+        </p>
+        <p id="Reference_Palette_GetColor">
+        <h2 style="margin-bottom: 0px;">Palette.GetColor</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.GetColor()</i>
+        <div>Gets a color from the specified palette.</div>
+        </p>
+        <p id="Reference_Palette_SetColor">
+        <h2 style="margin-bottom: 0px;">Palette.SetColor</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.SetColor()</i>
+        <div>Sets a color on the specified palette, format 0xAARRGGBB.</div>
+        </p>
+        <p id="Reference_Palette_MixPalettes">
+        <h2 style="margin-bottom: 0px;">Palette.MixPalettes</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.MixPalettes()</i>
+        <div>Sets a color on the specified palette, format 0xAARRGGBB.</div>
+        </p>
+        <p id="Reference_Palette_RotateColorsLeft">
+        <h2 style="margin-bottom: 0px;">Palette.RotateColorsLeft</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.RotateColorsLeft()</i>
+        <div>Sets a color on the specified palette, format 0xAARRGGBB.</div>
+        </p>
+        <p id="Reference_Palette_RotateColorsRight">
+        <h2 style="margin-bottom: 0px;">Palette.RotateColorsRight</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.RotateColorsRight()</i>
+        <div>Sets a color on the specified palette, format 0xAARRGGBB.</div>
+        </p>
+        <p id="Reference_Palette_CopyColors">
+        <h2 style="margin-bottom: 0px;">Palette.CopyColors</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.CopyColors()</i>
+        <div>Sets a color on the specified palette, format 0xAARRGGBB.</div>
+        </p>
+        <p id="Reference_Palette_SetPaletteIndexLines">
+        <h2 style="margin-bottom: 0px;">Palette.SetPaletteIndexLines</h2>
+        <i style="margin-bottom: 16px; display: block;">Palette.SetPaletteIndexLines()</i>
+        <div>Sets a color on the specified palette, format 0xAARRGGBB.</div>
+        </p>
+        <p id="Reference_Resources_LoadSprite">
+        <h2 style="margin-bottom: 0px;">Resources.LoadSprite</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.LoadSprite()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Resources_LoadImage">
+        <h2 style="margin-bottom: 0px;">Resources.LoadImage</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.LoadImage()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Resources_LoadFont">
+        <h2 style="margin-bottom: 0px;">Resources.LoadFont</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.LoadFont()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Resources_LoadShader">
+        <h2 style="margin-bottom: 0px;">Resources.LoadShader</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.LoadShader()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Resources_LoadModel">
+        <h2 style="margin-bottom: 0px;">Resources.LoadModel</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.LoadModel()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Resources_LoadMusic">
+        <h2 style="margin-bottom: 0px;">Resources.LoadMusic</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.LoadMusic()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Resources_LoadSound">
+        <h2 style="margin-bottom: 0px;">Resources.LoadSound</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.LoadSound()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Resources_LoadVideo">
+        <h2 style="margin-bottom: 0px;">Resources.LoadVideo</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.LoadVideo()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Resources_FileExists">
+        <h2 style="margin-bottom: 0px;">Resources.FileExists</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.FileExists()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Resources_UnloadImage">
+        <h2 style="margin-bottom: 0px;">Resources.UnloadImage</h2>
+        <i style="margin-bottom: 16px; display: block;">Resources.UnloadImage()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_Load">
+        <h2 style="margin-bottom: 0px;">Scene.Load</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.Load()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_LoadTileCollisions">
+        <h2 style="margin-bottom: 0px;">Scene.LoadTileCollisions</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.LoadTileCollisions()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_Restart">
+        <h2 style="margin-bottom: 0px;">Scene.Restart</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.Restart()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_GetLayerCount">
+        <h2 style="margin-bottom: 0px;">Scene.GetLayerCount</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.GetLayerCount()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_GetLayerIndex">
+        <h2 style="margin-bottom: 0px;">Scene.GetLayerIndex</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.GetLayerIndex()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_GetName">
+        <h2 style="margin-bottom: 0px;">Scene.GetName</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.GetName()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_GetWidth">
+        <h2 style="margin-bottom: 0px;">Scene.GetWidth</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.GetWidth()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_GetHeight">
+        <h2 style="margin-bottom: 0px;">Scene.GetHeight</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.GetHeight()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_GetTileSize">
+        <h2 style="margin-bottom: 0px;">Scene.GetTileSize</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.GetTileSize()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_GetTileID">
+        <h2 style="margin-bottom: 0px;">Scene.GetTileID</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.GetTileID()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_GetTileFlipX">
+        <h2 style="margin-bottom: 0px;">Scene.GetTileFlipX</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.GetTileFlipX()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_GetTileFlipY">
+        <h2 style="margin-bottom: 0px;">Scene.GetTileFlipY</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.GetTileFlipY()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_SetTile">
+        <h2 style="margin-bottom: 0px;">Scene.SetTile</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.SetTile()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_SetTileCollisionSides">
+        <h2 style="margin-bottom: 0px;">Scene.SetTileCollisionSides</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.SetTileCollisionSides()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_SetPaused">
+        <h2 style="margin-bottom: 0px;">Scene.SetPaused</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.SetPaused()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_SetLayerVisible">
+        <h2 style="margin-bottom: 0px;">Scene.SetLayerVisible</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.SetLayerVisible()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_SetLayerOffsetPosition">
+        <h2 style="margin-bottom: 0px;">Scene.SetLayerOffsetPosition</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.SetLayerOffsetPosition()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_SetLayerDrawGroup">
+        <h2 style="margin-bottom: 0px;">Scene.SetLayerDrawGroup</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.SetLayerDrawGroup()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Scene_IsPaused">
+        <h2 style="margin-bottom: 0px;">Scene.IsPaused</h2>
+        <i style="margin-bottom: 16px; display: block;">Scene.IsPaused()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Shader_Set">
+        <h2 style="margin-bottom: 0px;">Shader.Set</h2>
+        <i style="margin-bottom: 16px; display: block;">Shader.Set()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Shader_GetUniform">
+        <h2 style="margin-bottom: 0px;">Shader.GetUniform</h2>
+        <i style="margin-bottom: 16px; display: block;">Shader.GetUniform()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Shader_SetUniformI">
+        <h2 style="margin-bottom: 0px;">Shader.SetUniformI</h2>
+        <i style="margin-bottom: 16px; display: block;">Shader.SetUniformI()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Shader_SetUniformF">
+        <h2 style="margin-bottom: 0px;">Shader.SetUniformF</h2>
+        <i style="margin-bottom: 16px; display: block;">Shader.SetUniformF()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Shader_SetUniform3x3">
+        <h2 style="margin-bottom: 0px;">Shader.SetUniform3x3</h2>
+        <i style="margin-bottom: 16px; display: block;">Shader.SetUniform3x3()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Shader_SetUniform4x4">
+        <h2 style="margin-bottom: 0px;">Shader.SetUniform4x4</h2>
+        <i style="margin-bottom: 16px; display: block;">Shader.SetUniform4x4()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Shader_SetUniformTexture">
+        <h2 style="margin-bottom: 0px;">Shader.SetUniformTexture</h2>
+        <i style="margin-bottom: 16px; display: block;">Shader.SetUniformTexture()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Shader_Unset">
+        <h2 style="margin-bottom: 0px;">Shader.Unset</h2>
+        <i style="margin-bottom: 16px; display: block;">Shader.Unset()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_Open">
+        <h2 style="margin-bottom: 0px;">SocketClient.Open</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.Open()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_Close">
+        <h2 style="margin-bottom: 0px;">SocketClient.Close</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.Close()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_IsOpen">
+        <h2 style="margin-bottom: 0px;">SocketClient.IsOpen</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.IsOpen()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_Poll">
+        <h2 style="margin-bottom: 0px;">SocketClient.Poll</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.Poll()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_BytesToRead">
+        <h2 style="margin-bottom: 0px;">SocketClient.BytesToRead</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.BytesToRead()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_ReadDecimal">
+        <h2 style="margin-bottom: 0px;">SocketClient.ReadDecimal</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.ReadDecimal()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_ReadInteger">
+        <h2 style="margin-bottom: 0px;">SocketClient.ReadInteger</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.ReadInteger()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_ReadString">
+        <h2 style="margin-bottom: 0px;">SocketClient.ReadString</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.ReadString()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_WriteDecimal">
+        <h2 style="margin-bottom: 0px;">SocketClient.WriteDecimal</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.WriteDecimal()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_WriteInteger">
+        <h2 style="margin-bottom: 0px;">SocketClient.WriteInteger</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.WriteInteger()</i>
+        <div></div>
+        </p>
+        <p id="Reference_SocketClient_WriteString">
+        <h2 style="margin-bottom: 0px;">SocketClient.WriteString</h2>
+        <i style="margin-bottom: 16px; display: block;">SocketClient.WriteString()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sound_Play">
+        <h2 style="margin-bottom: 0px;">Sound.Play</h2>
+        <i style="margin-bottom: 16px; display: block;">Sound.Play()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sound_Loop">
+        <h2 style="margin-bottom: 0px;">Sound.Loop</h2>
+        <i style="margin-bottom: 16px; display: block;">Sound.Loop()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sound_Stop">
+        <h2 style="margin-bottom: 0px;">Sound.Stop</h2>
+        <i style="margin-bottom: 16px; display: block;">Sound.Stop()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sound_Pause">
+        <h2 style="margin-bottom: 0px;">Sound.Pause</h2>
+        <i style="margin-bottom: 16px; display: block;">Sound.Pause()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sound_Resume">
+        <h2 style="margin-bottom: 0px;">Sound.Resume</h2>
+        <i style="margin-bottom: 16px; display: block;">Sound.Resume()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sound_StopAll">
+        <h2 style="margin-bottom: 0px;">Sound.StopAll</h2>
+        <i style="margin-bottom: 16px; display: block;">Sound.StopAll()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sound_PauseAll">
+        <h2 style="margin-bottom: 0px;">Sound.PauseAll</h2>
+        <i style="margin-bottom: 16px; display: block;">Sound.PauseAll()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sound_ResumeAll">
+        <h2 style="margin-bottom: 0px;">Sound.ResumeAll</h2>
+        <i style="margin-bottom: 16px; display: block;">Sound.ResumeAll()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sprite_GetAnimationCount">
+        <h2 style="margin-bottom: 0px;">Sprite.GetAnimationCount</h2>
+        <i style="margin-bottom: 16px; display: block;">Sprite.GetAnimationCount()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sprite_GetFrameLoopIndex">
+        <h2 style="margin-bottom: 0px;">Sprite.GetFrameLoopIndex</h2>
+        <i style="margin-bottom: 16px; display: block;">Sprite.GetFrameLoopIndex()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sprite_GetFrameCount">
+        <h2 style="margin-bottom: 0px;">Sprite.GetFrameCount</h2>
+        <i style="margin-bottom: 16px; display: block;">Sprite.GetFrameCount()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sprite_GetFrameDuration">
+        <h2 style="margin-bottom: 0px;">Sprite.GetFrameDuration</h2>
+        <i style="margin-bottom: 16px; display: block;">Sprite.GetFrameDuration()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Sprite_GetFrameSpeed">
+        <h2 style="margin-bottom: 0px;">Sprite.GetFrameSpeed</h2>
+        <i style="margin-bottom: 16px; display: block;">Sprite.GetFrameSpeed()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_Split">
+        <h2 style="margin-bottom: 0px;">String.Split</h2>
+        <i style="margin-bottom: 16px; display: block;">String.Split()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_CharAt">
+        <h2 style="margin-bottom: 0px;">String.CharAt</h2>
+        <i style="margin-bottom: 16px; display: block;">String.CharAt()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_Length">
+        <h2 style="margin-bottom: 0px;">String.Length</h2>
+        <i style="margin-bottom: 16px; display: block;">String.Length()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_Compare">
+        <h2 style="margin-bottom: 0px;">String.Compare</h2>
+        <i style="margin-bottom: 16px; display: block;">String.Compare()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_IndexOf">
+        <h2 style="margin-bottom: 0px;">String.IndexOf</h2>
+        <i style="margin-bottom: 16px; display: block;">String.IndexOf()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_Contains">
+        <h2 style="margin-bottom: 0px;">String.Contains</h2>
+        <i style="margin-bottom: 16px; display: block;">String.Contains()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_Substring">
+        <h2 style="margin-bottom: 0px;">String.Substring</h2>
+        <i style="margin-bottom: 16px; display: block;">String.Substring()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_ToUpperCase">
+        <h2 style="margin-bottom: 0px;">String.ToUpperCase</h2>
+        <i style="margin-bottom: 16px; display: block;">String.ToUpperCase()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_ToLowerCase">
+        <h2 style="margin-bottom: 0px;">String.ToLowerCase</h2>
+        <i style="margin-bottom: 16px; display: block;">String.ToLowerCase()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_LastIndexOf">
+        <h2 style="margin-bottom: 0px;">String.LastIndexOf</h2>
+        <i style="margin-bottom: 16px; display: block;">String.LastIndexOf()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_ParseInteger">
+        <h2 style="margin-bottom: 0px;">String.ParseInteger</h2>
+        <i style="margin-bottom: 16px; display: block;">String.ParseInteger()</i>
+        <div></div>
+        </p>
+        <p id="Reference_String_ParseDecimal">
+        <h2 style="margin-bottom: 0px;">String.ParseDecimal</h2>
+        <i style="margin-bottom: 16px; display: block;">String.ParseDecimal()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Texture_Create">
+        <h2 style="margin-bottom: 0px;">Texture.Create</h2>
+        <i style="margin-bottom: 16px; display: block;">Texture.Create()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Texture_FromSprite">
+        <h2 style="margin-bottom: 0px;">Texture.FromSprite</h2>
+        <i style="margin-bottom: 16px; display: block;">Texture.FromSprite()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Texture_FromImage">
+        <h2 style="margin-bottom: 0px;">Texture.FromImage</h2>
+        <i style="margin-bottom: 16px; display: block;">Texture.FromImage()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Texture_SetInterpolation">
+        <h2 style="margin-bottom: 0px;">Texture.SetInterpolation</h2>
+        <i style="margin-bottom: 16px; display: block;">Texture.SetInterpolation()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Touch_GetX">
+        <h2 style="margin-bottom: 0px;">Touch.GetX</h2>
+        <i style="margin-bottom: 16px; display: block;">Touch.GetX()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Touch_GetY">
+        <h2 style="margin-bottom: 0px;">Touch.GetY</h2>
+        <i style="margin-bottom: 16px; display: block;">Touch.GetY()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Touch_IsDown">
+        <h2 style="margin-bottom: 0px;">Touch.IsDown</h2>
+        <i style="margin-bottom: 16px; display: block;">Touch.IsDown()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Touch_IsPressed">
+        <h2 style="margin-bottom: 0px;">Touch.IsPressed</h2>
+        <i style="margin-bottom: 16px; display: block;">Touch.IsPressed()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Touch_IsReleased">
+        <h2 style="margin-bottom: 0px;">Touch.IsReleased</h2>
+        <i style="margin-bottom: 16px; display: block;">Touch.IsReleased()</i>
+        <div></div>
+        </p>
+        <p id="Reference_TileCollision_Point">
+        <h2 style="margin-bottom: 0px;">TileCollision.Point</h2>
+        <i style="margin-bottom: 16px; display: block;">TileCollision.Point()</i>
+        <div></div>
+        </p>
+        <p id="Reference_TileCollision_PointExtended">
+        <h2 style="margin-bottom: 0px;">TileCollision.PointExtended</h2>
+        <i style="margin-bottom: 16px; display: block;">TileCollision.PointExtended()</i>
+        <div></div>
+        </p>
+        <p id="Reference_TileInfo_IsEmptySpace">
+        <h2 style="margin-bottom: 0px;">TileInfo.IsEmptySpace</h2>
+        <i style="margin-bottom: 16px; display: block;">TileInfo.IsEmptySpace()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Thread_RunEvent">
+        <h2 style="margin-bottom: 0px;">Thread.RunEvent</h2>
+        <i style="margin-bottom: 16px; display: block;">Thread.RunEvent()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Thread_Sleep">
+        <h2 style="margin-bottom: 0px;">Thread.Sleep</h2>
+        <i style="margin-bottom: 16px; display: block;">Thread.Sleep()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_Play">
+        <h2 style="margin-bottom: 0px;">Video.Play</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.Play()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_Pause">
+        <h2 style="margin-bottom: 0px;">Video.Pause</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.Pause()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_Resume">
+        <h2 style="margin-bottom: 0px;">Video.Resume</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.Resume()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_Stop">
+        <h2 style="margin-bottom: 0px;">Video.Stop</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.Stop()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_Close">
+        <h2 style="margin-bottom: 0px;">Video.Close</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.Close()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_IsBuffering">
+        <h2 style="margin-bottom: 0px;">Video.IsBuffering</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.IsBuffering()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_IsPlaying">
+        <h2 style="margin-bottom: 0px;">Video.IsPlaying</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.IsPlaying()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_IsPaused">
+        <h2 style="margin-bottom: 0px;">Video.IsPaused</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.IsPaused()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_SetPosition">
+        <h2 style="margin-bottom: 0px;">Video.SetPosition</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.SetPosition()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_SetBufferDuration">
+        <h2 style="margin-bottom: 0px;">Video.SetBufferDuration</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.SetBufferDuration()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_SetTrackEnabled">
+        <h2 style="margin-bottom: 0px;">Video.SetTrackEnabled</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.SetTrackEnabled()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetPosition">
+        <h2 style="margin-bottom: 0px;">Video.GetPosition</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetPosition()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetDuration">
+        <h2 style="margin-bottom: 0px;">Video.GetDuration</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetDuration()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetBufferDuration">
+        <h2 style="margin-bottom: 0px;">Video.GetBufferDuration</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetBufferDuration()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetBufferEnd">
+        <h2 style="margin-bottom: 0px;">Video.GetBufferEnd</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetBufferEnd()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetTrackCount">
+        <h2 style="margin-bottom: 0px;">Video.GetTrackCount</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetTrackCount()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetTrackEnabled">
+        <h2 style="margin-bottom: 0px;">Video.GetTrackEnabled</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetTrackEnabled()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetTrackName">
+        <h2 style="margin-bottom: 0px;">Video.GetTrackName</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetTrackName()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetTrackLanguage">
+        <h2 style="margin-bottom: 0px;">Video.GetTrackLanguage</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetTrackLanguage()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetDefaultVideoTrack">
+        <h2 style="margin-bottom: 0px;">Video.GetDefaultVideoTrack</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetDefaultVideoTrack()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetDefaultAudioTrack">
+        <h2 style="margin-bottom: 0px;">Video.GetDefaultAudioTrack</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetDefaultAudioTrack()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetDefaultSubtitleTrack">
+        <h2 style="margin-bottom: 0px;">Video.GetDefaultSubtitleTrack</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetDefaultSubtitleTrack()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetWidth">
+        <h2 style="margin-bottom: 0px;">Video.GetWidth</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetWidth()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Video_GetHeight">
+        <h2 style="margin-bottom: 0px;">Video.GetHeight</h2>
+        <i style="margin-bottom: 16px; display: block;">Video.GetHeight()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetX">
+        <h2 style="margin-bottom: 0px;">View.SetX</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetX()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetY">
+        <h2 style="margin-bottom: 0px;">View.SetY</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetY()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetZ">
+        <h2 style="margin-bottom: 0px;">View.SetZ</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetZ()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetPosition">
+        <h2 style="margin-bottom: 0px;">View.SetPosition</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetPosition()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetAngle">
+        <h2 style="margin-bottom: 0px;">View.SetAngle</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetAngle()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_GetX">
+        <h2 style="margin-bottom: 0px;">View.GetX</h2>
+        <i style="margin-bottom: 16px; display: block;">View.GetX()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_GetY">
+        <h2 style="margin-bottom: 0px;">View.GetY</h2>
+        <i style="margin-bottom: 16px; display: block;">View.GetY()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_GetZ">
+        <h2 style="margin-bottom: 0px;">View.GetZ</h2>
+        <i style="margin-bottom: 16px; display: block;">View.GetZ()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_GetWidth">
+        <h2 style="margin-bottom: 0px;">View.GetWidth</h2>
+        <i style="margin-bottom: 16px; display: block;">View.GetWidth()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_GetHeight">
+        <h2 style="margin-bottom: 0px;">View.GetHeight</h2>
+        <i style="margin-bottom: 16px; display: block;">View.GetHeight()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetSize">
+        <h2 style="margin-bottom: 0px;">View.SetSize</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetSize()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_IsUsingDrawTarget">
+        <h2 style="margin-bottom: 0px;">View.IsUsingDrawTarget</h2>
+        <i style="margin-bottom: 16px; display: block;">View.IsUsingDrawTarget()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetUseDrawTarget">
+        <h2 style="margin-bottom: 0px;">View.SetUseDrawTarget</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetUseDrawTarget()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_IsUsingSoftwareRenderer">
+        <h2 style="margin-bottom: 0px;">View.IsUsingSoftwareRenderer</h2>
+        <i style="margin-bottom: 16px; display: block;">View.IsUsingSoftwareRenderer()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetUseSoftwareRenderer">
+        <h2 style="margin-bottom: 0px;">View.SetUseSoftwareRenderer</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetUseSoftwareRenderer()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetUsePerspective">
+        <h2 style="margin-bottom: 0px;">View.SetUsePerspective</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetUsePerspective()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_IsEnabled">
+        <h2 style="margin-bottom: 0px;">View.IsEnabled</h2>
+        <i style="margin-bottom: 16px; display: block;">View.IsEnabled()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetEnabled">
+        <h2 style="margin-bottom: 0px;">View.SetEnabled</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetEnabled()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_SetFieldOfView">
+        <h2 style="margin-bottom: 0px;">View.SetFieldOfView</h2>
+        <i style="margin-bottom: 16px; display: block;">View.SetFieldOfView()</i>
+        <div></div>
+        </p>
+        <p id="Reference_View_GetCurrent">
+        <h2 style="margin-bottom: 0px;">View.GetCurrent</h2>
+        <i style="margin-bottom: 16px; display: block;">View.GetCurrent()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Window_SetSize">
+        <h2 style="margin-bottom: 0px;">Window.SetSize</h2>
+        <i style="margin-bottom: 16px; display: block;">Window.SetSize()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Window_SetFullscreen">
+        <h2 style="margin-bottom: 0px;">Window.SetFullscreen</h2>
+        <i style="margin-bottom: 16px; display: block;">Window.SetFullscreen()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Window_SetBorderless">
+        <h2 style="margin-bottom: 0px;">Window.SetBorderless</h2>
+        <i style="margin-bottom: 16px; display: block;">Window.SetBorderless()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Window_SetPosition">
+        <h2 style="margin-bottom: 0px;">Window.SetPosition</h2>
+        <i style="margin-bottom: 16px; display: block;">Window.SetPosition()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Window_SetPositionCentered">
+        <h2 style="margin-bottom: 0px;">Window.SetPositionCentered</h2>
+        <i style="margin-bottom: 16px; display: block;">Window.SetPositionCentered()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Window_SetTitle">
+        <h2 style="margin-bottom: 0px;">Window.SetTitle</h2>
+        <i style="margin-bottom: 16px; display: block;">Window.SetTitle()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Window_GetWidth">
+        <h2 style="margin-bottom: 0px;">Window.GetWidth</h2>
+        <i style="margin-bottom: 16px; display: block;">Window.GetWidth()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Window_GetHeight">
+        <h2 style="margin-bottom: 0px;">Window.GetHeight</h2>
+        <i style="margin-bottom: 16px; display: block;">Window.GetHeight()</i>
+        <div></div>
+        </p>
+        <p id="Reference_Window_GetFullscreen">
+        <h2 style="margin-bottom: 0px;">Window.GetFullscreen</h2>
+        <i style="margin-bottom: 16px; display: block;">Window.GetFullscreen()</i>
+        <div></div>
+        </p>
     </body>
 </html>

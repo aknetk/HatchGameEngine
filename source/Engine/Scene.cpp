@@ -827,7 +827,9 @@ PUBLIC STATIC void Scene::Render() {
                                     if (sourceTileCellY < 0) goto SKIP_TILE_ROW_DRAW;
                                     if (sourceTileCellY >= layer.Height) goto SKIP_TILE_ROW_DRAW;
                                 }
-                                sourceTileCellY = sourceTileCellY & layer.HeightMask;
+                                // sourceTileCellY = sourceTileCellY & layer.HeightMask;
+                                while (sourceTileCellY < 0) sourceTileCellY += layer.Height;
+                                while (sourceTileCellY >= layer.Height) sourceTileCellY -= layer.Height;
 
                                 // Draw row of tiles
                                 ix = (TileBaseX >> 4);

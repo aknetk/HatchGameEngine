@@ -29,7 +29,7 @@ public:
            size_t        Position();
            size_t        Length();
            size_t        ReadBytes(void* data, size_t n);
-           void*         ReadCompressed(void* out);
+           Uint32        ReadCompressed(void* out);
            size_t        WriteBytes(void* data, size_t n);
 };
 

@@ -191,6 +191,8 @@ struct ObjClass {
     Uint32     Hash;
     Table*     Methods;
     Uint8      Extended;
+    Uint32     ParentHash;
+    ObjClass*  Parent;
 };
 struct ObjInstance {
     Obj       Object;

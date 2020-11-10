@@ -90,6 +90,7 @@ public:
     int   ResolveEnum(Token* name);
     void  DeclareEnum();
     void  GetThis(bool canAssign);
+    void  GetSuper(bool canAssign);
     void  GetDot(bool canAssign);
     void  GetElement(bool canAssign);
     void GetGrouping(bool canAssign);

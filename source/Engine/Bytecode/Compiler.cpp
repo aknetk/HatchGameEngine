@@ -133,6 +133,7 @@ enum TokenTYPE {
     TOKEN_ENUM,
     TOKEN_THIS,
     TOKEN_WITH,
+    TOKEN_SUPER,
     TOKEN_BREAK,
     TOKEN_CLASS,
     TOKEN_WHILE,
@@ -382,12 +383,12 @@ PUBLIC VIRTUAL int   Compiler::GetKeywordType() {
                 switch (*(scanner.Start + 1)) {
                     // case 't': return CheckKeyword(2, 4, "ruct", TOKEN_STRUCT);
                     case 'u':
-                        // if (scanner.Current - scanner.Start > 2) {
-                        //     switch (*(scanner.Start + 2)) {
-                        //         case 'b': return CheckKeyword(3, 5, "class", TOKEN_SUBCLASS);
-                        //         case 'p': return CheckKeyword(3, 2, "er", TOKEN_SUPER);
-                        //     }
-                        // }
+                        if (scanner.Current - scanner.Start > 2) {
+                            switch (*(scanner.Start + 2)) {
+                                // case 'b': return CheckKeyword(3, 5, "class", TOKEN_SUBCLASS);
+                                case 'p': return CheckKeyword(3, 2, "er", TOKEN_SUPER);
+                            }
+                        }
                         break;
                     case 'w': return CheckKeyword(2, 4, "itch", TOKEN_SWITCH);
                 }
@@ -955,7 +956,9 @@ PUBLIC void  Compiler::DeclareEnum() {
     AddEnum(*name);
 }
 
+Token InstanceToken = Token { 0, NULL, 0, 0, 0 };
 PUBLIC void  Compiler::GetThis(bool canAssign) {
+    InstanceToken = parser.Previous;
     // if (currentClass == NULL) {
     //     Error("Cannot use 'this' outside of a class.");
     // }
@@ -963,7 +966,14 @@ PUBLIC void  Compiler::GetThis(bool canAssign) {
         GetVariable(false);
     // }
 }
+PUBLIC void  Compiler::GetSuper(bool canAssign) {
+    InstanceToken = parser.Previous;
+    EmitBytes(OP_GET_LOCAL, 0);
+}
 PUBLIC void  Compiler::GetDot(bool canAssign) {
+    Token instanceToken = InstanceToken;
+    InstanceToken.Type = -1;
+
     ConsumeToken(TOKEN_IDENTIFIER, "Expect property name after '.'.");
     // uint8_t name = IdentifierConstant(&parser.Previous);
     Token nameToken = parser.Previous;
@@ -1001,8 +1011,11 @@ PUBLIC void  Compiler::GetDot(bool canAssign) {
     else if (MatchToken(TOKEN_LEFT_PAREN)) {
         uint8_t argCount = GetArgumentList();
         EmitBytes(OP_INVOKE, argCount);
+
         // EmitByte(name);
         EmitStringHash(nameToken);
+        // For supers
+        EmitByte((instanceToken.Type == TOKEN_SUPER));
     }
     else {
         // EmitBytes(OP_GET_PROPERTY, name);
@@ -1940,8 +1953,6 @@ PUBLIC void Compiler::GetClassDeclaration() {
         ClassExtendedList.push_back(0);
     }
 
-    DefineVariableToken(className);
-
     // ClassCompiler classCompiler;
     // classCompiler.name = parser.Previous;
     // classCompiler.hasSuperclass = false;
@@ -1949,7 +1960,13 @@ PUBLIC void Compiler::GetClassDeclaration() {
     // currentClass = &classCompiler;
 
     if (MatchToken(TOKEN_LESS)) {
-        // ConsumeToken(TOKEN_IDENTIFIER, "Expect superclass name.");
+        ConsumeToken(TOKEN_IDENTIFIER, "Expect base class name.");
+        Token superName = parser.Previous;
+
+        EmitByte(OP_INHERIT);
+        EmitStringHash(superName);
+        // printf("super: %.*s (0x%08X)\n", superName.Length, superName.Start, GetHash(superName));
+
         //
         // if (IdentifiersEqual(&className, &parser.Previous)) {
         //     Error("A class cannot inherit from itself.");
@@ -1965,8 +1982,9 @@ PUBLIC void Compiler::GetClassDeclaration() {
         // DefineVariable(0);
         //
         // NamedVariable(className, false);
-        // EmitByte(OP_INHERIT);
     }
+
+    DefineVariableToken(className);
 
     ConsumeToken(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
 
@@ -2084,7 +2102,7 @@ PUBLIC STATIC void   Compiler::MakeRules() {
     Rules[TOKEN_ASSIGNMENT_BITWISE_OR] = ParseRule { NULL, NULL, NULL, PREC_NONE };
     // Keywords
     Rules[TOKEN_THIS] = ParseRule { &Compiler::GetThis, NULL, NULL, PREC_NONE };
-    // Rules[TOKEN_IF] = ParseRule { &Compiler::GetThis, NULL, NULL, PREC_NONE };
+    Rules[TOKEN_SUPER] = ParseRule { &Compiler::GetSuper, NULL, NULL, PREC_NONE };
     // Constants or whatever
     Rules[TOKEN_NULL] = ParseRule { &Compiler::GetLiteral, NULL, NULL, PREC_NONE };
     Rules[TOKEN_TRUE] = ParseRule { &Compiler::GetLiteral, NULL, NULL, PREC_NONE };
@@ -2715,7 +2733,7 @@ PUBLIC void          Compiler::Initialize(Compiler* enclosing, int scope, int ty
 
         // local = &Locals[LocalCount++];
         // local->Depth = ScopeDepth;
-        // local->Name.Start = (char*)"other";
+        // local->Name.Start = (char*)"super";
         // local->Name.Length = 5;
     }
     else {

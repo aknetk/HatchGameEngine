@@ -20,6 +20,7 @@ public:
     static void PrintValue(PrintBuffer* buffer, VMValue value);
     static void PrintValue(PrintBuffer* buffer, VMValue value, int indent);
     static void PrintObject(PrintBuffer* buffer, VMValue value, int indent);
+    static bool GetMethodFromClass(VMValue* value);
 };
 
 #endif /* ENGINE_BYTECODE_VALUES_H */

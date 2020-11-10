@@ -84,14 +84,14 @@ PUBLIC        size_t        MemoryStream::ReadBytes(void* data, size_t n) {
     pointer += n;
     return n;
 }
-PUBLIC        void*         MemoryStream::ReadCompressed(void* out) {
+PUBLIC        Uint32        MemoryStream::ReadCompressed(void* out) {
     Uint32 compressed_size = ReadUInt32() - 4;
     Uint32 uncompressed_size = ReadUInt32BE();
 
     ZLibStream::Decompress(out, uncompressed_size, pointer, compressed_size);
     pointer += compressed_size;
 
-    return out;
+    return uncompressed_size;
 }
 
 PUBLIC        size_t        MemoryStream::WriteBytes(void* data, size_t n) {

@@ -124,7 +124,7 @@ PUBLIC         char*   Stream::ReadHeaderedString() {
 
     return data;
 }
-PUBLIC VIRTUAL void*   Stream::ReadCompressed(void* out) {
+PUBLIC VIRTUAL Uint32  Stream::ReadCompressed(void* out) {
     Uint32 compressed_size = ReadUInt32() - 4;
     Uint32 uncompressed_size = ReadUInt32BE();
 
@@ -134,7 +134,7 @@ PUBLIC VIRTUAL void*   Stream::ReadCompressed(void* out) {
     ZLibStream::Decompress(out, uncompressed_size, buffer, compressed_size);
     Memory::Free(buffer);
 
-    return out;
+    return uncompressed_size;
 }
 
 PUBLIC VIRTUAL size_t  Stream::WriteBytes(void* data, size_t n) {

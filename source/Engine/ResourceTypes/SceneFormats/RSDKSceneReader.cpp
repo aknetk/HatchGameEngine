@@ -296,8 +296,10 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         if (layer.Name[0] == 'F' && layer.Name[1] == 'G')
             layer.Flags |= SceneLayer::FLAGS_COLLIDEABLE;
 
-        if (strcmp(layer.Name, "Move") == 0)
-            layer.Flags |= SceneLayer::FLAGS_COLLIDEABLE | SceneLayer::FLAGS_NO_REPEAT_X | SceneLayer::FLAGS_NO_REPEAT_Y;
+        if (strcmp(layer.Name, "Move") == 0) {
+            // layer.Flags |= SceneLayer::FLAGS_COLLIDEABLE | SceneLayer::FLAGS_NO_REPEAT_X | SceneLayer::FLAGS_NO_REPEAT_Y;
+            layer.Flags |= SceneLayer::FLAGS_NO_REPEAT_X | SceneLayer::FLAGS_NO_REPEAT_Y;
+        }
         // BUG:
         // Some kinda memory leak when FG High is not immediately after FG Low
 
@@ -319,8 +321,11 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
 
         Uint16* tileBoys = (Uint16*)malloc(sizeof(Uint16) * Width * Height);
 
-        r->ReadCompressed(layer.ScrollIndexes);
-        r->ReadCompressed(tileBoys);
+        Uint32 scrollIndexRead = r->ReadCompressed(layer.ScrollIndexes);
+        Uint32 tileBoysRead = r->ReadCompressed(tileBoys);
+
+        // printf("scrollIndexRead: size %d, read %d\n", 16 * layer.HeightData, scrollIndexRead);
+        // printf("tileboys: size %d, read %d\n", sizeof(Uint16) * Width * Height, tileBoysRead);
 
         int height16 = Height * 16;
         int splitCount, lastValue, lastY, sliceH;
@@ -374,9 +379,9 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
                 tileRow[x] |= (tileBoys[t] & 0x3000) << 16; // Collision A
                 t++;
             }
-            tileRow += (layer.WidthMask + 1);
+            tileRow += layer.WidthData;
         }
-        memcpy(layer.TilesBackup, layer.Tiles, sizeof(Uint32) * (layer.WidthMask + 1) * (layer.HeightMask + 1));
+        memcpy(layer.TilesBackup, layer.Tiles, layer.DataSize);
 
         // Sprite Flag? (Entity -> 0x53)
         // 0x1: Can flip
@@ -386,7 +391,11 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
 
         free(tileBoys);
 
-        Log::Print(Log::LOG_VERBOSE, "Layer %d (%s): Width (%d) Height (%d) DrawGroup (%d)", i, layer.Name, layer.Width, layer.Height, DrawGroup);
+        Log::Print(Log::LOG_VERBOSE, "Layer %d (%s): Width (%d) Height (%d)\n    ScrollInfoCount (%d) HeightMask (%d)\n    WidthInBits (%d) HeightInBits (%d)\n    WidthData (%d) HeightData (%d) DrawGroup (%d)",
+            i, layer.Name, layer.Width, layer.Height,
+            layer.ScrollInfoCount, layer.HeightMask,
+            layer.WidthInBits, layer.HeightInBits,
+            layer.WidthData, layer.HeightData,  DrawGroup);
 
         Scene::Layers[i] = layer;
     }

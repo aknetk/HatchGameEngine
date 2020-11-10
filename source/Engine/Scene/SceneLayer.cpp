@@ -94,8 +94,9 @@ PUBLIC         SceneLayer::SceneLayer(int w, int h) {
     Tiles = (Uint32*)Memory::TrackedCalloc("SceneLayer::Tiles", w * h, sizeof(Uint32));
     TilesBackup = (Uint32*)Memory::TrackedCalloc("SceneLayer::TilesBackup", w * h, sizeof(Uint32));
     // TileOffsetY = (Uint16*)Memory::Calloc(w, sizeof(Uint16));
-    Deform = (Sint8*)Memory::Malloc(h * 16 * sizeof(Sint8));
-    ScrollIndexes = (Uint8*)Memory::Calloc(h * 16, sizeof(Uint8));
+    Deform = (Sint8*)Memory::Malloc(h * 16 * sizeof(Sint8) * 2);
+    // NOTE: * 2 this to fix TMZ1 load bug
+    ScrollIndexes = (Uint8*)Memory::Calloc(h * 16 * 2, sizeof(Uint8));
     // memset(ScrollIndexes, 0xFF, h * 16 * sizeof(Uint8));
 }
 PUBLIC void    SceneLayer::Dispose() {

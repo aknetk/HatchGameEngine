@@ -37,7 +37,7 @@ public:
             char*   ReadString();
             Uint16* ReadUnicodeString();
             char*   ReadHeaderedString();
-    virtual void*   ReadCompressed(void* out);
+    virtual Uint32  ReadCompressed(void* out);
     virtual size_t  WriteBytes(void* data, size_t n);
             void    WriteByte(Uint8 data);
             void    WriteUInt16(Uint16 data);

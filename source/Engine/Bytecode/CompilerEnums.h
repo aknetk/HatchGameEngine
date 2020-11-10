@@ -1,8 +1,7 @@
 #ifndef ENGINE_COMPILER_ENUMS
 #define ENGINE_COMPILER_ENUMS
 
-class Token {
-public:
+struct Token {
     int   Type;
     char* Start;
     int   Length;

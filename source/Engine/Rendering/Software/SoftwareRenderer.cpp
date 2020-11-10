@@ -874,11 +874,11 @@ PUBLIC STATIC Uint32   SoftwareRenderer::GetWindowFlags() {
     return Graphics::Internal.GetWindowFlags();
 }
 PUBLIC STATIC void     SoftwareRenderer::SetGraphicsFunctions() {
-    for (int a = 0; a < 0x100; a++) {
-        for (int b = 0; b < 0x100; b++) {
-            MultTable[a << 8 | b] = (a * b) >> 8;
-            MultTableInv[a << 8 | b] = (a * (b ^ 0xFF)) >> 8;
-            MultSubTable[a << 8 | b] = (a * -b) >> 8;
+    for (int alpha = 0; alpha < 0x100; alpha++) {
+        for (int color = 0; color < 0x100; color++) {
+            MultTable[alpha << 8 | color] = (alpha * color) >> 8;
+            MultTableInv[alpha << 8 | color] = (alpha * (color ^ 0xFF)) >> 8;
+            MultSubTable[alpha << 8 | color] = (alpha * -(color ^ 0xFF)) >> 8;
         }
     }
 
@@ -1208,9 +1208,12 @@ inline void PixelSetSubtract(Uint32* src, Uint32* dst, int opacity, int* multTab
         register Uint32 col = *src;
         col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
 
-        Sint32 R = (multSubTableAt[(col >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
-        Sint32 G = (multSubTableAt[(col >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
-        Sint32 B = (multSubTableAt[(col) & 0xFF]) + (*dst & 0x0000FF);
+        // Sint32 R = (multSubTableAt[(col >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
+        // Sint32 G = (multSubTableAt[(col >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
+        // Sint32 B = (multSubTableAt[(col) & 0xFF]) + (*dst & 0x0000FF);
+        Sint32 R = -(col & 0xFF0000) + (*dst & 0xFF0000);
+        Sint32 G = -(col & 0x00FF00) + (*dst & 0x00FF00);
+        Sint32 B = -(col & 0x0000FF) + (*dst & 0x0000FF);
         if (R < 0) R = 0;
         if (G < 0) G = 0;
         if (B < 0) B = 0;
@@ -1250,6 +1253,9 @@ inline void PixelNoFiltSetSubtract(Uint32* src, Uint32* dst, int opacity, int* m
     Sint32 R = (multSubTableAt[(*src >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
     Sint32 G = (multSubTableAt[(*src >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
     Sint32 B = (multSubTableAt[(*src) & 0xFF]) + (*dst & 0x0000FF);
+    // Sint32 R = (*dst & 0xFF0000) - (*src & 0xFF0000);
+    // Sint32 G = (*dst & 0x00FF00) - (*src & 0x00FF00);
+    // Sint32 B = (*dst & 0x0000FF) - (*src & 0x0000FF);
     if (R < 0) R = 0;
     if (G < 0) G = 0;
     if (B < 0) B = 0;
@@ -1264,6 +1270,10 @@ inline void PixelNoFiltSetMatchNotEqual(Uint32* src, Uint32* dst, int opacity, i
     if (*dst != SoftwareRenderer::CompareColor) {
         *dst = *src;
     }
+}
+inline void PixelNoFiltSetFilter(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
+    register Uint32 col = *dst;
+    *dst = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
 }
 
 struct Contour {
@@ -1622,6 +1632,8 @@ PUBLIC STATIC void     SoftwareRenderer::FillCircle(float x, float y, float rad)
 
     int blendFlag = BlendFlag;
     int opacity = Alpha;
+    if (FilterTable != &FilterColor[0])
+        blendFlag = 6;
     if (Alpha == 0 && blendFlag != 0)
         return;
     if (Alpha != 0 && blendFlag == 0)
@@ -1721,6 +1733,9 @@ PUBLIC STATIC void     SoftwareRenderer::FillCircle(float x, float y, float rad)
         case 5:
             DRAW_CIRCLE(PixelNoFiltSetMatchNotEqual);
             break;
+        case 6:
+            DRAW_CIRCLE(PixelNoFiltSetFilter);
+            break;
     }
 
     #undef DRAW_CIRCLE
@@ -1777,6 +1792,8 @@ PUBLIC STATIC void     SoftwareRenderer::FillRectangle(float x, float y, float w
 
     int blendFlag = BlendFlag;
     int opacity = Alpha;
+    if (FilterTable != &FilterColor[0])
+        blendFlag = 6;
     if (Alpha == 0 && blendFlag != 0)
         return;
     if (Alpha != 0 && blendFlag == 0)
@@ -1816,6 +1833,9 @@ PUBLIC STATIC void     SoftwareRenderer::FillRectangle(float x, float y, float w
             break;
         case 5:
             DRAW_RECT(PixelNoFiltSetMatchNotEqual);
+            break;
+        case 6:
+            DRAW_RECT(PixelNoFiltSetFilter);
             break;
     }
 

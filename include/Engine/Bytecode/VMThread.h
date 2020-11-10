@@ -67,7 +67,7 @@ public:
     bool    CallValue(VMValue callee, int argCount);
     bool    Call(ObjFunction* function, int argCount);
     bool    InvokeFromClass(ObjClass* klass, Uint32 hash, int argCount);
-    bool    Invoke(Uint32 hash, int argCount);
+    bool    Invoke(Uint32 hash, int argCount, bool isSuper);
     VMValue Values_Multiply();
     VMValue Values_Division();
     VMValue Values_Modulo();
