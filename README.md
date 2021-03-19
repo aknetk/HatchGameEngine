@@ -14,6 +14,7 @@ Required:
 - Android Studio (for Android building)
 - Xcode 12 (for iOS building)
 - devKitPro (for Nintendo Switch homebrew building)
+
 Optional:
 - FFmpeg (for video playback, currently broken)
 - CURL (for simple HTTP network, currently broken)
