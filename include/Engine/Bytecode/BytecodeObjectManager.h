@@ -64,6 +64,7 @@ public:
     static void    LinkExtensions();
     static void    RunFromIBC(MemoryStream* stream, size_t size);
     static void    SetCurrentObjectHash(Uint32 hash);
+    static bool    CallFunction(char* functionName);
     static Entity* SpawnFunction();
     static void*   GetSpawnFunction(Uint32 objectNameHash, const char* objectName);
 };

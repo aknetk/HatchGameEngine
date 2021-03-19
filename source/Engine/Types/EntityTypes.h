@@ -86,5 +86,12 @@ namespace CollideSide {
     };
 };
 
+struct Sensor {
+    int X;
+    int Y;
+    int Collided;
+    int Angle;
+};
+
 
 #endif /* ENTITYTYPES_H */

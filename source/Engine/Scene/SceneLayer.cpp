@@ -1,6 +1,7 @@
 #if INTERFACE
 
 #include <Engine/Includes/Standard.h>
+#include <Engine/Bytecode/Types.h>
 #include <Engine/Scene/ScrollingInfo.h>
 #include <Engine/Scene/ScrollingIndex.h>
 
@@ -30,10 +31,18 @@ public:
     Uint32*        TilesBackup = NULL;
     Uint16*        TileOffsetY = NULL;
 
-    Sint8*         Deform = NULL;
+    int            DeformOffsetA = 0;
+    int            DeformOffsetB = 0;
+    int            DeformSetA[MAX_DEFORM_LINES];
+    int            DeformSetB[MAX_DEFORM_LINES];
+    int            DeformSplitLine = 0;
 
     int            Flags = 0x0000;
     int            DrawGroup = 0;
+    Uint8          DrawBehavior = 0;
+
+    bool           UsingCustomScanlineFunction = false;
+    ObjFunction    CustomScanlineFunction;
 
     int            ScrollInfoCount = 0;
     ScrollingInfo* ScrollInfos = NULL;
@@ -55,6 +64,7 @@ public:
 
 #include <Engine/Scene/SceneLayer.h>
 #include <Engine/Diagnostics/Memory.h>
+#include <Engine/Math/Math.h>
 
 PUBLIC         SceneLayer::SceneLayer() {
 
@@ -63,25 +73,13 @@ PUBLIC         SceneLayer::SceneLayer(int w, int h) {
     Width = w;
     Height = h;
 
-    w--;
-    w |= w >> 1;
-    w |= w >> 2;
-    w |= w >> 4;
-    w |= w >> 8;
-    w |= w >> 16;
-    w++;
+    w = Math::CeilPOT(w);
     WidthMask = w - 1;
     WidthInBits = 0;
     for (int f = w >> 1; f > 0; f >>= 1)
         WidthInBits++;
 
-    h--;
-    h |= h >> 1;
-    h |= h >> 2;
-    h |= h >> 4;
-    h |= h >> 8;
-    h |= h >> 16;
-    h++;
+    h = Math::CeilPOT(h);
     HeightMask = h - 1;
     HeightInBits = 0;
     for (int f = h >> 1; f > 0; f >>= 1)
@@ -91,12 +89,16 @@ PUBLIC         SceneLayer::SceneLayer(int w, int h) {
     HeightData = h;
     DataSize = w * h * sizeof(Uint32);
 
+    int scrollIndexCount = WidthData;
+    if (scrollIndexCount < HeightData)
+        scrollIndexCount = HeightData;
+
+    memset(DeformSetA, 0, sizeof(DeformSetA));
+    memset(DeformSetB, 0, sizeof(DeformSetB));
+
     Tiles = (Uint32*)Memory::TrackedCalloc("SceneLayer::Tiles", w * h, sizeof(Uint32));
     TilesBackup = (Uint32*)Memory::TrackedCalloc("SceneLayer::TilesBackup", w * h, sizeof(Uint32));
-    // TileOffsetY = (Uint16*)Memory::Calloc(w, sizeof(Uint16));
-    Deform = (Sint8*)Memory::Malloc(h * 16 * sizeof(Sint8) * 2);
-    // NOTE: * 2 this to fix TMZ1 load bug
-    ScrollIndexes = (Uint8*)Memory::Calloc(h * 16 * 2, sizeof(Uint8));
+    ScrollIndexes = (Uint8*)Memory::Calloc(scrollIndexCount * 16, sizeof(Uint8));
     // memset(ScrollIndexes, 0xFF, h * 16 * sizeof(Uint8));
 }
 PUBLIC void    SceneLayer::Dispose() {
@@ -105,10 +107,7 @@ PUBLIC void    SceneLayer::Dispose() {
     if (ScrollInfosSplitIndexes)
         Memory::Free(ScrollInfosSplitIndexes);
 
-    // BUG: Somehow Tiles & TilesBackup can be NULL?
     Memory::Free(Tiles);
     Memory::Free(TilesBackup);
-    // Memory::Free(TileOffsetY);
-    Memory::Free(Deform);
     Memory::Free(ScrollIndexes);
 }

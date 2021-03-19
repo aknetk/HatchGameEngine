@@ -29,7 +29,7 @@ static Obj*       AllocateObject(size_t size, ObjType type) {
 
     return object;
 }
-static ObjString* AllocateString(char* chars, int length, Uint32 hash) {
+static ObjString* AllocateString(char* chars, size_t length, Uint32 hash) {
     ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
     Memory::Track(string, "NewString");
     string->Length = length;
@@ -41,7 +41,7 @@ static ObjString* AllocateString(char* chars, int length, Uint32 hash) {
     return string;
 }
 
-ObjString*        TakeString(char* chars, int length) {
+ObjString*        TakeString(char* chars, size_t length) {
     Uint32 hash = FNV1A::EncryptData(chars, length);
     // ObjString* interned = AS_STRING(BytecodeObjectManager::Strings->Get(hash));
     // if (interned != NULL) {
@@ -51,7 +51,7 @@ ObjString*        TakeString(char* chars, int length) {
     // }
     return AllocateString(chars, length, hash);
 }
-ObjString*        CopyString(const char* chars, int length) {
+ObjString*        CopyString(const char* chars, size_t length) {
     Uint32 hash = FNV1A::EncryptData(chars, length);
     // if (BytecodeObjectManager::Strings->Exists(hash)) {
     //     ObjString* interned = AS_STRING(BytecodeObjectManager::Strings->Get(hash));
@@ -67,7 +67,7 @@ ObjString*        CopyString(const char* chars, int length) {
 
     return AllocateString(heapChars, length, hash);
 }
-ObjString*        AllocString(int length) {
+ObjString*        AllocString(size_t length) {
     char* heapChars = ALLOCATE(char, length + 1);
     heapChars[length] = '\0';
 
@@ -249,5 +249,5 @@ int               ChunkAddConstant(Chunk* chunk, VMValue value) {
     // BytecodeObjectManager::Push(value);
     chunk->Constants->push_back(value);
     // BytecodeObjectManager::Pop();
-    return chunk->Constants->size() - 1;
+    return (int)chunk->Constants->size() - 1;
 }

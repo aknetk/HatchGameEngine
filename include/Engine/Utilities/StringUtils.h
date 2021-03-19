@@ -13,7 +13,8 @@
 
 class StringUtils {
 public:
-    static bool WildcardMatch(const char* first, const char* second);
+    static bool  WildcardMatch(const char* first, const char* second);
+    static char* StrCaseStr(const char* haystack, const char* needle);
 };
 
 #endif /* ENGINE_UTILITIES_STRINGUTILS_H */

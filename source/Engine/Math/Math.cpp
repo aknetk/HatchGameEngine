@@ -11,13 +11,15 @@ public:
 PUBLIC STATIC void Math::Init() {
     srand(time(NULL));
 }
-
 // Trig functions
 PUBLIC STATIC float Math::Cos(float n) {
     return std::cos(n);
 }
 PUBLIC STATIC float Math::Sin(float n) {
     return std::sin(n);
+}
+PUBLIC STATIC float Math::Tan(float n) {
+    return std::tan(n);
 }
 PUBLIC STATIC float Math::Asin(float x) {
     return std::asin(x);
@@ -38,6 +40,17 @@ PUBLIC STATIC float Math::Distance(float x1, float y1, float x2, float y2) {
 PUBLIC STATIC float Math::Hypot(float a, float b, float c) {
     return (float)sqrt(a * a + b * b + c * c);
 }
+// help
+PUBLIC STATIC int   Math::CeilPOT(int n) {
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n++;
+    return n;
+}
 // Deterministic functions
 PUBLIC STATIC float Math::Abs(float n) {
     return std::abs(n);
@@ -54,7 +67,6 @@ PUBLIC STATIC float Math::Clamp(float v, float a, float b) {
 PUBLIC STATIC float Math::Sign(float a) {
     return a < 0.0f ? -1.0f : a > 0.0f ? 1.0f : 0.0f;
 }
-
 // Random functions (non-inclusive)
 PUBLIC STATIC float Math::Random() {
     return rand() / (float)RAND_MAX;
@@ -65,3 +77,4 @@ PUBLIC STATIC float Math::RandomMax(float max) {
 PUBLIC STATIC float Math::RandomRange(float min, float max) {
     return (Math::Random() * (max - min)) + min;
 }
+//

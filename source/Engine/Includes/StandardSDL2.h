@@ -2,27 +2,21 @@
 #define STANDARDSDL2_H
 
 #if WIN32
+    // SDL2 includes
     #include <SDL2/SDL.h>
-    #include <SDL2/SDL_syswm.h>
-
-    #include <GL/glew.h>
 #elif MACOSX
+    // SDL2 includes
     #include <SDL.h>
-    #include <OpenGL/gl3.h>
-    #include <OpenGL/gl3ext.h>
 #elif SWITCH
+    // SDL2 includes
     #include <SDL2/SDL.h>
-
-    #include <GLES2/gl2.h>
-    #include <SDL2/SDL_opengl.h>
-    #include <GLES2/gl2ext.h>
-
+    // Important includes
     #include <switch.h>
 #elif IOS
-    #include <SDL.h>
-    #include <OpenGLES/ES3/gl.h>
-    #include <OpenGLES/ES3/glext.h>
+    // SDL2 includes
+    #include "SDL.h"
 #elif ANDROID
+    // SDL2 includes
     #include <SDL.h>
     #include <SDL_opengles2.h>
 #endif

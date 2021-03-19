@@ -1,9 +1,11 @@
 #if INTERFACE
 class ScrollingInfo {
 public:
-    int RelativeX;
-    int ConstantX;
-    char HeatWaveEnabled;
+    int RelativeParallax;
+    int ConstantParallax;
+    char CanDeform;
     char Byte2;
+    int Position;
+    int Offset;
 };
 #endif

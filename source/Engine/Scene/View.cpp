@@ -15,6 +15,7 @@ public:
     float      RotateZ = 0.0f;
     float      Width = 1.0f;
     float      Height = 1.0f;
+    int        Stride = 1;
     float      FOV = 45.0f;
     float      NearPlane = 0.1f;
     float      FarPlane = 1000.f;

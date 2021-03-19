@@ -20,6 +20,8 @@ public:
     READ_ACCESS = 0,
     WRITE_ACCESS = 1,
     APPEND_ACCESS = 2,
+    SAVEGAME_ACCESS = 16,
+    PREFERENCES_ACCESS = 32,
     }; 
 
     static FileStream* New(const char* filename, Uint32 access);

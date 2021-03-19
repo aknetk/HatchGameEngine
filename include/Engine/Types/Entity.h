@@ -78,8 +78,10 @@ public:
     bool CollideWithObject(Entity* other);
     int  SolidCollideWithObject(Entity* other, int flag);
     bool TopSolidCollideWithObject(Entity* other, int flag);
+    void ApplyPhysics();
     virtual void GameStart();
     virtual void Create(int flag);
+    virtual void Setup();
     virtual void UpdateEarly();
     virtual void Update();
     virtual void UpdateLate();

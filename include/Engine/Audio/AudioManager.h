@@ -53,6 +53,7 @@ public:
     static void   FadeMusic(double seconds);
     static void   Lock();
     static void   Unlock();
+    static bool   AudioIsPlaying(int channel);
     static void   AudioUnpause(int channel);
     static void   AudioPause(int channel);
     static void   AudioStop(int channel);

@@ -20,6 +20,7 @@ public:
     static bool     MatchToken(Token tok, const char* string);
     static float    TokenToNumber(Token tok);
     static XMLNode* Parse();
+    static XMLNode* ParseFromStream(Stream* streamSrc);
     static XMLNode* ParseFromResource(const char* filename);
     static void     Free(XMLNode* root);
 };

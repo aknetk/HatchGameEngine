@@ -6,7 +6,6 @@
 #include <Engine/ResourceTypes/ISprite.h>
 #include <Engine/ResourceTypes/Image.h>
 #include <Engine/ResourceTypes/ISound.h>
-#include <Engine/Rendering/GL/GLShader.h>
 #include <Engine/Rendering/Texture.h>
 #include <Engine/ResourceTypes/IModel.h>
 
@@ -25,7 +24,7 @@ struct ResourceType {
         ISound*   AsSound;
         ISound*   AsMusic;
         void*     AsFont;
-        GLShader* AsShader;
+        void*     AsShader;
         IModel*   AsModel;
         MediaBag* AsMedia;
     };

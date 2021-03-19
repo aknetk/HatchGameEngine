@@ -11,6 +11,7 @@
 class ScrollingInfo;
 
 #include <Engine/Includes/Standard.h>
+#include <Engine/Bytecode/Types.h>
 #include <Engine/Scene/ScrollingInfo.h>
 #include <Engine/Scene/ScrollingIndex.h>
 
@@ -36,9 +37,16 @@ public:
     Uint32*        Tiles = NULL;
     Uint32*        TilesBackup = NULL;
     Uint16*        TileOffsetY = NULL;
-    Sint8*         Deform = NULL;
+    int            DeformOffsetA = 0;
+    int            DeformOffsetB = 0;
+    int            DeformSetA[MAX_DEFORM_LINES];
+    int            DeformSetB[MAX_DEFORM_LINES];
+    int            DeformSplitLine = 0;
     int            Flags = 0x0000;
     int            DrawGroup = 0;
+    Uint8          DrawBehavior = 0;
+    bool           UsingCustomScanlineFunction = false;
+    ObjFunction    CustomScanlineFunction;
     int            ScrollInfoCount = 0;
     ScrollingInfo* ScrollInfos = NULL;
     int            ScrollInfosSplitIndexesCount = 0;

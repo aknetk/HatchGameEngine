@@ -306,6 +306,13 @@ PUBLIC STATIC void   AudioManager::Unlock() {
     SDL_UnlockAudioDevice(Device); //// SDL_UnlockAudio();
 }
 
+PUBLIC STATIC bool   AudioManager::AudioIsPlaying(int channel) {
+    bool isPlaying = false;
+    AudioManager::Lock();
+    isPlaying = !SoundArray[channel].Stopped && !SoundArray[channel].Paused;
+    AudioManager::Unlock();
+    return isPlaying;
+}
 PUBLIC STATIC void   AudioManager::AudioUnpause(int channel) {
     AudioManager::Lock();
     SoundArray[channel].Paused = false;

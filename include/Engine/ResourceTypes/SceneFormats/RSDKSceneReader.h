@@ -15,6 +15,8 @@ class RSDKSceneReader {
 public:
     static bool             Initialized;
 
+    static void StageConfig_GetColors(const char* filename);
+    static void GameConfig_GetColors(const char* filename);
     static bool Read(const char* filename, const char* parentFolder);
 };
 

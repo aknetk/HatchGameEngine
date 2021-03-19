@@ -286,7 +286,7 @@ void     ConsumeToken(int type, const char* message) {
     exit(-1);
 }
 void     PrintToken(Token token) {
-    printf("%.*s", token.Length, token.Start);
+    printf("%.*s", (int)token.Length, token.Start);
     printf("\n");
     // exit(0);
 }
@@ -470,21 +470,13 @@ PUBLIC STATIC XMLNode* XMLParser::Parse() {
 
     return XMLRoot;
 }
-PUBLIC STATIC XMLNode* XMLParser::ParseFromResource(const char* filename) {
-    ResourceStream* res = ResourceStream::New(filename);
-    if (!res) {
-        Log::Print(Log::LOG_ERROR, "Could not open ResourceStream from \"%s\"", filename);
-        return NULL;
-    }
-
-    MemoryStream* stream = MemoryStream::New(res);
+PUBLIC STATIC XMLNode* XMLParser::ParseFromStream(Stream* streamSrc) {
+    MemoryStream* stream = MemoryStream::New(streamSrc);
+    if (!stream) return NULL;
     // NOTE: This fixes the XML overread bug (unterminated string caused bad access/read)
     stream->SeekEnd(0);
     stream->WriteByte(0);
     stream->Seek(0);
-
-    res->Close();
-    if (!stream) return NULL;
 
     scanner.Line = 1;
     scanner.Start = (char*)stream->pointer;
@@ -498,6 +490,17 @@ PUBLIC STATIC XMLNode* XMLParser::ParseFromResource(const char* filename) {
     XMLNode* xml = XMLParser::Parse();
     xml->base_stream = stream;
     return xml;
+}
+PUBLIC STATIC XMLNode* XMLParser::ParseFromResource(const char* filename) {
+    ResourceStream* res = ResourceStream::New(filename);
+    if (!res) {
+        Log::Print(Log::LOG_ERROR, "Could not open ResourceStream from \"%s\"", filename);
+        return NULL;
+    }
+
+    XMLNode* node = XMLParser::ParseFromStream(res);
+    res->Close();
+    return node;
 }
 PUBLIC STATIC void     XMLParser::Free(XMLNode* root) {
     root->attributes.Dispose();

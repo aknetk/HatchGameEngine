@@ -15,6 +15,7 @@
 class ResourceManager {
 public:
     static bool      UsingDataFolder;
+    static bool      UsingModPack;
 
     static void   PrefixResourcePath(char* out, const char* path);
     static void   PrefixParentPath(char* out, const char* path);

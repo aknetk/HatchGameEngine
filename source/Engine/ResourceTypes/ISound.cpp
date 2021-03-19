@@ -29,6 +29,7 @@ public:
 // Import sound formats
 #include <Engine/ResourceTypes/SoundFormats/OGG.h>
 #include <Engine/ResourceTypes/SoundFormats/WAV.h>
+#include <Engine/Utilities/StringUtils.h>
 
 #define FIRST_LOAD_SAMPLE_BOOST 4
 
@@ -47,19 +48,25 @@ PUBLIC void ISound::Load(const char* filename, bool streamFromFile) {
     double ticks = Clock::GetTicks();
 
     // .OGG format
-    if (strstr(Filename, ".ogg")) {
+    if (StringUtils::StrCaseStr(Filename, ".ogg")) {
         ticks = Clock::GetTicks();
 
         SoundData = OGG::Load(Filename);
+        if (!SoundData)
+            return;
+
         Format = SoundData->InputFormat;
 
         Log::Print(Log::LOG_VERBOSE, "OGG load took %.3f ms", Clock::GetTicks() - ticks);
     }
     // .WAV format
-    else if (strstr(Filename, ".wav")) {
+    else if (StringUtils::StrCaseStr(Filename, ".wav")) {
         ticks = Clock::GetTicks();
 
         SoundData = WAV::Load(Filename);
+        if (!SoundData)
+            return;
+
         Format = SoundData->InputFormat;
 
         Log::Print(Log::LOG_VERBOSE, "WAV load took %.3f ms", Clock::GetTicks() - ticks);
@@ -110,6 +117,9 @@ PUBLIC void ISound::Load(const char* filename, bool streamFromFile) {
 }
 
 PUBLIC int  ISound::RequestSamples(int samples, bool loop, int sample_to_loop_to) {
+    if (!SoundData)
+        return AudioManager::REQUEST_ERROR;
+
     int bytesPerSample = ((AudioManager::DeviceFormat.format & 0xFF) >> 3) * AudioManager::DeviceFormat.channels;
 
     // If the format is the same, no need to convert.
@@ -171,6 +181,9 @@ PUBLIC int  ISound::RequestSamples(int samples, bool loop, int sample_to_loop_to
     return received_bytes;
 }
 PUBLIC void ISound::Seek(int samples) {
+    if (!SoundData)
+        return;
+
     SoundData->SeekSample(samples);
 }
 

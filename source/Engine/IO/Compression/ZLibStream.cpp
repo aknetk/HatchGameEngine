@@ -32,8 +32,8 @@ PUBLIC STATIC ZLibStream* ZLibStream::New(Stream* other_stream, uint32_t mode) {
     stream->mode = mode;
 
     if (mode == CompressionMode::DECOMPRESS) {
-        uint32_t inSize = other_stream->Length() - 4;
-        void*    inMem = Memory::Malloc(inSize);
+        size_t inSize = other_stream->Length() - 4;
+        void*  inMem = Memory::Malloc(inSize);
         stream->memory_size = other_stream->ReadUInt32BE();
         stream->memory = Memory::Malloc(stream->memory_size);
 

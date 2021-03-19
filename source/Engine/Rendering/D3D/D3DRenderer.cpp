@@ -2,7 +2,6 @@
 #include <Engine/Includes/Standard.h>
 #include <Engine/Includes/StandardSDL2.h>
 #include <Engine/ResourceTypes/ISprite.h>
-#include <Engine/Rendering/D3D/D3DShader.h>
 #include <Engine/Rendering/Texture.h>
 #include <Engine/Includes/HashMap.h>
 
@@ -13,13 +12,15 @@ public:
 };
 #endif
 
+#ifdef USING_DIRECT3D
+
 #include <Engine/Rendering/D3D/D3DRenderer.h>
 
 #include <Engine/Application.h>
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Rendering/Texture.h>
 
-#ifdef WIN32
+#include <SDL2/SDL_syswm.h>
 
 #define NUM_SHADERS 3
 #define D3D_DEBUG_INFO
@@ -55,11 +56,6 @@ struct D3D_TextureData {
     IDirect3DTexture9* Staging;
     D3DTEXTUREFILTERTYPE ScaleMode;
 };
-
-D3DShader*         D3D_CurrentShader = NULL;
-D3DShader*         D3D_SelectedShader = NULL;
-D3DShader*         D3D_ShaderShape = NULL;
-D3DShader*         D3D_ShaderTexturedShape = NULL;
 
 int                D3D_DefaultFramebuffer;
 Vertex*            D3D_BufferCircleFill;
@@ -830,7 +826,7 @@ PUBLIC STATIC void     D3DRenderer::Init() {
     D3D_MakeShaders();
     D3D_MakeShapeBuffers();
 
-    UseShader(D3D_ShaderShape);
+    // UseShader(D3D_ShaderShape);
 
     Graphics::MaxTextureWidth = texture_max_w;
     Graphics::MaxTextureHeight = texture_max_h;
@@ -1097,10 +1093,10 @@ PUBLIC STATIC void     D3DRenderer::UpdateProjectionMatrix() {
 
 // Shader-related functions
 PUBLIC STATIC void     D3DRenderer::UseShader(void* shader) {
-    if (D3D_CurrentShader != (D3DShader*)shader) {
-        D3D_CurrentShader = (D3DShader*)shader;
-        D3D_CurrentShader->Use();
-    }
+    // if (D3D_CurrentShader != (D3DShader*)shader) {
+    //     D3D_CurrentShader = (D3DShader*)shader;
+    //     D3D_CurrentShader->Use();
+    // }
 }
 PUBLIC STATIC void     D3DRenderer::SetUniformF(int location, int count, float* values) {
     // switch (count) {
@@ -1226,7 +1222,7 @@ PUBLIC STATIC void     D3DRenderer::SetLineWidth(float n) {
 
 // Primitive drawing functions
 PUBLIC STATIC void     D3DRenderer::StrokeLine(float x1, float y1, float x2, float y2) {
-    UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderShape);
+    // UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderShape);
 
     Graphics::Save();
         // glUniformMatrix4fv(D3D_CurrentShader->LocModelViewMatrix, 1, false, Graphics::ModelViewMatrix.top()->Values);
@@ -1254,7 +1250,7 @@ PUBLIC STATIC void     D3DRenderer::StrokeCircle(float x, float y, float rad) {
     D3D_EndDrawShape(D3D_BufferCircleStroke, D3DPT_LINESTRIP, 360);
 }
 PUBLIC STATIC void     D3DRenderer::StrokeEllipse(float x, float y, float w, float h) {
-    UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderShape);
+    // UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderShape);
 
     Graphics::Save();
     Graphics::Translate(x + w / 2, y + h / 2, 0.0f);
@@ -1332,7 +1328,7 @@ PUBLIC STATIC void     D3DRenderer::FillRectangle(float x, float y, float w, flo
 
 // Texture drawing functions
 PUBLIC STATIC void     D3DRenderer::DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h) {
-    UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderTexturedShape);
+    // UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderTexturedShape);
     if (sx < 0)
         sx = 0.0, sy = 0.0, sw = texture->Width, sh = texture->Height;
     D3D_DrawTextureRaw(texture, sx, sy, sw, sh, x, y, w, h, false, texture->Access != SDL_TEXTUREACCESS_TARGET);
@@ -1346,7 +1342,7 @@ PUBLIC STATIC void     D3DRenderer::DrawSprite(ISprite* sprite, int animation, i
 	float fY = flipY ? -1.0 : 1.0;
 	// DrawTexture(sprite->Spritesheets[animframe.SheetNumber], animframe.X, animframe.Y, animframe.W, animframe.H, x + fX * animframe.OffX, y + fY * animframe.OffY, fX * animframe.W, fY * animframe.H);
 
-    UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderTexturedShape);
+    // UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderTexturedShape);
     Graphics::Save();
     Graphics::Translate(x, y, 0.0f);
     Graphics::Scale(fX, fY, 1.0f);
@@ -1369,7 +1365,7 @@ PUBLIC STATIC void     D3DRenderer::DrawSpritePart(ISprite* sprite, int animatio
     if (sh >= animframe.Height - sy)
         sh  = animframe.Height - sy;
 
-    UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderTexturedShape);
+    // UseShader(D3D_SelectedShader ? D3D_SelectedShader : D3D_ShaderTexturedShape);
     Graphics::Save();
     Graphics::Translate(x, y, 0.0f);
     Graphics::Scale(fX, fY, 1.0f);

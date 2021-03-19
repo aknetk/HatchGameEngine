@@ -24,11 +24,11 @@ PUBLIC STATIC Uint32 FNV1A::EncryptString(const char* message) {
     return FNV1A::EncryptString((char*)message);
 }
 
-PUBLIC STATIC Uint32 FNV1A::EncryptData(const void* data, Uint32 size) {
+PUBLIC STATIC Uint32 FNV1A::EncryptData(const void* data, size_t size) {
     return FNV1A::EncryptData(data, size, 0x811C9DC5U);
 }
-PUBLIC STATIC Uint32 FNV1A::EncryptData(const void* data, Uint32 size, Uint32 hash) {
-    int i = size;
+PUBLIC STATIC Uint32 FNV1A::EncryptData(const void* data, size_t size, Uint32 hash) {
+    size_t i = size;
     char* message = (char*)data;
     while (i) {
         hash ^= *message;

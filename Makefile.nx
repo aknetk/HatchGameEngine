@@ -43,7 +43,7 @@ CFLAGS	:=	-g -Wall -O3 -ffunction-sections \
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__ \
  			`freetype-config --cflags` \
-			-DSWITCH -DUSING_LIBAV -DOGG_MUSIC -DDEBUG -DTARGET_NAME=\"$(TARGETNAME)\"
+			-DSWITCH -DOGG_MUSIC -DDEBUG -DTARGET_NAME=\"$(TARGETNAME)\"
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++14 -Wno-unused-variable
 
@@ -57,12 +57,18 @@ LIBS		+= 	-lpng -ljpeg -lwebp -lvorbisidec -logg `freetype-config --libs`
 # OpenGL Libraries
 LIBS		+= 	-lglad -lGLESv2 -lEGL -lglapi -ldrm_nouveau
 # FFmpeg Libraries
-LIBS 		+=	-lm -lstdc++ -lc -lnosys -lavformat -lavcodec -lopus -lopusfile -lswresample -lswscale -lavutil
-LIBS        +=  -lvpx
+# LIBS 		+=	-lm -lstdc++ -lc -lnosys -lavformat -lavcodec -lopus -lopusfile -lswresample -lswscale -lavutil
+# LIBS        +=  -lvpx
 # Networking Libraries
-LIBS 		+=	-lcurl -lmbedtls -lmbedx509 -lmbedcrypto
+# LIBS 		+=	-lcurl -lmbedtls -lmbedx509 -lmbedcrypto
 # Standard Libraries
 LIBS		+=  -lz -lbz2 -lnx
+
+# CFLAGS	 +=	-DUSING_LIBAV
+# CFLAGS	 +=	-DUSING_CURL
+CFLAGS	 +=	-DUSING_OPENGL
+CFLAGS	 +=	-DUSING_VM_DISPATCH_TABLE
+CFLAGS	 += -DUSING_LIBPNG -DUSING_LIBPNG_HEADER=<libpng16/png.h>
 
 LIBDIRS	:= $(PORTLIBS) $(LIBNX)
 

@@ -11,6 +11,7 @@
 
 #include <Engine/Includes/Standard.h>
 #include <Engine/Includes/StandardSDL2.h>
+#include <Engine/Rendering/GL/Includes.h>
 #include <Engine/ResourceTypes/ISprite.h>
 #include <Engine/Math/Matrix4x4.h>
 #include <Engine/Rendering/GL/GLShader.h>
@@ -26,6 +27,7 @@ public:
     static GLShader*          ShaderTexturedShape;
     static GLShader*          ShaderTexturedShapeYUV;
     static GLint              DefaultFramebuffer;
+    static GLint              DefaultRenderbuffer;
     static GLuint             BufferCircleFill;
     static GLuint             BufferCircleStroke;
     static GLuint             BufferSquareFill;

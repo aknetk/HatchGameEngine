@@ -18,3 +18,8 @@ PUBLIC STATIC void RemoteDebug::Init() {
 
     RemoteDebug::Initialized = true;
 }
+
+PUBLIC STATIC bool RemoteDebug::AwaitResponse() {
+    // To be used inside a for loop while awaiting a response from the remote debugger
+    return true;
+}

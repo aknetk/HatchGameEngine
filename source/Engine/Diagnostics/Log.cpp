@@ -22,6 +22,15 @@ public:
     #include <windows.h>
 #endif
 
+#ifdef MACOSX
+extern "C" {
+    #include <Engine/Platforms/MacOS/Filesystem.h>
+}
+#include <Engine/Filesystem/Directory.h>
+#include <Engine/Includes/StandardSDL2.h>
+#include <unistd.h>
+#endif
+
 #ifdef ANDROID
     #include <android/log.h>
 #endif
@@ -32,18 +41,27 @@ int         Log::LogLevel = -1;
 bool        Log::WriteToFile = false;
 const char* Log::LogFilename = TARGET_NAME ".log";
 
-bool Log_Initialized = false;
+bool        Log_Initialized = false;
 
 PUBLIC STATIC void Log::Init() {
     if (Log_Initialized)
         return;
 
-    #if WIN32 || MACOSX_APP_BUNDLE || SWITCH
-    WriteToFile = true;
+    // Set environment
+    #ifdef MACOSX
+        char appSupportPath[1024];
+        int isBundle = MacOS_GetApplicationSupportDirectory(appSupportPath, 512);
+        if (isBundle) {
+            strcat(appSupportPath, "/" TARGET_NAME);
+            if (!Directory::Exists(appSupportPath)) {
+                Directory::Create(appSupportPath);
+            }
+            chdir(appSupportPath);
+        }
     #endif
 
-    #if MACOSX_APP_BUNDLE
-    // LogFilename = "/Users/Justin/" TARGET_NAME ".log";
+    #if WIN32 || MACOSX || LINUX || SWITCH
+    WriteToFile = true;
     #endif
 
     FILE* f = NULL;
@@ -70,14 +88,14 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
     if (sev < Log::LogLevel) return;
 
     int ColorCode = 0;
-    char string[512];
+    char string[1024];
     const char* severityText = NULL;
 
     va_list args;
     va_start(args, format);
-    vsnprintf(string, 512, format, args);
+    vsnprintf(string, 1024, format, args);
     va_end(args);
-    string[511] = 0;
+    string[1023] = 0;
 
     #if ANDROID
     switch (sev) {
@@ -116,7 +134,7 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
         case     LOG_ERROR: ColorCode = 91; break;
         case LOG_IMPORTANT: ColorCode = 96; break;
     }
-    if (!WriteToFile)
+    // if (!WriteToFile)
         printf("\x1b[%d;1m", ColorCode);
     #endif
 
@@ -146,8 +164,8 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
         SendMessage(edit, EM_REPLACESEL, TRUE, (LPARAM)"\r\n");
         //*/
     #elif MACOSX || LINUX
-        if (!WriteToFile)
-            printf("%s", "\x1b[0m");
+        // if (!WriteToFile)
+            printf("\x1b[0m");
     #endif
 
     printf("%s\n", string);

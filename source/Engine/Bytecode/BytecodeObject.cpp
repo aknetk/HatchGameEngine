@@ -10,7 +10,6 @@ public:
 #endif
 
 #include <Engine/Bytecode/BytecodeObject.h>
-#include <Engine/Bytecode/BytecodeObjectManager.h>
 #include <Engine/Bytecode/Compiler.h>
 #include <Engine/Bytecode/StandardLibrary.h>
 #include <Engine/Scene.h>
@@ -21,6 +20,7 @@ public:
 
 bool   SavedHashes = false;
 Uint32 Hash_GameStart = 0;
+Uint32 Hash_Setup = 0;
 Uint32 Hash_Create = 0;
 Uint32 Hash_Update = 0;
 Uint32 Hash_UpdateLate = 0;
@@ -37,6 +37,7 @@ PUBLIC void BytecodeObject::Link(ObjInstance* instance) {
 
     if (!SavedHashes) {
         Hash_GameStart = Murmur::EncryptString("GameStart");
+        Hash_Setup = Murmur::EncryptString("Setup");
         Hash_Create = Murmur::EncryptString("Create");
         Hash_Update = Murmur::EncryptString("Update");
         Hash_UpdateLate = Murmur::EncryptString("UpdateLate");
@@ -110,7 +111,7 @@ PUBLIC bool BytecodeObject::RunFunction(Uint32 hash) {
     thread->Push(OBJECT_VAL(Instance));
     thread->RunInvoke(hash, 0 /* arity */);
 
-    int stackChange = thread->StackTop - StackTop;
+    int stackChange = (int)(thread->StackTop - StackTop);
     if (stackChange) {
         // printf("BytecodeObject::RunFunction(%s) Stack Change: %d\n", f, stackChange);
         // BytecodeObjectManager::PrintStack();
@@ -147,7 +148,7 @@ PUBLIC bool BytecodeObject::RunCreateFunction(int flag) {
         thread->RunInvoke(hash, 0);
     }
 
-    int stackChange = thread->StackTop - StackTop;
+    int stackChange = (int)(thread->StackTop - StackTop);
     if (stackChange) {
         // printf("BytecodeObject::RunFunction(%s) Stack Change: %d\n", f, stackChange);
         // BytecodeObjectManager::PrintStack();
@@ -166,6 +167,12 @@ PUBLIC void BytecodeObject::GameStart() {
     if (!Instance) return;
 
     RunFunction(Hash_GameStart);
+}
+PUBLIC void BytecodeObject::Setup() {
+    if (!Active) return;
+    if (!Instance) return;
+
+    // RunFunction(Hash_Setup);
 }
 PUBLIC void BytecodeObject::Create(int flag) {
     if (!Instance) return;
@@ -303,11 +310,11 @@ PUBLIC STATIC VMValue BytecodeObject::VM_SetAnimation(int argCount, VMValue* arg
     }
 
     ISprite* sprite = Scene::SpriteList[self->Sprite]->AsSprite;
-    if (!(animation > -1 && (size_t)animation < sprite->Animations.size())) {
+    if (!(animation >= 0 && (size_t)animation < sprite->Animations.size())) {
         BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Animation %d is not in bounds of sprite.", animation);
         return NULL_VAL;
     }
-    if (!(frame > -1 && (size_t)frame < sprite->Animations[animation].Frames.size())) {
+    if (!(frame >= 0 && (size_t)frame < sprite->Animations[animation].Frames.size())) {
         BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Frame %d is not in bounds of animation %d.", frame, animation);
         return NULL_VAL;
     }
@@ -319,6 +326,12 @@ PUBLIC STATIC VMValue BytecodeObject::VM_ResetAnimation(int argCount, VMValue* a
     Entity* self = (Entity*)AS_INSTANCE(args[0])->EntityPtr;
     int animation = AS_INTEGER(args[1]);
     int frame = AS_INTEGER(args[2]);
+
+	int spriteIns = self->Sprite;
+	if (!(spriteIns > -1 && (size_t)spriteIns < Scene::SpriteList.size())) {
+		BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Sprite %d does not exist!", spriteIns);
+		return NULL_VAL;
+	}
 
     ISprite* sprite = Scene::SpriteList[self->Sprite]->AsSprite;
     if (!(animation >= 0 && (Uint32)animation < sprite->Animations.size())) {
@@ -491,6 +504,12 @@ PUBLIC STATIC VMValue BytecodeObject::VM_TopSolidCollideWithObject(int argCount,
     BytecodeObject* other = (BytecodeObject*)AS_INSTANCE(args[1])->EntityPtr;
     int flag = StandardLibrary::GetInteger(args, 2);
     return INTEGER_VAL(self->TopSolidCollideWithObject(other, flag));
+}
+
+PUBLIC STATIC VMValue BytecodeObject::VM_ApplyPhysics(int argCount, VMValue* args, Uint32 threadID) {
+    Entity* self = (Entity*)AS_INSTANCE(args[0])->EntityPtr;
+    self->ApplyPhysics();
+    return NULL_VAL;
 }
 
 PUBLIC STATIC VMValue BytecodeObject::VM_PropertyExists(int argCount, VMValue* args, Uint32 threadID) {

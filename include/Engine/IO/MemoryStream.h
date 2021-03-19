@@ -30,6 +30,7 @@ public:
            size_t        Length();
            size_t        ReadBytes(void* data, size_t n);
            Uint32        ReadCompressed(void* out);
+           Uint32        ReadCompressed(void* out, size_t outSz);
            size_t        WriteBytes(void* data, size_t n);
 };
 

@@ -23,6 +23,7 @@ public:
 #include <Engine/Diagnostics/Memory.h>
 #include <Engine/IO/FileStream.h>
 #include <Engine/IO/ResourceStream.h>
+#include <Engine/Utilities/StringUtils.h>
 
 PUBLIC Image::Image(const char* filename) {
     strncpy(Filename, filename, 255);
@@ -108,7 +109,7 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
             return NULL;
         }
     }
-    else if (strstr(altered, ".gif")) {
+    else if (StringUtils::StrCaseStr(altered, ".gif")) {
         Clock::Start();
         GIF* gif = GIF::Load(altered);
         if (gif) {

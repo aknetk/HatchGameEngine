@@ -24,6 +24,8 @@
     #undef __on_failure
 #endif
 
+using namespace std;
+
 enum class Platforms {
     Default,
     Windows,
@@ -37,15 +39,26 @@ enum class Platforms {
     iOS,
 };
 
-#define Uint8 uint8_t
-#define Uint16 uint16_t
-#define Uint32 uint32_t
-#define Uint64 uint64_t
-#define Sint8 int8_t
-#define Sint16 int16_t
-#define Sint32 int32_t
-#define Sint64 int64_t
+#ifndef __OBJC__
 
-using namespace std;
+#endif
 
+#define MAX_PALETTE_COUNT 32
+#define MAX_DEFORM_LINES 0x400
+#define MAX_FRAMEBUFFER_HEIGHT 4096
+
+typedef uint8_t Uint8;
+typedef uint16_t Uint16;
+typedef uint32_t Uint32;
+typedef uint64_t Uint64;
+typedef int8_t Sint8;
+typedef int16_t Sint16;
+typedef int32_t Sint32;
+typedef int64_t Sint64;
+
+#ifdef IOS
+#define NEW_STRUCT_MACRO(n) (n)
+#else
+#define NEW_STRUCT_MACRO(n) n
+#endif
 #endif // STANDARDLIBS_H

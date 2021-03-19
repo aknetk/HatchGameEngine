@@ -28,6 +28,7 @@ public:
     Local           Locals[0x100];
     int             LocalCount = 0;
     int             ScopeDepth = 0;
+    int             WithDepth = 0;
     vector<Uint32>  ClassHashList;
     vector<Uint32>  ClassExtendedList;
 

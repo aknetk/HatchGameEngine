@@ -18,14 +18,13 @@ PUBLIC STATIC Uint32 Murmur::EncryptString(const char* message) {
     return Murmur::EncryptString((char*)message);
 }
 
-PUBLIC STATIC Uint32 Murmur::EncryptData(const void* data, Uint32 size) {
+PUBLIC STATIC Uint32 Murmur::EncryptData(const void* data, size_t size) {
     return Murmur::EncryptData(data, size, 0xDEADBEEF);
 }
-PUBLIC STATIC Uint32 Murmur::EncryptData(const void* key, Uint32 size, Uint32 hash) {
-    int i = size;
-	const unsigned int m = 0x5bd1e995;
+PUBLIC STATIC Uint32 Murmur::EncryptData(const void* key, size_t size, Uint32 hash) {
+    const unsigned int m = 0x5bd1e995;
     const int r = 24;
-	unsigned int h = hash ^ size;
+	unsigned int h = hash ^ (Uint32)size;
 
 	const unsigned char* data = (const unsigned char*)key;
 

@@ -57,6 +57,7 @@ int  ChunkAddConstant(Chunk* chunk, VMValue value);
 
 const char* GetTypeString(VMValue value);
 
+#define IS_NULL(value)  ((value).Type == VAL_NULL)
 #define IS_INTEGER(value)  ((value).Type == VAL_INTEGER)
 #define IS_DECIMAL(value)  ((value).Type == VAL_DECIMAL)
 #define IS_OBJECT(value)   ((value).Type == VAL_OBJECT)
@@ -156,7 +157,7 @@ struct Obj {
 };
 struct ObjString {
     Obj    Object;
-    int    Length;
+    size_t Length;
     char*  Chars;
     Uint32 Hash;
 };
@@ -215,9 +216,9 @@ struct ObjMap {
     HashMap<char*>*   Keys;
 };
 
-ObjString*         TakeString(char* chars, int length);
-ObjString*         CopyString(const char* chars, int length);
-ObjString*         AllocString(int length);
+ObjString*         TakeString(char* chars, size_t length);
+ObjString*         CopyString(const char* chars, size_t length);
+ObjString*         AllocString(size_t length);
 char*              HeapCopyString(const char* str, size_t len);
 ObjFunction*       NewFunction();
 ObjNative*         NewNative(NativeFn function);
@@ -235,12 +236,24 @@ static inline bool IsObjectType(VMValue value, ObjType type) {
     return IS_OBJECT(value) && AS_OBJECT(value)->Type == type;
 }
 
+struct WithIter {
+    void* entity;
+    void* entityNext;
+    int   index;
+    void* list;
+};
+
 struct CallFrame {
     ObjFunction* Function;
     Uint8*       IP;
     Uint8*       IPLast;
     Uint8*       IPStart;
     VMValue*     Slots;
+
+    VMValue   WithReceiverStack[16];
+    VMValue*  WithReceiverStackTop = WithReceiverStack;
+    WithIter  WithIteratorStack[16];
+    WithIter* WithIteratorStackTop = WithIteratorStack;
 };
 enum   OpCode {
     OP_ERROR = 0,
@@ -318,6 +331,7 @@ enum   OpCode {
     //
     OP_SWITCH_TABLE,
     OP_FAILSAFE,
+    OP_EVENT,
 
     OP_SYNC = 0xFF,
 };

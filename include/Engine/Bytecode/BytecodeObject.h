@@ -21,6 +21,7 @@ public:
     bool RunFunction(Uint32 hash);
     bool RunCreateFunction(int flag);
     void GameStart();
+    void Setup();
     void Create(int flag);
     void UpdateEarly();
     void Update();
@@ -42,6 +43,7 @@ public:
     static VMValue VM_CollideWithObject(int argCount, VMValue* args, Uint32 threadID);
     static VMValue VM_SolidCollideWithObject(int argCount, VMValue* args, Uint32 threadID);
     static VMValue VM_TopSolidCollideWithObject(int argCount, VMValue* args, Uint32 threadID);
+    static VMValue VM_ApplyPhysics(int argCount, VMValue* args, Uint32 threadID);
     static VMValue VM_PropertyExists(int argCount, VMValue* args, Uint32 threadID);
     static VMValue VM_PropertyGet(int argCount, VMValue* args, Uint32 threadID);
 };

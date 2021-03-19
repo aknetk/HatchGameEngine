@@ -1,6 +1,7 @@
 #if INTERFACE
 #include <Engine/Includes/Standard.h>
 #include <Engine/Includes/StandardSDL2.h>
+#include <Engine/Rendering/GL/Includes.h>
 #include <Engine/ResourceTypes/ISprite.h>
 #include <Engine/Math/Matrix4x4.h>
 #include <Engine/Rendering/GL/GLShader.h>
@@ -18,12 +19,15 @@ public:
     static GLShader*          ShaderTexturedShapeYUV;
 
     static GLint              DefaultFramebuffer;
+    static GLint              DefaultRenderbuffer;
 
     static GLuint             BufferCircleFill;
     static GLuint             BufferCircleStroke;
     static GLuint             BufferSquareFill;
 };
 #endif
+
+#ifdef USING_OPENGL
 
 #include <Engine/Rendering/GL/GLRenderer.h>
 
@@ -41,6 +45,7 @@ GLShader*          GLRenderer::ShaderTexturedShape = NULL;
 GLShader*          GLRenderer::ShaderTexturedShapeYUV = NULL;
 
 GLint              GLRenderer::DefaultFramebuffer;
+GLint              GLRenderer::DefaultRenderbuffer;
 
 GLuint             GLRenderer::BufferCircleFill;
 GLuint             GLRenderer::BufferCircleStroke;
@@ -49,6 +54,10 @@ GLuint             GLRenderer::BufferSquareFill;
 bool               UseDepthTesting = true;
 float              RetinaScale = 1.0;
 Texture*           GL_LastTexture = NULL;
+
+// TODO:
+// RetinaScale should belong to the texture (specifically TARGET_TEXTURES),
+// and drawing functions should scale basded on the current render target.
 
 struct   GL_Vec3 {
     float x;
@@ -233,8 +242,9 @@ void   GL_Predraw(Texture* texture) {
         glEnableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord); CHECK_GL();
     }
     else {
-        if (GLRenderer::CurrentShader == GLRenderer::ShaderTexturedShape || GLRenderer::CurrentShader == GLRenderer::ShaderTexturedShapeYUV)
+        if (GLRenderer::CurrentShader == GLRenderer::ShaderTexturedShape || GLRenderer::CurrentShader == GLRenderer::ShaderTexturedShapeYUV) {
             glDisableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord); CHECK_GL();
+        }
 
         GLRenderer::UseShader(GLRenderer::ShaderShape);
     }
@@ -367,61 +377,71 @@ PUBLIC STATIC void     GLRenderer::Init() {
 
     Log::Print(Log::LOG_INFO, "Renderer: OpenGL");
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2); CHECK_GL();
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1); CHECK_GL();
 
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); CHECK_GL();
 
     #ifdef GL_SUPPORTS_MULTISAMPLING
     if (Graphics::MultisamplingEnabled) {
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, Graphics::MultisamplingEnabled);
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1); CHECK_GL();
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, Graphics::MultisamplingEnabled); CHECK_GL();
     }
     #endif
 
-    Context = SDL_GL_CreateContext(Application::Window);
+	if (Application::Platform == Platforms::iOS) {
+		SDL_GL_SetAttribute(SDL_GL_RETAINED_BACKING, 0); CHECK_GL();
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0); CHECK_GL();
+	}
+
+    Context = SDL_GL_CreateContext(Application::Window); CHECK_GL();
     if (!Context) {
-        Log::Print(Log::LOG_ERROR, "Could not create OpenGL context: %s", SDL_GetError());
+        Log::Print(Log::LOG_ERROR, "Could not create OpenGL context: %s", SDL_GetError()); CHECK_GL();
         exit(0);
     }
 
     #ifdef WIN32
     glewExperimental = GL_TRUE;
-    GLenum res = glewInit();
+    GLenum res = glewInit(); CHECK_GL();
     if (res != GLEW_OK) {
-        Log::Print(Log::LOG_ERROR, "Could not create GLEW context: %s", glewGetErrorString(res));
+        Log::Print(Log::LOG_ERROR, "Could not create GLEW context: %s", glewGetErrorString(res)); CHECK_GL();
         exit(0);
     }
     #endif
 
     if (Graphics::VsyncEnabled) {
         if (SDL_GL_SetSwapInterval(-1) < 0) {
+			CHECK_GL();
             if (SDL_GL_SetSwapInterval(1) < 0) {
+				CHECK_GL();
                 Log::Print(Log::LOG_WARN, "Could not enable V-Sync: %s", SDL_GetError());
+				CHECK_GL();
                 Graphics::VsyncEnabled = false;
             }
         }
     }
+    CHECK_GL();
 
     int max, w, h, ww, wh;
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max); CHECK_GL();
 
     Graphics::MaxTextureWidth = max;
     Graphics::MaxTextureHeight = max;
 
-    SDL_GL_GetDrawableSize(Application::Window, &w, &h);
+    SDL_GL_GetDrawableSize(Application::Window, &w, &h); CHECK_GL();
     SDL_GetWindowSize(Application::Window, &ww, &wh);
 
     RetinaScale = 1.0;
     if (h > wh)
-        RetinaScale = 2.0;
+        RetinaScale = h / wh;
 
-    Log::Print(Log::LOG_INFO, "OpenGL Version: %s", glGetString(GL_VERSION));
-    Log::Print(Log::LOG_INFO, "GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
-    Log::Print(Log::LOG_INFO, "Graphics Card: %s %s", glGetString(GL_VENDOR), glGetString(GL_RENDERER));
+    Log::Print(Log::LOG_INFO, "OpenGL Version: %s", glGetString(GL_VERSION)); CHECK_GL();
+    Log::Print(Log::LOG_INFO, "GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION)); CHECK_GL();
+    Log::Print(Log::LOG_INFO, "Graphics Card: %s %s", glGetString(GL_VENDOR), glGetString(GL_RENDERER)); CHECK_GL();
     Log::Print(Log::LOG_INFO, "Drawable Size: %d x %d", w, h);
 
-    if (Application::Platform == Platforms::Android) {
+    if (Application::Platform == Platforms::iOS ||
+		Application::Platform == Platforms::Android) {
         UseDepthTesting = false;
     }
 
@@ -456,12 +476,20 @@ PUBLIC STATIC void     GLRenderer::Init() {
     glEnableVertexAttribArray(GLRenderer::CurrentShader->LocPosition); CHECK_GL();
 
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &DefaultFramebuffer); CHECK_GL();
+    #ifdef GL_SUPPORTS_RENDERBUFFER
+    glGetIntegerv(GL_RENDERBUFFER_BINDING, &DefaultRenderbuffer); CHECK_GL();
+    #endif
+
+    Log::Print(Log::LOG_INFO, "Default Framebuffer: %d", DefaultFramebuffer);
+    Log::Print(Log::LOG_INFO, "Default Renderbuffer: %d", DefaultRenderbuffer);
+
+    glClearColor(0.0, 0.0, 0.0, 0.0); CHECK_GL();
 }
 PUBLIC STATIC Uint32   GLRenderer::GetWindowFlags() {
     #ifdef GL_SUPPORTS_MULTISAMPLING
     if (Graphics::MultisamplingEnabled) {
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, Graphics::MultisamplingEnabled);
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1); CHECK_GL();
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, Graphics::MultisamplingEnabled); CHECK_GL();
     }
     #endif
 
@@ -523,14 +551,14 @@ PUBLIC STATIC void     GLRenderer::SetGraphicsFunctions() {
     Graphics::Internal.MakeFrameBufferID = GLRenderer::MakeFrameBufferID;
 }
 PUBLIC STATIC void     GLRenderer::Dispose() {
-    glDeleteBuffers(1, &BufferCircleFill);
-    glDeleteBuffers(1, &BufferCircleStroke);
-    glDeleteBuffers(1, &BufferSquareFill);
+    glDeleteBuffers(1, &BufferCircleFill); CHECK_GL();
+    glDeleteBuffers(1, &BufferCircleStroke); CHECK_GL();
+    glDeleteBuffers(1, &BufferSquareFill); CHECK_GL();
 
     ShaderShape->Dispose(); delete ShaderShape;
     ShaderTexturedShape->Dispose(); delete ShaderTexturedShape;
 
-    SDL_GL_DeleteContext(Context);
+    SDL_GL_DeleteContext(Context); CHECK_GL();
 }
 
 // Texture management functions
@@ -607,7 +635,8 @@ PUBLIC STATIC Texture* GLRenderer::CreateTexture(Uint32 format, Uint32 access, U
     // Set target
     switch (textureData->TextureTarget) {
         case GL_TEXTURE_2D:
-            glTexImage2D(textureData->TextureTarget, 0, textureData->TextureStorageFormat, width, height, 0, textureData->PixelDataFormat, textureData->PixelDataType, texture->Pixels); CHECK_GL();
+            // glTexImage2D(textureData->TextureTarget, 0, textureData->TextureStorageFormat, width, height, 0, textureData->PixelDataFormat, textureData->PixelDataType, texture->Pixels); CHECK_GL();
+			glTexImage2D(textureData->TextureTarget, 0, textureData->TextureStorageFormat, width, height, 0, textureData->PixelDataFormat, textureData->PixelDataType, 0); CHECK_GL();
             break;
         {
         #ifdef GL_SUPPORTS_MULTISAMPLING
@@ -721,17 +750,17 @@ PUBLIC STATIC int      GLRenderer::UpdateTextureYUV(Texture* texture, SDL_Rect* 
     inputPixelsW = (inputPixelsW + 1) / 2;
     inputPixelsH = (inputPixelsH + 1) / 2;
 
-    glBindTexture(textureData->TextureTarget, texture->Format != SDL_PIXELFORMAT_YV12 ? textureData->TextureV : textureData->TextureU);
+    glBindTexture(textureData->TextureTarget, texture->Format != SDL_PIXELFORMAT_YV12 ? textureData->TextureV : textureData->TextureU); CHECK_GL();
 
     glTexSubImage2D(textureData->TextureTarget, 0,
         inputPixelsX, inputPixelsY, inputPixelsW, inputPixelsH,
-        textureData->PixelDataFormat, textureData->PixelDataType, pixelsU);
+        textureData->PixelDataFormat, textureData->PixelDataType, pixelsU); CHECK_GL();
 
-    glBindTexture(textureData->TextureTarget, texture->Format != SDL_PIXELFORMAT_YV12 ? textureData->TextureU : textureData->TextureV);
+    glBindTexture(textureData->TextureTarget, texture->Format != SDL_PIXELFORMAT_YV12 ? textureData->TextureU : textureData->TextureV); CHECK_GL();
 
     glTexSubImage2D(textureData->TextureTarget, 0,
         inputPixelsX, inputPixelsY, inputPixelsW, inputPixelsH,
-        textureData->PixelDataFormat, textureData->PixelDataType, pixelsV);
+        textureData->PixelDataFormat, textureData->PixelDataType, pixelsV); CHECK_GL();
     return 0;
 }
 PUBLIC STATIC void     GLRenderer::UnlockTexture(Texture* texture) {
@@ -765,7 +794,7 @@ PUBLIC STATIC void     GLRenderer::SetRenderTarget(Texture* texture) {
         glBindFramebuffer(GL_FRAMEBUFFER, DefaultFramebuffer); CHECK_GL();
 
         #ifdef GL_SUPPORTS_RENDERBUFFER
-        glBindRenderbuffer(GL_RENDERBUFFER, 0); CHECK_GL();
+        glBindRenderbuffer(GL_RENDERBUFFER, DefaultRenderbuffer); CHECK_GL();
         #endif
     }
     else {
@@ -787,6 +816,7 @@ PUBLIC STATIC void     GLRenderer::SetRenderTarget(Texture* texture) {
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             Log::Print(Log::LOG_ERROR, "glFramebufferTexture2D() failed");
         }
+        CHECK_GL();
     }
 }
 PUBLIC STATIC void     GLRenderer::UpdateWindowSize(int width, int height) {
@@ -882,7 +912,6 @@ PUBLIC STATIC void     GLRenderer::SetUniformTexture(Texture* texture, int unifo
 
 // These guys
 PUBLIC STATIC void     GLRenderer::Clear() {
-    glClearColor(0.0, 0.0, 0.0, 0.0); CHECK_GL();
     if (UseDepthTesting) {
         #ifdef GL_ES
         glClearDepthf(1.0f); CHECK_GL();
@@ -896,7 +925,7 @@ PUBLIC STATIC void     GLRenderer::Clear() {
     }
 }
 PUBLIC STATIC void     GLRenderer::Present() {
-    SDL_GL_SwapWindow(Application::Window);
+	SDL_GL_SwapWindow(Application::Window); CHECK_GL();
 }
 
 // Draw mode setting functions
@@ -932,9 +961,9 @@ PUBLIC STATIC void     GLRenderer::StrokeCircle(float x, float y, float rad) {
     Graphics::Scale(rad, rad, 1.0f);
         GL_Predraw(NULL);
 
-        glBindBuffer(GL_ARRAY_BUFFER, BufferCircleStroke);
-        glVertexAttribPointer(CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glDrawArrays(GL_LINE_STRIP, 0, 361);
+        glBindBuffer(GL_ARRAY_BUFFER, BufferCircleStroke); CHECK_GL();
+        glVertexAttribPointer(CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, 0, 0); CHECK_GL();
+        glDrawArrays(GL_LINE_STRIP, 0, 361); CHECK_GL();
     Graphics::Restore();
 }
 PUBLIC STATIC void     GLRenderer::StrokeEllipse(float x, float y, float w, float h) {
@@ -943,9 +972,9 @@ PUBLIC STATIC void     GLRenderer::StrokeEllipse(float x, float y, float w, floa
     Graphics::Scale(w / 2, h / 2, 1.0f);
         GL_Predraw(NULL);
 
-        glBindBuffer(GL_ARRAY_BUFFER, BufferCircleStroke);
-        glVertexAttribPointer(CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glDrawArrays(GL_LINE_STRIP, 0, 361);
+        glBindBuffer(GL_ARRAY_BUFFER, BufferCircleStroke); CHECK_GL();
+        glVertexAttribPointer(CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, 0, 0); CHECK_GL();
+        glDrawArrays(GL_LINE_STRIP, 0, 361); CHECK_GL();
     Graphics::Restore();
 }
 PUBLIC STATIC void     GLRenderer::StrokeRectangle(float x, float y, float w, float h) {
@@ -967,9 +996,9 @@ PUBLIC STATIC void     GLRenderer::FillCircle(float x, float y, float rad) {
     Graphics::Scale(rad, rad, 1.0f);
         GL_Predraw(NULL);
 
-        glBindBuffer(GL_ARRAY_BUFFER, BufferCircleFill);
-        glVertexAttribPointer(CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 362);
+        glBindBuffer(GL_ARRAY_BUFFER, BufferCircleFill); CHECK_GL();
+        glVertexAttribPointer(CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, 0, 0); CHECK_GL();
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 362); CHECK_GL();
     Graphics::Restore();
 
     #ifdef GL_SUPPORTS_SMOOTHING
@@ -990,9 +1019,9 @@ PUBLIC STATIC void     GLRenderer::FillEllipse(float x, float y, float w, float 
     Graphics::Scale(w / 2, h / 2, 1.0f);
         GL_Predraw(NULL);
 
-        glBindBuffer(GL_ARRAY_BUFFER, BufferCircleFill);
-        glVertexAttribPointer(CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 362);
+        glBindBuffer(GL_ARRAY_BUFFER, BufferCircleFill); CHECK_GL();
+        glVertexAttribPointer(CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, 0, 0); CHECK_GL();
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 362); CHECK_GL();
     Graphics::Restore();
 
     #ifdef GL_SUPPORTS_SMOOTHING
@@ -1014,9 +1043,9 @@ PUBLIC STATIC void     GLRenderer::FillTriangle(float x1, float y1, float x2, fl
     v[2] = GL_Vec2 { x3, y3 };
 
     GL_Predraw(NULL);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glVertexAttribPointer(CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, v);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindBuffer(GL_ARRAY_BUFFER, 0); CHECK_GL();
+    glVertexAttribPointer(CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, v); CHECK_GL();
+    glDrawArrays(GL_TRIANGLES, 0, 3); CHECK_GL();
 
     #ifdef GL_SUPPORTS_SMOOTHING
         if (Graphics::SmoothFill) {
@@ -1041,12 +1070,12 @@ PUBLIC STATIC void     GLRenderer::FillRectangle(float x, float y, float w, floa
         v[1] = GL_Vec2 { x + w, y };
         v[2] = GL_Vec2 { x, y + h };
         v[3] = GL_Vec2 { x + w, y + h };
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, v);
-        // glBindBuffer(GL_ARRAY_BUFFER, BufferSquareFill);
-        // glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0); CHECK_GL();
+        glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, v); CHECK_GL();
+        // glBindBuffer(GL_ARRAY_BUFFER, BufferSquareFill); CHECK_GL();
+        // glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 2, GL_FLOAT, GL_FALSE, 0, 0); CHECK_GL();
 
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); CHECK_GL();
     Graphics::Restore();
 
     #ifdef GL_SUPPORTS_SMOOTHING
@@ -1058,9 +1087,9 @@ PUBLIC STATIC void     GLRenderer::FillRectangle(float x, float y, float w, floa
 PUBLIC STATIC Uint32   GLRenderer::CreateTexturedShapeBuffer(float* data, int vertexCount) {
     // x, y, z, u, v
     Uint32 bufferID;
-    glGenBuffers(1, &bufferID);
-    glBindBuffer(GL_ARRAY_BUFFER, bufferID);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertexCount * 5, data, GL_STATIC_DRAW);
+    glGenBuffers(1, &bufferID); CHECK_GL();
+    glBindBuffer(GL_ARRAY_BUFFER, bufferID); CHECK_GL();
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertexCount * 5, data, GL_STATIC_DRAW); CHECK_GL();
     return bufferID;
 }
 PUBLIC STATIC void     GLRenderer::DrawTexturedShapeBuffer(Texture* texture, Uint32 bufferID, int vertexCount) {
@@ -1068,16 +1097,20 @@ PUBLIC STATIC void     GLRenderer::DrawTexturedShapeBuffer(Texture* texture, Uin
 
     // glEnableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
 
-        glBindBuffer(GL_ARRAY_BUFFER, bufferID);
-        glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (GLvoid*)0);
-        glVertexAttribPointer(GLRenderer::CurrentShader->LocTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (GLvoid*)12);
-        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+        glBindBuffer(GL_ARRAY_BUFFER, bufferID); CHECK_GL();
+        glVertexAttribPointer(GLRenderer::CurrentShader->LocPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (GLvoid*)0); CHECK_GL();
+        glVertexAttribPointer(GLRenderer::CurrentShader->LocTexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (GLvoid*)12); CHECK_GL();
+        glDrawArrays(GL_TRIANGLES, 0, vertexCount); CHECK_GL();
 
     // glDisableVertexAttribArray(GLRenderer::CurrentShader->LocTexCoord);
 }
 
 // Texture drawing functions
 PUBLIC STATIC void     GLRenderer::DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h) {
+    x *= RetinaScale;
+    y *= RetinaScale;
+    w *= RetinaScale;
+    h *= RetinaScale;
     GL_DrawTexture(texture, sx, sy, sw, sh, x, y, w, h);
 }
 PUBLIC STATIC void     GLRenderer::DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation) {
@@ -1164,7 +1197,9 @@ PUBLIC STATIC void     GLRenderer::MakeFrameBufferID(ISprite* sprite, AnimFrame*
         vert[3] = GL_AnimFrameVert { ffX1, ffY1, ffU1, ffV1 };
         vert += 4;
     }
-    glGenBuffers(1, (GLuint*)&frame->ID);
-    glBindBuffer(GL_ARRAY_BUFFER, frame->ID);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glGenBuffers(1, (GLuint*)&frame->ID); CHECK_GL();
+    glBindBuffer(GL_ARRAY_BUFFER, frame->ID); CHECK_GL();
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); CHECK_GL();
 }
+
+#endif /* USING_OPENGL */

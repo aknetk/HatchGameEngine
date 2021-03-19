@@ -192,7 +192,7 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
     stream->ReadBytes(magicGIF, 3);
     if (memcmp(magicGIF, "GIF", 3) != 0) {
         magicGIF[3] = 0;
-        Log::Print(Log::LOG_ERROR, "Invalid GIF file! Found \"%s\", expected \"GIF\"!", magicGIF);
+        Log::Print(Log::LOG_ERROR, "Invalid GIF file! Found \"%s\", expected \"GIF\"! (%s)", magicGIF, filename);
         goto GIF_Load_FAIL;
     }
 
@@ -201,7 +201,7 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
     if (memcmp(magic89a, "89a", 3) != 0 &&
         memcmp(magic89a, "87a", 3) != 0) {
         magic89a[3] = 0;
-        Log::Print(Log::LOG_ERROR, "Invalid GIF version! Found \"%s\", expected \"89a\"!", magic89a);
+        Log::Print(Log::LOG_ERROR, "Invalid GIF version! Found \"%s\", expected \"89a\"! (%s)", magic89a, filename);
         goto GIF_Load_FAIL;
     }
 
@@ -218,7 +218,7 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
     stream->Skip(1); // pixelAspectRatio = stream->ReadByte();
 
     if ((logicalScreenDesc & 0x80) == 0) {
-        Log::Print(Log::LOG_ERROR, "GIF missing palette table!");
+        Log::Print(Log::LOG_ERROR, "GIF missing palette table! (%s)", filename);
         goto GIF_Load_FAIL;
     }
 

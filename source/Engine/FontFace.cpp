@@ -16,10 +16,12 @@ public:
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Memory.h>
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
+#ifdef USING_FREETYPE
+    #include <ft2build.h>
+    #include FT_FREETYPE_H
 
-FT_Library ftLib;
+    FT_Library ftLib;
+#endif
 bool       ftInitialized = false;
 
 struct FT_GlyphBox {
@@ -148,6 +150,8 @@ FT_Package*     PackBoxes(FT_GlyphBox* boxes, int boxCount, int defWidth, int de
 }
 
 PUBLIC STATIC ISprite* FontFace::SpriteFromFont(Stream* stream, int pixelSize, char* filename) {
+    #ifdef USING_FREETYPE
+
     if (!ftInitialized) {
         if (FT_Init_FreeType(&ftLib)) {
             Log::Print(Log::LOG_ERROR, "FREETYPE: Could not init FreeType Library.");
@@ -233,23 +237,27 @@ PUBLIC STATIC ISprite* FontFace::SpriteFromFont(Stream* stream, int pixelSize, c
         sprite->Animations.back().Frames.back().Advance = face->glyph->advance.x >> 6;
 	}
 
-    if (filename && false) {
-        char testFilename[256];
-        sprintf(testFilename, "%s_%d.bmp", filename, pixelSize);
-        for (char* i = testFilename; *i; i++) {
-            if (*i == '/') *i = '_';
+    bool exportFonts = false;
+    Application::Settings->GetBool("dev", "exportFonts", &exportFonts);
+    if (filename && exportFonts) {
+        char* filenameJustName = filename + strlen(filename) - 1;
+        for (; filenameJustName > filename; filenameJustName--) {
+            if (*filenameJustName == '/') {
+                filenameJustName++;
+                break;
+            }
         }
-        strcpy(sprite->SpritesheetsFilenames[0], testFilename);
+
+        char testFilename[256];
+        sprintf(testFilename, "Fonts/%s_%d.bmp", filenameJustName, pixelSize);
+        strncpy(sprite->SpritesheetsFilenames[0], testFilename, 128);
 
         SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(pixelData, package->Width, package->Height, 32, package->Width * 4,
             0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
         SDL_SaveBMP(surface, testFilename);
         SDL_FreeSurface(surface);
 
-        sprintf(testFilename, "%s_%d.bin", filename, pixelSize);
-        for (char* i = testFilename; *i; i++) {
-            if (*i == '/') *i = '_';
-        }
+        sprintf(testFilename, "Fonts/%s_%d.bin", filenameJustName, pixelSize);
         sprite->SaveAnimation(testFilename);
     }
 
@@ -259,4 +267,7 @@ PUBLIC STATIC ISprite* FontFace::SpriteFromFont(Stream* stream, int pixelSize, c
     // FT_Done_FreeType(ftLib);
 
     return sprite;
+
+    #endif
+    return NULL;
 }

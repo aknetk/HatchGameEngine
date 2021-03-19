@@ -23,6 +23,27 @@ enum {
     BlendFactor_INV_DST_ALPHA = 9,
 };
 
+enum {
+    DrawBehavior_HorizontalParallax = 0,
+    DrawBehavior_VerticalParallax = 1,
+    DrawBehavior_CustomTileScanLines = 2,
+    DrawBehavior_PGZ1_BG = 3,
+};
+
+#define TILE_FLIPX_MASK 0x80000000U
+#define TILE_FLIPY_MASK 0x40000000U
+// #define TILE_DIAGO_MASK 0x20000000U
+#define TILE_COLLA_MASK 0x30000000U
+#define TILE_COLLB_MASK 0x0C000000U
+#define TILE_COLLC_MASK 0x03000000U
+#define TILE_IDENT_MASK 0x00FFFFFFU
+
+struct TileScanLine {
+    int SrcX;
+    int SrcY;
+    int DeltaX;
+    int DeltaY;
+};
 struct Viewport {
     float X;
     float Y;

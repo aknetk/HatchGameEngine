@@ -1,6 +1,6 @@
 #if INTERFACE
 #include <Engine/Includes/Standard.h>
-#include <Engine/Includes/StandardSDL2.h>
+#include <Engine/Rendering/GL/Includes.h>
 
 #include <Engine/IO/Stream.h>
 
@@ -28,6 +28,8 @@ public:
     Matrix4x4* CachedModelViewMatrix = NULL;
 };
 #endif
+
+#ifdef USING_OPENGL
 
 #include <Engine/Rendering/GL/GLShader.h>
 
@@ -210,7 +212,7 @@ PUBLIC GLint  GLShader::GetUniformLocation(const GLchar* identifier) {
 }
 
 PUBLIC void   GLShader::Dispose() {
-    glDeleteProgram(ProgramID);
+    glDeleteProgram(ProgramID); CHECK_GL();
 }
 
 PUBLIC STATIC bool GLShader::CheckGLError(int line) {
@@ -248,3 +250,5 @@ PUBLIC STATIC bool GLShader::CheckGLError(int line) {
     return false;
 }
 #undef CHECK_GL
+
+#endif /* USING_OPENGL */

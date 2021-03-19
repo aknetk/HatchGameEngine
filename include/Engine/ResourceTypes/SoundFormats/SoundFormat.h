@@ -21,16 +21,16 @@ public:
     SDL_AudioSpec  InputFormat;
     SDL_AudioSpec  OutputFormat;
     vector<Uint8*> Samples;
-    int            SampleSize;
-    int            SampleIndex = 0;
+    size_t         SampleSize;
+    size_t         SampleIndex = 0;
     int            TotalPossibleSamples;
     Uint8*         SampleBuffer = NULL;
     Uint8*         SampleBufferHead = NULL;
 
     virtual int    LoadSamples(size_t count);
     virtual int    GetSamples(Uint8* buffer, size_t count);
-    virtual int    SeekSample(int index);
-    virtual int    TellSample();
+    virtual size_t SeekSample(int index);
+    virtual size_t TellSample();
     virtual double GetPosition();
     virtual double SetPosition(double seconds);
     virtual double GetDuration();

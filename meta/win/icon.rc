@@ -1,0 +1,22 @@
+#include <windows.h>
+#define IDC_STATIC -1
+
+100 ICON "icon.ico"
+VS_VERSION_INFO VERSIONINFO
+    FILEVERSION    1,0,0,0
+    PRODUCTVERSION 1,0,0,0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+        VALUE "FileDescription",    "Hatch Game Engine"
+        VALUE "CompanyName",        "aknetk"
+        VALUE "FileVersion",        "1.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END

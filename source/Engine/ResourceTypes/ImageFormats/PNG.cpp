@@ -20,17 +20,20 @@ public:
 #include <Engine/IO/MemoryStream.h>
 #include <Engine/IO/ResourceStream.h>
 
-#if WIN32
-#include <png.h>
-#else
-#include <libpng16/png.h>
-#endif
+// #ifdef USING_IMAGEIO
+// #endif
+
+#ifdef USING_LIBPNG
+
+#include USING_LIBPNG_HEADER
 
 void png_read_fn(png_structp ctx, png_bytep area, png_size_t size) {
     Stream* stream = (Stream*)png_get_io_ptr(ctx);
     stream->ReadBytes(area, size);
 }
+#endif
 PUBLIC STATIC  PNG*   PNG::Load(const char* filename) {
+#ifdef USING_LIBPNG
     PNG* png = new PNG;
     Stream* stream = NULL;
     // size_t fileSize;
@@ -171,6 +174,8 @@ PUBLIC STATIC  PNG*   PNG::Load(const char* filename) {
         if (stream)
             stream->Close();
         return png;
+#endif
+	return NULL;
 }
 PUBLIC STATIC  bool   PNG::Save(PNG* png, const char* filename) {
     return png->Save(filename);

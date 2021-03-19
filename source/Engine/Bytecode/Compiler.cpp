@@ -18,6 +18,7 @@ public:
     Local           Locals[0x100];
     int             LocalCount = 0;
     int             ScopeDepth = 0;
+    int             WithDepth = 0;
     vector<Uint32>  ClassHashList;
     vector<Uint32>  ClassExtendedList;
 };
@@ -643,12 +644,59 @@ PUBLIC bool          Compiler::ReportErrorPos(int line, int pos, const char* str
     vsprintf(message, string, args);
     va_end(args);
 
-    if (line > 0)
-        Log::Print(Log::LOG_ERROR, "in file '%s' on line %d, position %d:\n    %s\n\n", scanner.SourceFilename, line, pos, message);
-    else
-        Log::Print(Log::LOG_ERROR, "in file '%s' on line %d, position %d:\n    %s\n\n", scanner.SourceFilename, line, pos, message);
+	char* textBuffer = (char*)malloc(512);
 
-    assert(false);
+	PrintBuffer buffer;
+	buffer.Buffer = &textBuffer;
+	buffer.WriteIndex = 0;
+	buffer.BufferSize = 512;
+
+    if (line > 0)
+		buffer_printf(&buffer, "In file '%s' on line %d, position %d:\n    %s\n\n", scanner.SourceFilename, line, pos, message);
+    else
+		buffer_printf(&buffer, "In file '%s' on line %d, position %d:\n    %s\n\n", scanner.SourceFilename, line, pos, message);
+
+	bool fatal = true;
+
+	Log::Print(Log::LOG_ERROR, textBuffer);
+
+	const SDL_MessageBoxButtonData buttonsError[] = {
+		{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Exit Game" },
+		{ 0                                      , 2, "Ignore All" },
+		{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Continue" },
+	};
+	const SDL_MessageBoxButtonData buttonsFatal[] = {
+		{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Exit Game" },
+	};
+
+	const SDL_MessageBoxData messageBoxData = {
+		SDL_MESSAGEBOX_ERROR, NULL,
+		"Syntax Error",
+		textBuffer,
+		(int)(fatal ? SDL_arraysize(buttonsFatal) : SDL_arraysize(buttonsError)),
+		fatal ? buttonsFatal : buttonsError,
+		NULL,
+	};
+
+	int buttonClicked;
+	if (SDL_ShowMessageBox(&messageBoxData, &buttonClicked) < 0) {
+		buttonClicked = 2;
+	}
+
+	free(textBuffer);
+
+	switch (buttonClicked) {
+		// Exit Game
+		case 1:
+			exit(-1);
+			// NOTE: This is for later, this doesn't actually execute.
+			return ERROR_RES_EXIT;
+			// Ignore All
+		case 2:
+			// VMThread::InstructionIgnoreMap[000000000] = true;
+			return ERROR_RES_CONTINUE;
+	}
+
     return false;
 }
 PUBLIC void          Compiler::ErrorAt(Token* token, const char* message) {
@@ -659,9 +707,9 @@ PUBLIC void          Compiler::ErrorAt(Token* token, const char* message) {
     if (token->Type == TOKEN_EOF)
         ReportError(token->Line, " at end: %s", message);
     else if (token->Type == TOKEN_ERROR)
-        ReportErrorPos(token->Line, token->Pos, "%s", message);
+        ReportErrorPos(token->Line, (int)token->Pos, "%s", message);
     else
-        ReportErrorPos(token->Line, token->Pos, " at '%.*s': %s", token->Length, token->Start, message);
+        ReportErrorPos(token->Line, (int)token->Pos, " at '%.*s': %s", token->Length, token->Start, message);
 
     parser.HadError = true;
 }
@@ -1095,6 +1143,8 @@ PUBLIC void Compiler::GetInteger(bool canAssign) {
 
     if (negateConstant)
         value = -value;
+    negateConstant = false;
+
     EmitConstant(INTEGER_VAL(value));
 }
 PUBLIC void Compiler::GetDecimal(bool canAssign) {
@@ -1103,6 +1153,8 @@ PUBLIC void Compiler::GetDecimal(bool canAssign) {
 
     if (negateConstant)
         value = -value;
+    negateConstant = false;
+
     EmitConstant(DECIMAL_VAL(value));
 }
 PUBLIC void Compiler::GetString(bool canAssign) {
@@ -1583,7 +1635,7 @@ PUBLIC void Compiler::GetDefaultStatement() {
 
     ConsumeToken(TOKEN_COLON, "Expected \":\" after \"default\".");
 
-    int position, constant_index;
+    int position;
     position = CodePointer();
 
     SwitchJumpListStack.top()->push_back(switch_case { position, -1, 0 });
@@ -1672,8 +1724,12 @@ PUBLIC void Compiler::GetWithStatement() {
     // Push new jump list on continue stack
     StartContinueJumpList();
 
+    WithDepth++;
+
     // Execute code block
     GetStatement();
+
+    WithDepth--;
 
     // Pop jump list off continue stack, patch all continue to this code point
     EndContinueJumpList();
@@ -1843,14 +1899,14 @@ PUBLIC void Compiler::GetStatement() {
 }
 // Reading declarations
 PUBLIC int  Compiler::GetFunction(int type) {
-    int index = Compiler::Functions.size();
+    int index = (int)Compiler::Functions.size();
 
     Compiler* compiler = new Compiler;
     compiler->Initialize(this, 1, type);
 
     // compiler->EmitByte(OP_FAILSAFE);
     //
-    // int failsafecompiler->CodePointer();
+    // int failsafe = compiler->CodePointer();
     // compiler->EmitUint16(0xFFFFU);
 
     if (type == TYPE_WITH) {
@@ -2007,7 +2063,20 @@ PUBLIC void Compiler::GetClassDeclaration() {
     // currentClass = currentClass->enclosing;
 }
 PUBLIC void Compiler::GetEventDeclaration() {
+    ConsumeToken(TOKEN_IDENTIFIER, "Expected event name.");
+    // Uint8 constant = IdentifierConstant(&parser.Previous);
+    Token constantToken = parser.Previous;
 
+    // If the method is named "init", it's an initializer.
+    int type = TYPE_FUNCTION;
+
+    int index = GetFunction(type);
+
+    EmitByte(OP_EVENT);
+    EmitByte(index);
+    
+    EmitByte(OP_DEFINE_GLOBAL);
+    EmitStringHash(constantToken);
 }
 PUBLIC void Compiler::GetEnumDeclaration() {
     do {
@@ -2154,7 +2223,7 @@ PUBLIC int           Compiler::CodePointer() {
 }
 PUBLIC void          Compiler::EmitByte(Uint8 byte) {
     // ChunkWrite(CurrentChunk(), byte, parser.Previous.Line);
-    ChunkWrite(CurrentChunk(), byte, (parser.Previous.Pos & 0xFFFF) << 16 | (parser.Previous.Line & 0xFFFF));
+    ChunkWrite(CurrentChunk(), byte, (int)((parser.Previous.Pos & 0xFFFF) << 16 | (parser.Previous.Line & 0xFFFF)));
 }
 PUBLIC void          Compiler::EmitBytes(Uint8 byte1, Uint8 byte2) {
     EmitByte(byte1);
@@ -2280,7 +2349,7 @@ PUBLIC void          Compiler::EndSwitchJumpList() {
 PUBLIC int           Compiler::FindConstant(VMValue value) {
     for (size_t i = 0; i < CurrentChunk()->Constants->size(); i++) {
         if (ValuesEqual(value, (*CurrentChunk()->Constants)[i]))
-            return i;
+            return (int)i;
     }
     return -1;
 }
@@ -2456,7 +2525,7 @@ PUBLIC STATIC int    Compiler::HashInstruction(const char* name, Chunk* chunk, i
     printf("%-16s #%08X", name, hash);
     if (TokenMap->Exists(hash)) {
         Token t = TokenMap->Get(hash);
-        printf(" (%.*s)", t.Length, t.Start);
+        printf(" (%.*s)", (int)t.Length, t.Start);
     }
     printf("\n");
     return offset + 5;
@@ -2504,7 +2573,7 @@ PUBLIC STATIC int    Compiler::InvokeInstruction(const char* name, Chunk* chunk,
     printf(" #%08X", hash);
     if (TokenMap->Exists(hash)) {
         Token t = TokenMap->Get(hash);
-        printf(" (%.*s)", t.Length, t.Start);
+        printf(" (%.*s)", (int)t.Length, t.Start);
     }
     printf("\n");
     return offset + 6; // [debug]
@@ -2795,7 +2864,7 @@ PUBLIC bool          Compiler::Compile(const char* filename, const char* source,
     stream->WriteByte(0x00);
     stream->WriteByte(0x00);
 
-    int chunkCount = Compiler::Functions.size();
+    int chunkCount = (int)Compiler::Functions.size();
 
     stream->WriteUInt32(chunkCount);
     for (int c = 0; c < chunkCount; c++) {
@@ -2811,7 +2880,7 @@ PUBLIC bool          Compiler::Compile(const char* filename, const char* source,
             stream->WriteBytes(chunk->Lines, chunk->Count * sizeof(int));
         }
 
-        int constSize = chunk->Constants->size();
+        int constSize = (int)chunk->Constants->size();
         stream->WriteUInt32(constSize); // fwrite(&constSize, 1, sizeof(constSize), f);
         for (int i = 0; i < constSize; i++) {
             VMValue constt = (*chunk->Constants)[i];

@@ -4,13 +4,6 @@
 
 class VMThread {
 public:
-    struct WithIter {
-        void* entity;
-        void* entityNext;
-        int   index;
-        void* list;
-    };
-
     VMValue   Stack[STACK_SIZE_MAX];
     VMValue*  StackTop = Stack;
     VMValue   RegisterValue;
@@ -18,11 +11,6 @@ public:
     CallFrame Frames[FRAMES_MAX];
     Uint32    FrameCount;
     Uint32    ReturnFrame;
-
-    VMValue   WithReceiverStack[16];
-    VMValue*  WithReceiverStackTop = WithReceiverStack;
-    WithIter  WithIteratorStack[16];
-    WithIter* WithIteratorStackTop = WithIteratorStack;
 
     enum ThreadState {
         CREATED = 0,
@@ -59,6 +47,58 @@ std::jmp_buf VMThread::JumpBuffer;
 
 // #region Error Handling & Debug Info
 char GetTokenBuffer[16];
+
+#define THROW_ERROR_START() if (VMThread::InstructionIgnoreMap[000000000]) \
+        return ERROR_RES_CONTINUE; \
+    CallFrame* frame = &Frames[FrameCount - 1]; \
+    va_list args; \
+    char errorString[512]; \
+    va_start(args, errorMessage); \
+    vsnprintf(errorString, 512, errorMessage, args); \
+    va_end(args); \
+    int line; \
+    char* source; \
+    ObjFunction* function = frame->Function; \
+    char* textBuffer = (char*)malloc(512); \
+    PrintBuffer buffer; \
+    buffer.Buffer = &textBuffer; \
+    buffer.WriteIndex = 0; \
+    buffer.BufferSize = 512;
+#define THROW_ERROR_END() Log::Print(Log::LOG_ERROR, textBuffer); \
+    PrintStack(); \
+    const SDL_MessageBoxButtonData buttonsError[] = { \
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Exit Game" }, \
+        { 0                                      , 2, "Ignore All" }, \
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Continue" }, \
+    }; \
+    const SDL_MessageBoxButtonData buttonsFatal[] = { \
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Exit Game" }, \
+    }; \
+    const SDL_MessageBoxData messageBoxData = { \
+        SDL_MESSAGEBOX_ERROR, NULL, \
+        "Script Error", \
+        textBuffer, \
+        (int)(fatal ? SDL_arraysize(buttonsFatal) : SDL_arraysize(buttonsError)), \
+        fatal ? buttonsFatal : buttonsError, \
+        NULL, \
+    }; \
+    int buttonClicked; \
+    if (SDL_ShowMessageBox(&messageBoxData, &buttonClicked) < 0) { \
+        buttonClicked = 2; \
+    } \
+    free(textBuffer); \
+    switch (buttonClicked) { \
+        /* Exit Game */ \
+        case 1: \
+            exit(-1); \
+            /* NOTE: This is for later, this doesn't actually execute. */ \
+            return ERROR_RES_EXIT; \
+        /* Ignore All */ \
+        case 2: \
+            VMThread::InstructionIgnoreMap[000000000] = true; \
+            return ERROR_RES_CONTINUE; \
+    }
+
 PUBLIC char*   VMThread::GetToken(Uint32 hash) {
     if (__Tokens__ && __Tokens__->Exists(hash))
         return __Tokens__->Get(hash);
@@ -67,31 +107,11 @@ PUBLIC char*   VMThread::GetToken(Uint32 hash) {
     return &GetTokenBuffer[0];
 }
 PUBLIC int     VMThread::ThrowRuntimeError(bool fatal, const char* errorMessage, ...) {
-    if (VMThread::InstructionIgnoreMap[000000000])
-        return ERROR_RES_CONTINUE;
-
-    CallFrame* frame = &Frames[FrameCount - 1];
-
-    va_list args;
-    char errorString[512];
-    va_start(args, errorMessage);
-    vsnprintf(errorString, 512, errorMessage, args);
-    va_end(args);
-
-    int line;
-    char* source;
-    ObjFunction* function = frame->Function;
-
-    char* textBuffer = (char*)malloc(512);
-
-    PrintBuffer buffer;
-    buffer.Buffer = &textBuffer;
-    buffer.WriteIndex = 0;
-    buffer.BufferSize = 512;
+    THROW_ERROR_START();
 
     if (function) {
         if (function->Chunk.Lines) {
-            int bpos = (frame->IPLast - frame->IPStart);
+            size_t bpos = (frame->IPLast - frame->IPStart);
             line = function->Chunk.Lines[bpos] & 0xFFFF;
 
             buffer_printf(&buffer, "In event %s of object %s, line %d:\n\n    %s\n", GetToken(function->NameHash), function->SourceFilename, line, errorString);
@@ -104,64 +124,31 @@ PUBLIC int     VMThread::ThrowRuntimeError(bool fatal, const char* errorMessage,
         buffer_printf(&buffer, "In %d:\n    %s\n", (int)(frame->IP - frame->IPStart), errorString);
     }
 
-    buffer_printf(&buffer, "\nCall Backtrace (Thread %d):\n", ID);
-    for (int i = FrameCount - 1; i >= 0; i--) {
+    // buffer_printf(&buffer, "\nCall Backtrace (Thread %d):\n", ID);
+    buffer_printf(&buffer, "\nCall Trace (Thread %d):\n", ID);
+    // for (int i = FrameCount - 1; i >= 0; i--) {
+    for (Uint32 i = 0; i < FrameCount; i++) {
         CallFrame* fr = &Frames[i];
         function = fr->Function;
         source = function->SourceFilename;
         line = -1;
         if (i > 0) {
             CallFrame* fr2 = &Frames[i - 1];
+            // function = fr2->Function;
+            // source = function->SourceFilename;
             line = fr2->Function->Chunk.Lines[fr2->IPLast - fr2->IPStart] & 0xFFFF;
         }
-        buffer_printf(&buffer, "    event %s of object %s", GetToken(function->NameHash), source);
+        buffer_printf(&buffer, "    called \"%s\" of \"%s\"", GetToken(function->NameHash), source);
 
-        if (line < 0)
-            buffer_printf(&buffer, "\n");
-        else
-            buffer_printf(&buffer, " (line %d), from\n", line);
+        if (line > 0) {
+            buffer_printf(&buffer, " on Line %d", line);
+        }
+        if (i < FrameCount - 1)
+            buffer_printf(&buffer, ", then");
+        buffer_printf(&buffer, "\n");
     }
 
-    Log::Print(Log::LOG_ERROR, textBuffer);
-
-    PrintStack();
-
-    const SDL_MessageBoxButtonData buttonsError[] = {
-        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Exit Game" },
-        { 0                                      , 2, "Ignore All" },
-        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Continue" },
-    };
-    const SDL_MessageBoxButtonData buttonsFatal[] = {
-        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Exit Game" },
-    };
-
-    const SDL_MessageBoxData messageBoxData = {
-        SDL_MESSAGEBOX_ERROR, NULL,
-        "Script Error",
-        textBuffer,
-        (int)(fatal ? SDL_arraysize(buttonsFatal) : SDL_arraysize(buttonsError)),
-        fatal ? buttonsFatal : buttonsError,
-        NULL,
-    };
-
-    int buttonClicked;
-    if (SDL_ShowMessageBox(&messageBoxData, &buttonClicked) < 0) {
-        buttonClicked = 2;
-    }
-
-    free(textBuffer);
-
-    switch (buttonClicked) {
-        // Exit Game
-        case 1:
-            exit(-1);
-            // NOTE: This is for later, this doesn't actually execute.
-            return ERROR_RES_EXIT;
-        // Ignore All
-        case 2:
-            VMThread::InstructionIgnoreMap[000000000] = true;
-            return ERROR_RES_CONTINUE;
-    }
+    THROW_ERROR_END();
 
     return ERROR_RES_CONTINUE;
 }
@@ -256,86 +243,168 @@ PUBLIC VMValue VMThread::ReadConstant(CallFrame* frame) {
 }
 
 PUBLIC int     VMThread::RunInstruction() {
+    // #define VM_DEBUG_INSTRUCTIONS 0
+
+    // NOTE: MSVC cannot take advantage of the dispatch table.
+    #ifdef USING_VM_DISPATCH_TABLE
+        #define VM_ADD_DISPATCH(op) &&START_ ## op
+        #define VM_ADD_DISPATCH_NULL(op) NULL
+        static const void* dispatch_table[] = {
+            VM_ADD_DISPATCH_NULL(OP_ERROR),
+            VM_ADD_DISPATCH(OP_CONSTANT),
+            VM_ADD_DISPATCH(OP_DEFINE_GLOBAL),
+            VM_ADD_DISPATCH(OP_GET_PROPERTY),
+            VM_ADD_DISPATCH(OP_SET_PROPERTY),
+            VM_ADD_DISPATCH(OP_GET_GLOBAL),
+            VM_ADD_DISPATCH(OP_SET_GLOBAL),
+            VM_ADD_DISPATCH(OP_GET_LOCAL),
+            VM_ADD_DISPATCH(OP_SET_LOCAL),
+            VM_ADD_DISPATCH(OP_PRINT_STACK),
+            VM_ADD_DISPATCH(OP_INHERIT),
+            VM_ADD_DISPATCH(OP_RETURN),
+            VM_ADD_DISPATCH(OP_METHOD),
+            VM_ADD_DISPATCH(OP_CLASS),
+            VM_ADD_DISPATCH(OP_CALL),
+            VM_ADD_DISPATCH_NULL(OP_SUPER),
+            VM_ADD_DISPATCH(OP_INVOKE),
+            VM_ADD_DISPATCH(OP_JUMP),
+            VM_ADD_DISPATCH(OP_JUMP_IF_FALSE),
+            VM_ADD_DISPATCH(OP_JUMP_BACK),
+            VM_ADD_DISPATCH(OP_POP),
+            VM_ADD_DISPATCH(OP_COPY),
+            VM_ADD_DISPATCH(OP_ADD),
+            VM_ADD_DISPATCH(OP_SUBTRACT),
+            VM_ADD_DISPATCH(OP_MULTIPLY),
+            VM_ADD_DISPATCH(OP_DIVIDE),
+            VM_ADD_DISPATCH(OP_MODULO),
+            VM_ADD_DISPATCH(OP_NEGATE),
+            VM_ADD_DISPATCH(OP_INCREMENT),
+            VM_ADD_DISPATCH(OP_DECREMENT),
+            VM_ADD_DISPATCH(OP_BITSHIFT_LEFT),
+            VM_ADD_DISPATCH(OP_BITSHIFT_RIGHT),
+            VM_ADD_DISPATCH(OP_NULL),
+            VM_ADD_DISPATCH(OP_TRUE),
+            VM_ADD_DISPATCH(OP_FALSE),
+            VM_ADD_DISPATCH(OP_BW_NOT),
+            VM_ADD_DISPATCH(OP_BW_AND),
+            VM_ADD_DISPATCH(OP_BW_OR),
+            VM_ADD_DISPATCH(OP_BW_XOR),
+            VM_ADD_DISPATCH(OP_LG_NOT),
+            VM_ADD_DISPATCH(OP_LG_AND),
+            VM_ADD_DISPATCH(OP_LG_OR),
+            VM_ADD_DISPATCH(OP_EQUAL),
+            VM_ADD_DISPATCH(OP_EQUAL_NOT),
+            VM_ADD_DISPATCH(OP_GREATER),
+            VM_ADD_DISPATCH(OP_GREATER_EQUAL),
+            VM_ADD_DISPATCH(OP_LESS),
+            VM_ADD_DISPATCH(OP_LESS_EQUAL),
+            VM_ADD_DISPATCH(OP_PRINT),
+            VM_ADD_DISPATCH_NULL(OP_ENUM),
+            VM_ADD_DISPATCH(OP_SAVE_VALUE),
+            VM_ADD_DISPATCH(OP_LOAD_VALUE),
+            VM_ADD_DISPATCH(OP_WITH),
+            VM_ADD_DISPATCH(OP_GET_ELEMENT),
+            VM_ADD_DISPATCH(OP_SET_ELEMENT),
+            VM_ADD_DISPATCH(OP_NEW_ARRAY),
+            VM_ADD_DISPATCH(OP_NEW_MAP),
+            VM_ADD_DISPATCH(OP_SWITCH_TABLE),
+            VM_ADD_DISPATCH(OP_FAILSAFE),
+			VM_ADD_DISPATCH(OP_EVENT),
+            VM_ADD_DISPATCH_NULL(OP_SYNC),
+        };
+        #define VM_START(ins) goto *dispatch_table[(ins)];
+        #define VM_END() dispatch_end:
+        #define VM_CASE(n) START_ ## n
+        #define VM_BREAK goto dispatch_end;
+    #else
+        #define VM_START(ins) switch ((ins))
+        #define VM_END() ;
+        #define VM_CASE(n) case n
+        #define VM_BREAK break
+    #endif
+
     CallFrame* frame;
     Uint8 instruction;
 
     frame = &Frames[FrameCount - 1];
     frame->IPLast = frame->IP;
 
-    DebugInfo = ID == 1 && false;
-    if (DebugInfo) {
-        #define PRINT_CASE(n) case n: Log::Print(Log::LOG_VERBOSE, #n); break;
+    #ifdef VM_DEBUG_INSTRUCTIONS
+        DebugInfo = false;
+        if (DebugInfo) {
+            #define PRINT_CASE(n) case n: Log::Print(Log::LOG_VERBOSE, #n); break;
 
-        switch (*frame->IP) {
-            PRINT_CASE(OP_ERROR)
-            PRINT_CASE(OP_CONSTANT)
-            PRINT_CASE(OP_DEFINE_GLOBAL)
-            PRINT_CASE(OP_GET_PROPERTY)
-            PRINT_CASE(OP_SET_PROPERTY)
-            PRINT_CASE(OP_GET_GLOBAL)
-            PRINT_CASE(OP_SET_GLOBAL)
-            PRINT_CASE(OP_GET_LOCAL)
-            PRINT_CASE(OP_SET_LOCAL)
-            PRINT_CASE(OP_PRINT_STACK)
-            PRINT_CASE(OP_INHERIT)
-            PRINT_CASE(OP_RETURN)
-            PRINT_CASE(OP_METHOD)
-            PRINT_CASE(OP_CLASS)
-            PRINT_CASE(OP_CALL)
-            PRINT_CASE(OP_SUPER)
-            PRINT_CASE(OP_INVOKE)
-            PRINT_CASE(OP_JUMP)
-            PRINT_CASE(OP_JUMP_IF_FALSE)
-            PRINT_CASE(OP_JUMP_BACK)
-            PRINT_CASE(OP_POP)
-            PRINT_CASE(OP_COPY)
-            PRINT_CASE(OP_ADD)
-            PRINT_CASE(OP_SUBTRACT)
-            PRINT_CASE(OP_MULTIPLY)
-            PRINT_CASE(OP_DIVIDE)
-            PRINT_CASE(OP_MODULO)
-            PRINT_CASE(OP_NEGATE)
-            PRINT_CASE(OP_INCREMENT)
-            PRINT_CASE(OP_DECREMENT)
-            PRINT_CASE(OP_BITSHIFT_LEFT)
-            PRINT_CASE(OP_BITSHIFT_RIGHT)
-            PRINT_CASE(OP_NULL)
-            PRINT_CASE(OP_TRUE)
-            PRINT_CASE(OP_FALSE)
-            PRINT_CASE(OP_BW_NOT)
-            PRINT_CASE(OP_BW_AND)
-            PRINT_CASE(OP_BW_OR)
-            PRINT_CASE(OP_BW_XOR)
-            PRINT_CASE(OP_LG_NOT)
-            PRINT_CASE(OP_LG_AND)
-            PRINT_CASE(OP_LG_OR)
-            PRINT_CASE(OP_EQUAL)
-            PRINT_CASE(OP_EQUAL_NOT)
-            PRINT_CASE(OP_GREATER)
-            PRINT_CASE(OP_GREATER_EQUAL)
-            PRINT_CASE(OP_LESS)
-            PRINT_CASE(OP_LESS_EQUAL)
-            PRINT_CASE(OP_PRINT)
-            PRINT_CASE(OP_ENUM)
-            PRINT_CASE(OP_SAVE_VALUE)
-            PRINT_CASE(OP_LOAD_VALUE)
-            PRINT_CASE(OP_WITH)
-            PRINT_CASE(OP_GET_ELEMENT)
-            PRINT_CASE(OP_SET_ELEMENT)
-            PRINT_CASE(OP_NEW_ARRAY)
-            PRINT_CASE(OP_NEW_MAP)
-            PRINT_CASE(OP_SWITCH_TABLE)
+            switch (*frame->IP) {
+                PRINT_CASE(OP_ERROR)
+                PRINT_CASE(OP_CONSTANT)
+                PRINT_CASE(OP_DEFINE_GLOBAL)
+                PRINT_CASE(OP_GET_PROPERTY)
+                PRINT_CASE(OP_SET_PROPERTY)
+                PRINT_CASE(OP_GET_GLOBAL)
+                PRINT_CASE(OP_SET_GLOBAL)
+                PRINT_CASE(OP_GET_LOCAL)
+                PRINT_CASE(OP_SET_LOCAL)
+                PRINT_CASE(OP_PRINT_STACK)
+                PRINT_CASE(OP_INHERIT)
+                PRINT_CASE(OP_RETURN)
+                PRINT_CASE(OP_METHOD)
+                PRINT_CASE(OP_CLASS)
+                PRINT_CASE(OP_CALL)
+                PRINT_CASE(OP_SUPER)
+                PRINT_CASE(OP_INVOKE)
+                PRINT_CASE(OP_JUMP)
+                PRINT_CASE(OP_JUMP_IF_FALSE)
+                PRINT_CASE(OP_JUMP_BACK)
+                PRINT_CASE(OP_POP)
+                PRINT_CASE(OP_COPY)
+                PRINT_CASE(OP_ADD)
+                PRINT_CASE(OP_SUBTRACT)
+                PRINT_CASE(OP_MULTIPLY)
+                PRINT_CASE(OP_DIVIDE)
+                PRINT_CASE(OP_MODULO)
+                PRINT_CASE(OP_NEGATE)
+                PRINT_CASE(OP_INCREMENT)
+                PRINT_CASE(OP_DECREMENT)
+                PRINT_CASE(OP_BITSHIFT_LEFT)
+                PRINT_CASE(OP_BITSHIFT_RIGHT)
+                PRINT_CASE(OP_NULL)
+                PRINT_CASE(OP_TRUE)
+                PRINT_CASE(OP_FALSE)
+                PRINT_CASE(OP_BW_NOT)
+                PRINT_CASE(OP_BW_AND)
+                PRINT_CASE(OP_BW_OR)
+                PRINT_CASE(OP_BW_XOR)
+                PRINT_CASE(OP_LG_NOT)
+                PRINT_CASE(OP_LG_AND)
+                PRINT_CASE(OP_LG_OR)
+                PRINT_CASE(OP_EQUAL)
+                PRINT_CASE(OP_EQUAL_NOT)
+                PRINT_CASE(OP_GREATER)
+                PRINT_CASE(OP_GREATER_EQUAL)
+                PRINT_CASE(OP_LESS)
+                PRINT_CASE(OP_LESS_EQUAL)
+                PRINT_CASE(OP_PRINT)
+                PRINT_CASE(OP_ENUM)
+                PRINT_CASE(OP_SAVE_VALUE)
+                PRINT_CASE(OP_LOAD_VALUE)
+                PRINT_CASE(OP_WITH)
+                PRINT_CASE(OP_GET_ELEMENT)
+                PRINT_CASE(OP_SET_ELEMENT)
+                PRINT_CASE(OP_NEW_ARRAY)
+                PRINT_CASE(OP_NEW_MAP)
+                PRINT_CASE(OP_SWITCH_TABLE)
 
-            default:
-                Log::Print(Log::LOG_ERROR, "Unknown opcode %d\n", frame->IP); break;
+                default:
+                    Log::Print(Log::LOG_ERROR, "Unknown opcode %d\n", frame->IP); break;
+            }
+
+            #undef  PRINT_CASE
         }
+    #endif
 
-        #undef  PRINT_CASE
-    }
-
-    switch (instruction = ReadByte(frame)) {
+    VM_START(instruction = ReadByte(frame)) {
         // Globals (heap)
-        case OP_GET_GLOBAL: {
+        VM_CASE(OP_GET_GLOBAL): {
             Uint32 hash = ReadUInt32(frame);
             if (BytecodeObjectManager::Lock()) {
                 if (!BytecodeObjectManager::Globals->Exists(hash)) {
@@ -354,14 +423,14 @@ PUBLIC int     VMThread::RunInstruction() {
                 Push(BytecodeObjectManager::DelinkValue(BytecodeObjectManager::Globals->Get(hash)));
                 BytecodeObjectManager::Unlock();
             }
-            break;
+            VM_BREAK;
 
             FAIL_OP_GET_GLOBAL:
             BytecodeObjectManager::Unlock();
             Push(NULL_VAL);
-            break;
+            VM_BREAK;
         }
-        case OP_SET_GLOBAL: {
+        VM_CASE(OP_SET_GLOBAL): {
             Uint32 hash = ReadUInt32(frame);
             if (BytecodeObjectManager::Lock()) {
                 if (!BytecodeObjectManager::Globals->Exists(hash)) {
@@ -390,13 +459,13 @@ PUBLIC int     VMThread::RunInstruction() {
                 }
                 BytecodeObjectManager::Unlock();
             }
-            break;
+            VM_BREAK;
 
             FAIL_OP_SET_GLOBAL:
             BytecodeObjectManager::Unlock();
-            break;
+            VM_BREAK;
         }
-        case OP_DEFINE_GLOBAL: {
+        VM_CASE(OP_DEFINE_GLOBAL): {
             Uint32 hash = ReadUInt32(frame);
             if (BytecodeObjectManager::Lock()) {
                 VMValue value = Peek(0);
@@ -443,16 +512,16 @@ PUBLIC int     VMThread::RunInstruction() {
                 Pop();
                 BytecodeObjectManager::Unlock();
             }
-            break;
+            VM_BREAK;
 
             // FAIL_OP_DEFINE_GLOBAL:
             // Pop();
             // BytecodeObjectManager::Unlock();
-            // break;
+            // VM_BREAK;
         }
 
         // Object Properties (heap)
-        case OP_GET_PROPERTY: {
+        VM_CASE(OP_GET_PROPERTY): {
             Uint32 hash = ReadUInt32(frame);
 
             VMValue object;
@@ -470,7 +539,7 @@ PUBLIC int     VMThread::RunInstruction() {
                     Pop();
                     Push(BytecodeObjectManager::DelinkValue(instance->Fields->Get(hash)));
                     BytecodeObjectManager::Unlock();
-                    break;
+                    VM_BREAK;
                 }
 
                 ObjClass* klass = instance->Class;
@@ -485,7 +554,7 @@ PUBLIC int     VMThread::RunInstruction() {
 
                 if (BindMethod(instance->Class, hash)) {
                     BytecodeObjectManager::Unlock();
-                    break;
+                    VM_BREAK;
                 }
 
                 if (__Tokens__ && __Tokens__->Exists(hash)) {
@@ -498,15 +567,15 @@ PUBLIC int     VMThread::RunInstruction() {
                 }
                 goto FAIL_OP_GET_PROPERTY;
             }
-            break;
+            VM_BREAK;
 
             FAIL_OP_GET_PROPERTY:
             Pop();
             Push(NULL_VAL);
             BytecodeObjectManager::Unlock();
-            break;
+            VM_BREAK;
         }
-        case OP_SET_PROPERTY: {
+        VM_CASE(OP_SET_PROPERTY): {
             Uint32 hash;
             VMValue field;
             VMValue value;
@@ -546,16 +615,16 @@ PUBLIC int     VMThread::RunInstruction() {
                 Push(value);
                 BytecodeObjectManager::Unlock();
             }
-            break;
+            VM_BREAK;
 
             FAIL_OP_SET_PROPERTY:
             Pop();
             Pop(); // Instance
             Push(NULL_VAL);
             BytecodeObjectManager::Unlock();
-            break;
+            VM_BREAK;
         }
-        case OP_GET_ELEMENT: {
+        VM_CASE(OP_GET_ELEMENT): {
             VMValue at = Pop();
             VMValue obj = Pop();
             if (!IS_OBJECT(obj)) {
@@ -604,14 +673,14 @@ PUBLIC int     VMThread::RunInstruction() {
                 if (ThrowRuntimeError(false, "Cannot get value from object that's non-Array or non-Map.") == ERROR_RES_CONTINUE)
                     goto FAIL_OP_GET_ELEMENT;
             }
-            break;
+            VM_BREAK;
 
             FAIL_OP_GET_ELEMENT:
             Push(NULL_VAL);
             BytecodeObjectManager::Unlock();
-            break;
+            VM_BREAK;
         }
-        case OP_SET_ELEMENT: {
+        VM_CASE(OP_SET_ELEMENT): {
             VMValue value = Peek(0);
             VMValue at = Peek(1);
             VMValue obj = Peek(2);
@@ -665,7 +734,7 @@ PUBLIC int     VMThread::RunInstruction() {
             Pop(); // at
             Pop(); // Array
             Push(value);
-            break;
+            VM_BREAK;
 
             FAIL_OP_SET_ELEMENT:
             Pop(); // value
@@ -673,23 +742,23 @@ PUBLIC int     VMThread::RunInstruction() {
             Pop(); // Array
             Push(NULL_VAL);
             BytecodeObjectManager::Unlock();
-            break;
+            VM_BREAK;
         }
 
         // Locals
-        case OP_GET_LOCAL: {
+        VM_CASE(OP_GET_LOCAL): {
             Uint8 slot = ReadByte(frame);
             Push(frame->Slots[slot]);
-            break;
+            VM_BREAK;
         }
-        case OP_SET_LOCAL: {
+        VM_CASE(OP_SET_LOCAL): {
             Uint8 slot = ReadByte(frame);
             frame->Slots[slot] = Peek(0);
-            break;
+            VM_BREAK;
         }
 
         // Object Allocations (heap)
-        case OP_NEW_ARRAY: {
+        VM_CASE(OP_NEW_ARRAY): {
             Uint32 count = ReadUInt32(frame);
             if (BytecodeObjectManager::Lock()) {
                 ObjArray* array = NewArray();
@@ -700,9 +769,9 @@ PUBLIC int     VMThread::RunInstruction() {
                 Push(OBJECT_VAL(array));
                 BytecodeObjectManager::Unlock();
             }
-            break;
+            VM_BREAK;
         }
-        case OP_NEW_MAP: {
+        VM_CASE(OP_NEW_MAP): {
             Uint32 count = ReadUInt32(frame);
             if (BytecodeObjectManager::Lock()) {
                 ObjMap* map = NewMap();
@@ -718,17 +787,29 @@ PUBLIC int     VMThread::RunInstruction() {
                 Push(OBJECT_VAL(map));
                 BytecodeObjectManager::Unlock();
             }
-            break;
+            VM_BREAK;
         }
 
         // Stack constants
-        case OP_NULL:           Push(NULL_VAL); break;
-        case OP_TRUE:           Push(INTEGER_VAL(1)); break;
-        case OP_FALSE:          Push(INTEGER_VAL(0)); break;
-        case OP_CONSTANT:       Push(ReadConstant(frame)); break;
+        VM_CASE(OP_NULL): {
+            Push(NULL_VAL);
+            VM_BREAK;
+        }
+        VM_CASE(OP_TRUE): {
+            Push(INTEGER_VAL(1));
+            VM_BREAK;
+        }
+        VM_CASE(OP_FALSE): {
+            Push(INTEGER_VAL(0));
+            VM_BREAK;
+        }
+        VM_CASE(OP_CONSTANT): {
+            Push(ReadConstant(frame));
+            VM_BREAK;
+        }
 
         // Switch statements
-        case OP_SWITCH_TABLE: {
+        VM_CASE(OP_SWITCH_TABLE): {
             Uint16 count = ReadUInt16(frame);
             VMValue switch_value = Pop();
 
@@ -755,23 +836,29 @@ PUBLIC int     VMThread::RunInstruction() {
             }
 
             JUMPED:
-            break;
+            VM_BREAK;
         }
 
         // Stack Operations
-        case OP_POP: {
+        VM_CASE(OP_POP): {
             Pop();
-            break;
+            VM_BREAK;
         }
-        case OP_COPY: {
+        VM_CASE(OP_COPY): {
             Uint8 count = ReadByte(frame);
             for (int i = 0; i < count; i++)
                 Push(Peek(count - 1));
-            break;
+            VM_BREAK;
         }
-        case OP_SAVE_VALUE:     RegisterValue = Pop(); break;
-        case OP_LOAD_VALUE:     Push(RegisterValue); break;
-        case OP_PRINT: {
+        VM_CASE(OP_SAVE_VALUE): {
+            RegisterValue = Pop();
+            VM_BREAK;
+        }
+        VM_CASE(OP_LOAD_VALUE): {
+            Push(RegisterValue);
+            VM_BREAK;
+        }
+        VM_CASE(OP_PRINT): {
             VMValue v = Peek(0);
 
             char* textBuffer = (char*)malloc(64);
@@ -787,15 +874,15 @@ PUBLIC int     VMThread::RunInstruction() {
             free(textBuffer);
 
             Pop();
-            break;
+            VM_BREAK;
         }
-        case OP_PRINT_STACK: {
+        VM_CASE(OP_PRINT_STACK): {
             PrintStack();
-            break;
+            VM_BREAK;
         }
 
         // Frame stuffs & Returning
-        case OP_RETURN: {
+        VM_CASE(OP_RETURN): {
             VMValue result = Pop();
 
             FrameCount--;
@@ -807,59 +894,59 @@ PUBLIC int     VMThread::RunInstruction() {
             Push(result);
 
             frame = &Frames[FrameCount - 1];
-            break;
+            VM_BREAK;
         }
 
         // Jumping
-        case OP_JUMP: {
+        VM_CASE(OP_JUMP): {
             Sint32 offset = ReadSInt16(frame);
             frame->IP += offset;
-            break;
+            VM_BREAK;
         }
-        case OP_JUMP_BACK: {
+        VM_CASE(OP_JUMP_BACK): {
             Sint32 offset = ReadSInt16(frame);
             frame->IP -= offset;
-            break;
+            VM_BREAK;
         }
-        case OP_JUMP_IF_FALSE: {
+        VM_CASE(OP_JUMP_IF_FALSE): {
             Sint32 offset = ReadSInt16(frame);
             if (BytecodeObjectManager::ValueFalsey(Peek(0))) {
                 frame->IP += offset;
             }
-            break;
+            VM_BREAK;
         }
 
         // Numeric Operations
-        case OP_ADD:            Push(Values_Plus());  break;
-        case OP_SUBTRACT:       Push(Values_Minus());  break;
-        case OP_MULTIPLY:       Push(Values_Multiply());  break;
-        case OP_DIVIDE:         Push(Values_Division());  break;
-        case OP_MODULO:         Push(Values_Modulo());  break;
-        case OP_NEGATE:         Push(Values_Negate());  break;
-        case OP_INCREMENT:      Push(Values_Increment()); break;
-        case OP_DECREMENT:      Push(Values_Decrement()); break;
+        VM_CASE(OP_ADD):            Push(Values_Plus());  VM_BREAK;
+        VM_CASE(OP_SUBTRACT):       Push(Values_Minus());  VM_BREAK;
+        VM_CASE(OP_MULTIPLY):       Push(Values_Multiply());  VM_BREAK;
+        VM_CASE(OP_DIVIDE):         Push(Values_Division());  VM_BREAK;
+        VM_CASE(OP_MODULO):         Push(Values_Modulo());  VM_BREAK;
+        VM_CASE(OP_NEGATE):         Push(Values_Negate());  VM_BREAK;
+        VM_CASE(OP_INCREMENT):      Push(Values_Increment()); VM_BREAK;
+        VM_CASE(OP_DECREMENT):      Push(Values_Decrement()); VM_BREAK;
         // Bit Operations
-        case OP_BITSHIFT_LEFT:  Push(Values_BitwiseLeft());  break;
-        case OP_BITSHIFT_RIGHT: Push(Values_BitwiseRight());  break;
+        VM_CASE(OP_BITSHIFT_LEFT):  Push(Values_BitwiseLeft());  VM_BREAK;
+        VM_CASE(OP_BITSHIFT_RIGHT): Push(Values_BitwiseRight());  VM_BREAK;
         // Bitwise Operations
-        case OP_BW_NOT:         Push(Values_BitwiseNOT());  break;
-        case OP_BW_AND:         Push(Values_BitwiseAnd());  break;
-        case OP_BW_OR:          Push(Values_BitwiseOr());  break;
-        case OP_BW_XOR:         Push(Values_BitwiseXor());  break;
+        VM_CASE(OP_BW_NOT):         Push(Values_BitwiseNOT());  VM_BREAK;
+        VM_CASE(OP_BW_AND):         Push(Values_BitwiseAnd());  VM_BREAK;
+        VM_CASE(OP_BW_OR):          Push(Values_BitwiseOr());  VM_BREAK;
+        VM_CASE(OP_BW_XOR):         Push(Values_BitwiseXor());  VM_BREAK;
         // Logical Operations
-        case OP_LG_NOT:         Push(Values_LogicalNOT());  break;
-        case OP_LG_AND:         Push(Values_LogicalAND()); break;
-        case OP_LG_OR:          Push(Values_LogicalOR()); break;
+        VM_CASE(OP_LG_NOT):         Push(Values_LogicalNOT());  VM_BREAK;
+        VM_CASE(OP_LG_AND):         Push(Values_LogicalAND()); VM_BREAK;
+        VM_CASE(OP_LG_OR):          Push(Values_LogicalOR()); VM_BREAK;
         // Equality and Comparison Operators
-        case OP_EQUAL:          Push(INTEGER_VAL(BytecodeObjectManager::ValuesSortaEqual(Pop(), Pop()))); break;
-        case OP_EQUAL_NOT:      Push(INTEGER_VAL(!BytecodeObjectManager::ValuesSortaEqual(Pop(), Pop()))); break;
-        case OP_LESS:           Push(Values_LessThan()); break;
-        case OP_GREATER:        Push(Values_GreaterThan()); break;
-        case OP_LESS_EQUAL:     Push(Values_LessThanOrEqual()); break;
-        case OP_GREATER_EQUAL:  Push(Values_GreaterThanOrEqual()); break;
+        VM_CASE(OP_EQUAL):          Push(INTEGER_VAL(BytecodeObjectManager::ValuesSortaEqual(Pop(), Pop()))); VM_BREAK;
+        VM_CASE(OP_EQUAL_NOT):      Push(INTEGER_VAL(!BytecodeObjectManager::ValuesSortaEqual(Pop(), Pop()))); VM_BREAK;
+        VM_CASE(OP_LESS):           Push(Values_LessThan()); VM_BREAK;
+        VM_CASE(OP_GREATER):        Push(Values_GreaterThan()); VM_BREAK;
+        VM_CASE(OP_LESS_EQUAL):     Push(Values_LessThanOrEqual()); VM_BREAK;
+        VM_CASE(OP_GREATER_EQUAL):  Push(Values_GreaterThanOrEqual()); VM_BREAK;
 
         // Functions
-        case OP_WITH: {
+        VM_CASE(OP_WITH): {
             enum {
                 WITH_STATE_INIT,
                 WITH_STATE_ITERATE,
@@ -928,42 +1015,44 @@ PUBLIC int     VMThread::RunInstruction() {
 
                         // Add iterator
                         if (objectList->Registry)
-                            *WithIteratorStackTop = WithIter { NULL, NULL, objectListStartIndex, objectList };
+                            *frame->WithIteratorStackTop = NEW_STRUCT_MACRO(WithIter) { NULL, NULL, objectListStartIndex, objectList };
                         else
-                            *WithIteratorStackTop = WithIter { objectStart, objectStart->NextEntityInList, objectListStartIndex, objectList };
-                        WithIteratorStackTop++;
+                            *frame->WithIteratorStackTop = NEW_STRUCT_MACRO(WithIter) { objectStart, objectStart->NextEntityInList, objectListStartIndex, objectList };
+                        frame->WithIteratorStackTop++;
 
                         // Backup original receiver
                         BytecodeObjectManager::Globals->Put("other", frame->Slots[0]);
-                        *WithReceiverStackTop = frame->Slots[0];
-                        WithReceiverStackTop++;
+                        *frame->WithReceiverStackTop = frame->Slots[0];
+                        frame->WithReceiverStackTop++;
                         // Replace receiver
                         frame->Slots[0] = OBJECT_VAL(objectStart->Instance);
+                        BytecodeObjectManager::Globals->Put("this", frame->Slots[0]);
                         break;
                     }
                     else if (IS_INSTANCE(receiver)) {
                         // Backup original receiver
                         BytecodeObjectManager::Globals->Put("other", frame->Slots[0]);
-                        *WithReceiverStackTop = frame->Slots[0];
-                        WithReceiverStackTop++;
+                        *frame->WithReceiverStackTop = frame->Slots[0];
+                        frame->WithReceiverStackTop++;
                         // Replace receiver
                         frame->Slots[0] = receiver;
+                        BytecodeObjectManager::Globals->Put("this", frame->Slots[0]);
 
                         Pop(); // pop receiver
 
                         // Add dummy iterator
-                        *WithIteratorStackTop = WithIter { NULL, NULL, 0, NULL };
-                        WithIteratorStackTop++;
+                        *frame->WithIteratorStackTop = NEW_STRUCT_MACRO(WithIter) { NULL, NULL, 0, NULL };
+                        frame->WithIteratorStackTop++;
                         break;
                     }
                     break;
                 }
                 case WITH_STATE_ITERATE: {
-                    VMValue originalReceiver = WithReceiverStackTop[-1];
+                    VMValue originalReceiver = frame->WithReceiverStackTop[-1];
                     // Restore original receiver
                     frame->Slots[0] = originalReceiver;
 
-                    WithIter it = WithIteratorStackTop[-1];
+                    WithIter it = frame->WithIteratorStackTop[-1];
 
                     ObjectList* list = (ObjectList*)it.list;
                     if (list) {
@@ -984,51 +1073,55 @@ PUBLIC int     VMThread::RunInstruction() {
                                 frame->IP -= offset;
 
                                 // Put iterator back onto stack
-                                WithIteratorStackTop[-1] = it;
+                                frame->WithIteratorStackTop[-1] = it;
 
                                 // Backup original receiver
-                                WithReceiverStackTop[-1] = originalReceiver;
+                                frame->WithReceiverStackTop[-1] = originalReceiver;
                                 // Replace receiver
                                 BytecodeObject* object = (BytecodeObject*)it.entity;
                                 frame->Slots[0] = OBJECT_VAL(object->Instance);
+                                BytecodeObjectManager::Globals->Put("this", frame->Slots[0]);
                             }
                         }
                         else if (list->Registry && ++it.index < list->Count()) {
                             frame->IP -= offset;
 
                             // Put iterator back onto stack
-                            WithIteratorStackTop[-1] = it;
+                            frame->WithIteratorStackTop[-1] = it;
 
                             // Backup original receiver
-                            WithReceiverStackTop[-1] = originalReceiver;
+                            frame->WithReceiverStackTop[-1] = originalReceiver;
                             // Replace receiver
                             BytecodeObject* object = (BytecodeObject*)list->GetNth(it.index);
                             frame->Slots[0] = OBJECT_VAL(object->Instance);
+                            BytecodeObjectManager::Globals->Put("this", frame->Slots[0]);
                         }
                         else {
                             // If we are done
                         }
                     }
                     else {
-                        Log::Print(Log::LOG_ERROR, "hey you might need to handle the stack here (receiverStack: %d, iterator: %d)", WithReceiverStackTop - WithReceiverStack, WithIteratorStackTop - WithIteratorStack);
+                        Log::Print(Log::LOG_ERROR, "hey you might need to handle the stack here (receiverStack: %d, iterator: %d)", frame->WithReceiverStackTop - frame->WithReceiverStack, frame->WithIteratorStackTop - frame->WithIteratorStack);
                         PrintStack();
                         assert(false);
                     }
                     break;
                 }
                 case WITH_STATE_FINISH: {
-                    WithReceiverStackTop--;
+                    frame->WithReceiverStackTop--;
 
-                    VMValue originalReceiver = *WithReceiverStackTop;
+                    VMValue originalReceiver = *frame->WithReceiverStackTop;
                     frame->Slots[0] = originalReceiver;
 
-                    WithIteratorStackTop--;
+                    frame->WithIteratorStackTop--;
+
+                    BytecodeObjectManager::Globals->Remove("this");
                     break;
                 }
             }
-            break;
+            VM_BREAK;
         }
-        case OP_CALL: {
+        VM_CASE(OP_CALL): {
             int argCount = ReadByte(frame);
             if (!CallValue(Peek(argCount), argCount)) {
                 if (ThrowRuntimeError(false, "Could not call value!") == ERROR_RES_CONTINUE)
@@ -1036,12 +1129,12 @@ PUBLIC int     VMThread::RunInstruction() {
                 return INTERPRET_RUNTIME_ERROR;
             }
             frame = &Frames[FrameCount - 1];
-            break;
+            VM_BREAK;
 
             FAIL_OP_CALL:
-            break;
+            VM_BREAK;
         }
-        case OP_INVOKE: {
+        VM_CASE(OP_INVOKE): {
             Uint32 argCount = ReadByte(frame);
             Uint32 hash = ReadUInt32(frame);
             Uint32 isSuper = ReadByte(frame);
@@ -1085,7 +1178,7 @@ PUBLIC int     VMThread::RunInstruction() {
 
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                break;
+                VM_BREAK;
             }
 
             if (!Invoke(hash, argCount, isSuper)) {
@@ -1097,12 +1190,12 @@ PUBLIC int     VMThread::RunInstruction() {
             }
 
             frame = &Frames[FrameCount - 1];
-            break;
+            VM_BREAK;
 
             FAIL_OP_INVOKE:
-            break;
+            VM_BREAK;
         }
-        case OP_CLASS: {
+        VM_CASE(OP_CLASS): {
             Uint32 hash = ReadUInt32(frame);
             ObjClass* klass = NewClass(hash);
             klass->Extended = ReadByte(frame);
@@ -1121,9 +1214,9 @@ PUBLIC int     VMThread::RunInstruction() {
 
             // printf("OP_CLASS:\n");
             // PrintStack();
-            break;
+            VM_BREAK;
         }
-        case OP_INHERIT: {
+        VM_CASE(OP_INHERIT): {
             ObjClass* klass = AS_CLASS(Peek(0));
             // Uint32 hashClass = ReadUInt32(frame);
             Uint32 hashSuper = ReadUInt32(frame);
@@ -1132,27 +1225,36 @@ PUBLIC int     VMThread::RunInstruction() {
             // PrintStack();
 
             klass->ParentHash = hashSuper;
-            break;
+            VM_BREAK;
         }
-        case OP_METHOD: {
+        VM_CASE(OP_EVENT): {
+            int index = ReadByte(frame);
+            VMValue method = OBJECT_VAL(BytecodeObjectManager::FunctionList[index]);
+            Push(method);
+            VM_BREAK;
+        }
+        VM_CASE(OP_METHOD): {
             int index = ReadByte(frame);
             Uint32 hash = ReadUInt32(frame);
             BytecodeObjectManager::DefineMethod(index, hash);
-            break;
+            VM_BREAK;
         }
 
-        case OP_FAILSAFE: {
+        VM_CASE(OP_FAILSAFE): {
             int offset = ReadUInt16(frame);
             frame->Function->Chunk.Failsafe = frame->IPStart + offset;
             // frame->IP = frame->IPStart + offset;
-            break;
+            VM_BREAK;
         }
     }
+    VM_END();
 
-    if (DebugInfo) {
-        Log::Print(Log::LOG_WARN, "START");
-        PrintStack();
-    }
+    #ifdef VM_DEBUG_INSTRUCTIONS
+        if (DebugInfo) {
+            Log::Print(Log::LOG_WARN, "START");
+            PrintStack();
+        }
+    #endif
 
     return INTERPRET_OK;
 }
@@ -1181,12 +1283,16 @@ PUBLIC void    VMThread::RunValue(VMValue value, int argCount) {
     ReturnFrame = lastReturnFrame;
 }
 PUBLIC void    VMThread::RunFunction(ObjFunction* func, int argCount) {
+    VMValue* lastStackTop = StackTop;
     int lastReturnFrame = ReturnFrame;
 
     ReturnFrame = FrameCount;
+
     Call(func, argCount);
     RunInstructionSet();
+
     ReturnFrame = lastReturnFrame;
+    StackTop = lastStackTop;
 }
 PUBLIC void    VMThread::RunInvoke(Uint32 hash, int argCount) {
     VMValue* lastStackTop = StackTop;
@@ -1317,6 +1423,9 @@ PUBLIC bool    VMThread::Call(ObjFunction* function, int argCount) {
     frame->IPStart = frame->IP;
     frame->Function = function;
     frame->Slots = StackTop - (function->Arity + 1);
+    frame->WithReceiverStackTop = frame->WithReceiverStack;
+    frame->WithIteratorStackTop = frame->WithIteratorStack;
+    BytecodeObjectManager::Globals->Remove("this");
 
     return true;
 }
@@ -1441,7 +1550,12 @@ const char* ObjectTypesNames[] = {
 };
 
 #define IS_NOT_NUMBER(a) (a.Type != VAL_DECIMAL && a.Type != VAL_INTEGER && a.Type != VAL_LINKED_DECIMAL && a.Type != VAL_LINKED_INTEGER)
-#define CHECK_IS_NUM(a, b) if (IS_NOT_NUMBER(a)) ThrowRuntimeError(false, "Cannot perform %s operation on non-number value of type %s.", #b, a.Type == VAL_OBJECT ? ObjectTypesNames[OBJECT_TYPE(a)] : BasicTypesNames[a.Type]);
+#define CHECK_IS_NUM(a, b, def) \
+    if (IS_NOT_NUMBER(a)) { \
+        ThrowRuntimeError(false, "Cannot perform %s operation on non-number value of type %s.", #b, a.Type == VAL_OBJECT ? ObjectTypesNames[OBJECT_TYPE(a)] : BasicTypesNames[a.Type]); \
+        a = def; \
+    }
+
 
 enum {
     ASSIGNMENT_MULTIPLY,
@@ -1461,8 +1575,8 @@ PUBLIC VMValue VMThread::Values_Multiply() {
     VMValue b = Peek(0);
     VMValue a = Peek(1);
 
-    CHECK_IS_NUM(a, "multiply");
-    CHECK_IS_NUM(b, "multiply");
+    CHECK_IS_NUM(a, "multiply", DECIMAL_VAL(0.0f));
+    CHECK_IS_NUM(b, "multiply", DECIMAL_VAL(0.0f));
 
     Pop();
     Pop();
@@ -1480,8 +1594,8 @@ PUBLIC VMValue VMThread::Values_Division() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "division");
-    CHECK_IS_NUM(b, "division");
+    CHECK_IS_NUM(a, "division", DECIMAL_VAL(1.0f));
+    CHECK_IS_NUM(b, "division", DECIMAL_VAL(1.0f));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1504,8 +1618,8 @@ PUBLIC VMValue VMThread::Values_Modulo() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "modulo");
-    CHECK_IS_NUM(b, "modulo");
+    CHECK_IS_NUM(a, "modulo", DECIMAL_VAL(1.0f));
+    CHECK_IS_NUM(b, "modulo", DECIMAL_VAL(1.0f));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1531,8 +1645,8 @@ PUBLIC VMValue VMThread::Values_Plus() {
         }
     }
 
-    CHECK_IS_NUM(a, "plus");
-    CHECK_IS_NUM(b, "plus");
+    CHECK_IS_NUM(a, "plus", DECIMAL_VAL(0.0f));
+    CHECK_IS_NUM(b, "plus", DECIMAL_VAL(0.0f));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1551,8 +1665,8 @@ PUBLIC VMValue VMThread::Values_Minus() {
     VMValue b = Peek(0);
     VMValue a = Peek(1);
 
-    CHECK_IS_NUM(a, "minus");
-    CHECK_IS_NUM(b, "minus");
+    CHECK_IS_NUM(a, "minus", DECIMAL_VAL(0.0f));
+    CHECK_IS_NUM(b, "minus", DECIMAL_VAL(0.0f));
 
     Pop();
     Pop();
@@ -1570,8 +1684,8 @@ PUBLIC VMValue VMThread::Values_BitwiseLeft() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "bitwise left");
-    CHECK_IS_NUM(b, "bitwise left");
+    CHECK_IS_NUM(a, "bitwise left", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "bitwise left", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1586,8 +1700,8 @@ PUBLIC VMValue VMThread::Values_BitwiseRight() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "bitwise right");
-    CHECK_IS_NUM(b, "bitwise right");
+    CHECK_IS_NUM(a, "bitwise right", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "bitwise right", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1602,8 +1716,8 @@ PUBLIC VMValue VMThread::Values_BitwiseAnd() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "bitwise and");
-    CHECK_IS_NUM(b, "bitwise and");
+    CHECK_IS_NUM(a, "bitwise and", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "bitwise and", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1618,8 +1732,8 @@ PUBLIC VMValue VMThread::Values_BitwiseXor() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "xor");
-    CHECK_IS_NUM(b, "xor");
+    CHECK_IS_NUM(a, "xor", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "xor", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1634,8 +1748,8 @@ PUBLIC VMValue VMThread::Values_BitwiseOr() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "bitwise or");
-    CHECK_IS_NUM(b, "bitwise or");
+    CHECK_IS_NUM(a, "bitwise or", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "bitwise or", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1650,8 +1764,8 @@ PUBLIC VMValue VMThread::Values_LogicalAND() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "logical and");
-    CHECK_IS_NUM(b, "logical and");
+    CHECK_IS_NUM(a, "logical and", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "logical and", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         // float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1667,8 +1781,8 @@ PUBLIC VMValue VMThread::Values_LogicalOR() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "logical or");
-    CHECK_IS_NUM(b, "logical or");
+    CHECK_IS_NUM(a, "logical or", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "logical or", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         // float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1684,8 +1798,8 @@ PUBLIC VMValue VMThread::Values_LessThan() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "less than");
-    CHECK_IS_NUM(b, "less than");
+    CHECK_IS_NUM(a, "less than", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "less than", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1700,8 +1814,8 @@ PUBLIC VMValue VMThread::Values_GreaterThan() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "greater than");
-    CHECK_IS_NUM(b, "greater than");
+    CHECK_IS_NUM(a, "greater than", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "greater than", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1716,8 +1830,8 @@ PUBLIC VMValue VMThread::Values_LessThanOrEqual() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "less than or equal");
-    CHECK_IS_NUM(b, "less than or equal");
+    CHECK_IS_NUM(a, "less than or equal", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "less than or equal", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1732,8 +1846,8 @@ PUBLIC VMValue VMThread::Values_GreaterThanOrEqual() {
     VMValue b = Pop();
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "greater than or equal");
-    CHECK_IS_NUM(b, "greater than or equal");
+    CHECK_IS_NUM(a, "greater than or equal", INTEGER_VAL(0));
+    CHECK_IS_NUM(b, "greater than or equal", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL || b.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(BytecodeObjectManager::CastValueAsDecimal(a));
@@ -1747,7 +1861,7 @@ PUBLIC VMValue VMThread::Values_GreaterThanOrEqual() {
 PUBLIC VMValue VMThread::Values_Increment() {
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "increment");
+    CHECK_IS_NUM(a, "increment", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(a);
@@ -1759,7 +1873,7 @@ PUBLIC VMValue VMThread::Values_Increment() {
 PUBLIC VMValue VMThread::Values_Decrement() {
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "decrement");
+    CHECK_IS_NUM(a, "decrement", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL) {
         float a_d = AS_DECIMAL(a);
@@ -1771,7 +1885,7 @@ PUBLIC VMValue VMThread::Values_Decrement() {
 PUBLIC VMValue VMThread::Values_Negate() {
     VMValue a = Pop();
 
-    CHECK_IS_NUM(a, "negate");
+    CHECK_IS_NUM(a, "negate", INTEGER_VAL(0));
 
     if (a.Type == VAL_DECIMAL) {
         return DECIMAL_VAL(-AS_DECIMAL(a));

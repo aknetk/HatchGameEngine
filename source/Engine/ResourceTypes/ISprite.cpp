@@ -36,6 +36,8 @@ public:
 #include <Engine/IO/FileStream.h>
 #include <Engine/IO/ResourceStream.h>
 
+#include <Engine/Utilities/StringUtils.h>
+
 PUBLIC ISprite::ISprite() {
     memset(Spritesheets, 0, sizeof(Spritesheets));
     memset(SpritesheetsBorrowed, 0, sizeof(SpritesheetsBorrowed));
@@ -65,12 +67,12 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
     }
 
     float loadDelta = 0.0f;
-    if (strstr(altered, ".png")) {
+    if (StringUtils::StrCaseStr(altered, ".png")) {
         Clock::Start();
         PNG* png = PNG::Load(altered);
         loadDelta = Clock::End();
 
-        if (png) {
+        if (png && png->Data) {
             Log::Print(Log::LOG_VERBOSE, "PNG load took %.3f ms", loadDelta);
             width = png->Width;
             height = png->Height;
@@ -86,12 +88,12 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
             exit(-1);
         }
     }
-    else if (strstr(altered, ".jpg") || strstr(altered, ".jpeg")) {
+    else if (StringUtils::StrCaseStr(altered, ".jpg") || StringUtils::StrCaseStr(altered, ".jpeg")) {
         Clock::Start();
         JPEG* jpeg = JPEG::Load(altered);
         loadDelta = Clock::End();
 
-        if (jpeg) {
+        if (jpeg && jpeg->Data) {
             Log::Print(Log::LOG_VERBOSE, "JPEG load took %.3f ms", loadDelta);
             width = jpeg->Width;
             height = jpeg->Height;
@@ -107,12 +109,12 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
             return NULL;
         }
     }
-    else if (strstr(altered, ".gif")) {
+    else if (StringUtils::StrCaseStr(altered, ".gif")) {
         Clock::Start();
         GIF* gif = GIF::Load(altered);
         loadDelta = Clock::End();
 
-        if (gif) {
+        if (gif && gif->Data) {
             Log::Print(Log::LOG_VERBOSE, "GIF load took %.3f ms", loadDelta);
             width = gif->Width;
             height = gif->Height;
@@ -153,7 +155,7 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
 
     texture = Graphics::CreateTextureFromPixels(width, height, data, width * sizeof(Uint32));
     texture->Paletted = paletted;
-    
+
     Graphics::NoInternalTextures = false;
 
     Memory::Free(data);
@@ -186,7 +188,7 @@ PUBLIC void ISprite::ReserveAnimationCount(int count) {
     Animations.reserve(count);
 }
 PUBLIC void ISprite::AddAnimation(const char* name, int animationSpeed, int frameToLoop) {
-    Uint32 strl = strlen(name);
+    size_t strl = strlen(name);
 
     Animation an;
     an.Name = (char*)Memory::Malloc(strl + 1);
@@ -385,7 +387,7 @@ PUBLIC bool ISprite::SaveAnimation(const char* filename) {
     // Get collision group count
     stream->WriteByte(this->CollisionBoxCount);
 
-    // Load collision groups
+    // Write collision groups
     for (int i = 0; i < this->CollisionBoxCount; i++) {
         stream->WriteHeaderedString("Dummy");
     }
@@ -393,7 +395,7 @@ PUBLIC bool ISprite::SaveAnimation(const char* filename) {
     // Get animation count
     stream->WriteUInt16(Animations.size());
 
-    // Load animations
+    // Write animations
     for (size_t a = 0; a < Animations.size(); a++) {
         Animation an = Animations[a];
         stream->WriteHeaderedString(an.Name);

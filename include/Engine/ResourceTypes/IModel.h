@@ -12,20 +12,24 @@
 #include <Engine/Includes/Standard.h>
 #include <Engine/Rendering/3D.h>
 #include <Engine/Graphics.h>
+#include <Engine/IO/Stream.h>
 
 class IModel {
 public:
-    vector<uint32_t>        Colors;
-    vector<IFace>           Faces;
-    vector<vector<IVertex>> Vertices;
-    vector<vector<IVertex>> Normals;
-    vector<vector<IVertex>> UVs;
-    int                     FaceCount;
-    unsigned int            BufferID_V;
-    unsigned int            BufferID_N;
+    Vector3* PositionBuffer;
+    Vector2* UVBuffer;
+    Uint32*  ColorBuffer;
+    Sint16*  VertexIndexBuffer;
+    Uint16   VertexCount;
+    Uint16   VertexIndexCount;
+    Uint16   FrameCount;
+    Uint8    VertexFlag;
+    Uint8    FaceVertexCount;
 
     IModel();
     IModel(const char* filename);
+    bool Load(Stream* stream, const char* filename);
+    bool ReadRSDK(Stream* stream);
     bool HasColors();
     void Cleanup();
 };

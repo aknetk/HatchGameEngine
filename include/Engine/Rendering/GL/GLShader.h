@@ -12,7 +12,7 @@ class Matrix4x4;
 class Matrix4x4;
 
 #include <Engine/Includes/Standard.h>
-#include <Engine/Includes/StandardSDL2.h>
+#include <Engine/Rendering/GL/Includes.h>
 #include <Engine/IO/Stream.h>
 
 class GLShader {

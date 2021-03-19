@@ -9,12 +9,21 @@ public:
         READ_ACCESS = 0,
         WRITE_ACCESS = 1,
         APPEND_ACCESS = 2,
+        SAVEGAME_ACCESS = 16,
+        PREFERENCES_ACCESS = 32,
     };
 };
 #endif
 
 #include <Engine/IO/FileStream.h>
+#include <Engine/Filesystem/Directory.h>
 #include <Engine/Includes/StandardSDL2.h>
+
+#ifdef MACOSX
+extern "C" {
+    #include <Engine/Platforms/MacOS/Filesystem.h>
+}
+#endif
 
 PUBLIC STATIC FileStream* FileStream::New(const char* filename, Uint32 access) {
     FileStream* stream = new FileStream;
@@ -23,33 +32,89 @@ PUBLIC STATIC FileStream* FileStream::New(const char* filename, Uint32 access) {
     }
 
     const char* accessString = NULL;
-
-    switch (access) {
+    switch (access & 15) {
         case FileStream::READ_ACCESS: accessString = "rb"; break;
         case FileStream::WRITE_ACCESS: accessString = "wb"; break;
         case FileStream::APPEND_ACCESS: accessString = "ab"; break;
     }
 
-    stream->f = fopen(filename, accessString);
+    stream->f = NULL;
 
-    #ifdef SWITCH_ROMFS
-    if (!stream->f) {
-        char romfsPath[256];
-        snprintf(romfsPath, 256, "romfs:/%s", filename);
-        stream->f = fopen(romfsPath, accessString);
-    }
-    #endif
+    #if 0
+        printf("THIS SHOULDN'T HAPPEN\n");
+    #elif defined(WIN32)
+        if (access & FileStream::SAVEGAME_ACCESS) {
+            // Saves in C:/Users/Username/.appdata/Roaming/TARGET_NAME/
+            const char* saveDataPath = "%appdata%/" TARGET_NAME "/Saves";
+            if (!Directory::Exists(saveDataPath))
+                Directory::Create(saveDataPath);
 
-    #ifdef ANDROID
-    if (!stream->f) {
+            char documentPath[256];
+            snprintf(documentPath, 256, "%s/%s", saveDataPath, filename);
+            stream->f = fopen(documentPath, accessString);
+        }
+    #elif defined(MACOSX)
+        if (access & FileStream::SAVEGAME_ACCESS) {
+            char documentPath[256];
+            if (MacOS_GetApplicationSupportDirectory(documentPath, 256)) {
+                snprintf(documentPath, 256, "%s/" TARGET_NAME "/Saves", documentPath);
+                if (!Directory::Exists(documentPath))
+                    Directory::Create(documentPath);
+
+                snprintf(documentPath, 256, "%s/%s", documentPath, filename);
+                stream->f = fopen(documentPath, accessString);
+            }
+        }
+    #elif defined(IOS)
+        if (access & FileStream::SAVEGAME_ACCESS) {
+            char* base_path = SDL_GetPrefPath("aknetk", TARGET_NAME);
+            if (base_path) {
+                char documentPath[256];
+                snprintf(documentPath, 256, "%s%s", base_path, filename);
+                stream->f = fopen(documentPath, accessString);
+            }
+        }
+        else if (access & FileStream::PREFERENCES_ACCESS) {
+            char* base_path = SDL_GetPrefPath("aknetk", TARGET_NAME);
+            if (base_path) {
+                char documentPath[256];
+                snprintf(documentPath, 256, "%s%s", base_path, filename);
+                stream->f = fopen(documentPath, accessString);
+            }
+        }
+    #elif defined(ANDROID)
         const char* internalStorage = SDL_AndroidGetInternalStoragePath();
         if (internalStorage) {
             char androidPath[256];
-            snprintf(androidPath, 256, "%s/%s", internalStorage, filename);
-            stream->f = fopen(androidPath, accessString);
+            if (access & FileStream::SAVEGAME_ACCESS) {
+                snprintf(androidPath, 256, "%s/Save", internalStorage);
+                if (!Directory::Exists(androidPath))
+                    Directory::Create(androidPath);
+
+                char documentPath[256];
+                snprintf(documentPath, 256, "%s/%s", androidPath, filename);
+                stream->f = fopen(documentPath, accessString);
+            }
+            else {
+                snprintf(androidPath, 256, "%s/%s", internalStorage, filename);
+                stream->f = fopen(androidPath, accessString);
+            }
         }
-    }
+    #elif defined(SWITCH)
+        if (access & FileStream::SAVEGAME_ACCESS) {
+            // Saves in Saves/
+            const char* saveDataPath = "Saves";
+            if (!Directory::Exists(saveDataPath))
+                Directory::Create(saveDataPath);
+
+            char documentPath[256];
+            snprintf(documentPath, 256, "%s/%s", saveDataPath, filename);
+            stream->f = fopen(documentPath, accessString);
+        }
     #endif
+
+    if (!stream->f)
+        stream->f = fopen(filename, accessString);
 
     if (!stream->f)
         goto FREE;

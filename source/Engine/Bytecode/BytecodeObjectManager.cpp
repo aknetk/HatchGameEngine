@@ -74,7 +74,7 @@ PUBLIC STATIC void    BytecodeObjectManager::RequestGarbageCollection() {
         ForceGarbageCollection();
     #endif
     if (GarbageCollector::GarbageSize > GarbageCollector::NextGC) {
-        size_t startSize = GarbageCollector::GarbageSize;
+        // size_t startSize = GarbageCollector::GarbageSize;
 
         ForceGarbageCollection();
 
@@ -121,8 +121,8 @@ PUBLIC STATIC void    BytecodeObjectManager::Init() {
         memset(&Threads[i].RegisterValue, 0, sizeof(Threads[i].RegisterValue));
         memset(&Threads[i].Frames, 0, sizeof(Threads[i].Frames));
 
-        memset(&Threads[i].WithReceiverStack, 0, sizeof(Threads[i].WithReceiverStack));
-        memset(&Threads[i].WithIteratorStack, 0, sizeof(Threads[i].WithIteratorStack));
+        // memset(&Threads[i].WithReceiverStack, 0, sizeof(Threads[i].WithReceiverStack));
+        // memset(&Threads[i].WithIteratorStack, 0, sizeof(Threads[i].WithIteratorStack));
 
         memset(&Threads[i].Name, 0, sizeof(Threads[i].Name));
 
@@ -133,14 +133,14 @@ PUBLIC STATIC void    BytecodeObjectManager::Init() {
 
         Threads[i].ID = i;
         Threads[i].StackTop = Threads[i].Stack;
-        Threads[i].WithReceiverStackTop = Threads[i].WithReceiverStack;
-        Threads[i].WithIteratorStackTop = Threads[i].WithIteratorStack;
+        // Threads[i].WithReceiverStackTop = Threads[i].WithReceiverStack;
+        // Threads[i].WithIteratorStackTop = Threads[i].WithIteratorStack;
     }
     ThreadCount = 1;
 }
 PUBLIC STATIC void    BytecodeObjectManager::Dispose() {
     if (Globals) {
-        // NOTE: Remove GCable values from table so it may be cleaned up.
+        // NOTE: Remove GC-able values from table so it may be cleaned up.
         Globals->ForAll(RemoveNonGlobalableValue);
     }
 
@@ -235,6 +235,12 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValu
             }
             case OBJ_FUNCTION: {
                 ObjFunction* function = AS_FUNCTION(value);
+				/*
+				printf("OBJ_FUNCTION: %p (%s)\n", function, 
+					function->Name ?
+						(function->Name->Chars ? function->Name->Chars : "NULL") :
+						"NULL");
+				//*/
                 if (function->Name != NULL)
                     FreeValue(OBJECT_VAL(function->Name));
 
@@ -351,7 +357,7 @@ PUBLIC STATIC VMValue BytecodeObjectManager::Concatenate(VMValue va, VMValue vb)
     ObjString* a = AS_STRING(va);
     ObjString* b = AS_STRING(vb);
 
-    int length = a->Length + b->Length;
+    size_t length = a->Length + b->Length;
     ObjString* result = AllocString(length);
 
     memcpy(result->Chars, a->Chars, a->Length);
@@ -556,6 +562,7 @@ PUBLIC STATIC void    BytecodeObjectManager::LinkStandardLibrary() {
     StandardLibrary::Link();
 }
 PUBLIC STATIC void    BytecodeObjectManager::LinkExtensions() {
+    return;
     /*
     XMLNode* extensionHCEX = XMLParser::ParseFromResource("DiscordRPC.hcex");
     if (!extensionHCEX) return;
@@ -587,24 +594,40 @@ PUBLIC STATIC void    BytecodeObjectManager::LinkExtensions() {
             // StartingScene[value.Length] = 0;
         }
         else if (XMLParser::MatchToken(extension->children[i]->name, "import")) {
-            XMLNode* import = extension->children[i];
+            // XMLNode* import = extension->children[i];
         }
         else if (XMLParser::MatchToken(extension->children[i]->name, "functions")) {
-            XMLNode* functions = extension->children[i];
+            // XMLNode* functions = extension->children[i];
+
+            NativeFn exFunction = (NativeFn)SDL_LoadFunction(sharedObject, "HVM_Discord_Init");
+            if (exFunction) {
+                ObjClass* klass;
+                klass = NewClass(Murmur::EncryptString("Discord"));
+                klass->Name = CopyString("Discord", strlen("Discord"));
+
+                // VMValue val = OBJECT_VAL(klass);
+                BytecodeObjectManager::Globals->Put(klass->Hash, OBJECT_VAL(klass));
+                BytecodeObjectManager::DefineNative(klass, "Init", exFunction);
+            }
+        }
+        else if (XMLParser::MatchToken(extension->children[i]->name, "enums")) {
+            // XMLNode* enums = extension->children[i];
         }
     }
 
     XMLParser::Free(extensionHCEX);
-    */
+    // */
 }
 // #endregion
 
-#if defined(MACOSX) || defined(LINUX) || defined(UBUNTU)
-#define FG_YELLOW "\x1b[1;93m"
-#define FG_RESET "\x1b[m"
-#else
 #define FG_YELLOW ""
 #define FG_RESET ""
+
+#if defined(MACOSX) || defined(LINUX)
+    #undef FG_YELLOW
+    #undef FG_RESET
+    #define FG_YELLOW "\x1b[1;93m"
+    #define FG_RESET "\x1b[m"
 #endif
 
 // #region ObjectFuncs
@@ -620,7 +643,7 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
 
     bool doLineNumbers;
 
-    Uint8 opts;
+    // Uint8 opts;
     stream->Skip(1); // opts = stream->ReadByte();
     doLineNumbers = stream->ReadByte();
     stream->Skip(1); // opts = stream->ReadByte();
@@ -702,6 +725,21 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
 PUBLIC STATIC void    BytecodeObjectManager::SetCurrentObjectHash(Uint32 hash) {
     CurrentObjectHash = hash;
 }
+PUBLIC STATIC bool    BytecodeObjectManager::CallFunction(char* functionName) {
+    if (!Globals->Exists(functionName))
+        return false;
+
+    VMValue functionValue = Globals->Get(functionName);
+    if (!IS_FUNCTION(functionValue))
+        return false;
+
+    ObjFunction* function = AS_FUNCTION(functionValue);
+    if (!function)
+        return false;
+
+    Threads[0].RunFunction(function, 0);
+    return true;
+}
 PUBLIC STATIC Entity* BytecodeObjectManager::SpawnFunction() {
     BytecodeObject* object = new BytecodeObject;
     ObjClass* klass = AS_CLASS(Globals->Get(CurrentObjectHash));
@@ -773,7 +811,9 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
 
             // Load the object class
             if (fn == 0)
-                Log::Print(Log::LOG_VERBOSE, "Loading the object %s%s%s class, %d filenames...", FG_YELLOW, objectName, FG_RESET, (int)filenameHashList->size());
+                Log::Print(Log::LOG_VERBOSE, "Loading the object %s%s%s class, %d filenames...",
+                    Log::WriteToFile ? "" : FG_YELLOW, objectName, Log::WriteToFile ? "" : FG_RESET,
+                    (int)filenameHashList->size());
 
             MemoryStream* bytecodeStream = MemoryStream::New(bytecode, size);
             if (bytecodeStream) {
@@ -791,6 +831,7 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
             if (klass->Extended == 0) {
                 BytecodeObjectManager::DefineNative(klass, "InView", BytecodeObject::VM_InView);
                 BytecodeObjectManager::DefineNative(klass, "Animate", BytecodeObject::VM_Animate);
+                BytecodeObjectManager::DefineNative(klass, "ApplyPhysics", BytecodeObject::VM_ApplyPhysics);
                 BytecodeObjectManager::DefineNative(klass, "SetAnimation", BytecodeObject::VM_SetAnimation);
                 BytecodeObjectManager::DefineNative(klass, "ResetAnimation", BytecodeObject::VM_ResetAnimation);
                 BytecodeObjectManager::DefineNative(klass, "GetHitboxFromSprite", BytecodeObject::VM_GetHitboxFromSprite);

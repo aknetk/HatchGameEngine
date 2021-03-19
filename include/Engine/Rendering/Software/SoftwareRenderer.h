@@ -14,7 +14,6 @@
 #include <Engine/ResourceTypes/ISprite.h>
 #include <Engine/ResourceTypes/IModel.h>
 #include <Engine/Math/Matrix4x4.h>
-#include <Engine/Rendering/GL/GLShader.h>
 #include <Engine/Rendering/Texture.h>
 #include <Engine/Includes/HashMap.h>
 
@@ -23,8 +22,10 @@ public:
     static GraphicsFunctions BackendFunctions;
     static Uint32            CompareColor;
     static Sint32            CurrentPalette;
-    static Uint32            PaletteColors[32][0x100];
-    static Uint8             PaletteIndexLines[4096];
+    static Uint32            CurrentArrayBuffer;
+    static Uint32            PaletteColors[MAX_PALETTE_COUNT][0x100];
+    static Uint8             PaletteIndexLines[MAX_FRAMEBUFFER_HEIGHT];
+    static TileScanLine      TileScanLineBuffer[MAX_FRAMEBUFFER_HEIGHT];
 
     static inline Uint32 GetPixelIndex(ISprite* sprite, int x, int y);
     static void    SetDrawAlpha(int a);
@@ -35,16 +36,8 @@ public:
     static bool    IsOnScreen(int x, int y, int w, int h);
     static void    DrawRectangleStroke(int x, int y, int width, int height, Uint32 color);
     static void    DrawRectangleSkewedH(int x, int y, int width, int height, int sk, Uint32 color);
-    static void    DrawSpriteNormal(ISprite* sprite, int SrcX, int SrcY, int Width, int Height, int CenterX, int CenterY, bool FlipX, bool FlipY, int RealCenterX, int RealCenterY);
-    static void    DrawSpriteTransformed(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, int scaleW, int scaleH, int angle);
-    static void    DrawSpriteSizedTransformed(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, int width, int height, int angle);
-    static void    DrawSpriteAtlas(ISprite* sprite, int x, int y, int pivotX, int pivotY, bool flipX, bool flipY);
-    static void    DrawText(int x, int y, const char* string, unsigned int pixel);
-    static void    DrawTextShadow(int x, int y, const char* string, unsigned int pixel);
     static void    DrawTextSprite(ISprite* sprite, int animation, char first, int x, int y, const char* string);
     static int     MeasureTextSprite(ISprite* sprite, int animation, char first, const char* string);
-    static void    DrawModelOn2D(IModel* model, int x, int y, double scale, int rx, int ry, int rz, Uint32 color, bool wireframe);
-    static void    DrawSpriteIn3D(ISprite* sprite, int animation, int frame, int x, int y, int z, double scale, int rx, int ry, int rz);
     static void    ConvertFromARGBtoNative(Uint32* argb, int count);
     static void     Init();
     static Uint32   GetWindowFlags();
@@ -79,6 +72,13 @@ public:
     static void     Rotate(float x, float y, float z);
     static void     Scale(float x, float y, float z);
     static void     Restore();
+    static void     ArrayBuffer_Init(Uint32 arrayBufferIndex, Uint32 maxVertices);
+    static void     ArrayBuffer_SetAmbientLighting(Uint32 arrayBufferIndex, Uint32 r, Uint32 g, Uint32 b);
+    static void     ArrayBuffer_SetDiffuseLighting(Uint32 arrayBufferIndex, Uint32 r, Uint32 g, Uint32 b);
+    static void     ArrayBuffer_SetSpecularLighting(Uint32 arrayBufferIndex, Uint32 r, Uint32 g, Uint32 b);
+    static void     ArrayBuffer_DrawBegin(Uint32 arrayBufferIndex);
+    static void     ArrayBuffer_DrawFinish(Uint32 arrayBufferIndex, Uint32 drawMode);
+    static void     DrawModel(IModel* model, int frame, Matrix4x4i* viewMatrix, Matrix4x4i* normalMatrix);
     static void     SetLineWidth(float n);
     static void     StrokeLine(float x1, float y1, float x2, float y2);
     static void     StrokeCircle(float x, float y, float rad);
@@ -91,6 +91,12 @@ public:
     static void     DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h);
     static void     DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
     static void     DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
+    static void     DrawTile(int tile, int x, int y, bool flipX, bool flipY);
+    static void     DrawSceneLayer_InitTileScanLines(SceneLayer* layer, View* currentView);
+    static void     DrawSceneLayer_HorizontalParallax(SceneLayer* layer, View* currentView);
+    static void     DrawSceneLayer_VerticalParallax(SceneLayer* layer, View* currentView);
+    static void     DrawSceneLayer_CustomTileScanLines(SceneLayer* layer, View* currentView);
+    static void     DrawSceneLayer(SceneLayer* layer, View* currentView);
     static void     MakeFrameBufferID(ISprite* sprite, AnimFrame* frame);
 };
 

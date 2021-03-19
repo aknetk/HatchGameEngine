@@ -11,8 +11,8 @@ public:
     SDL_AudioSpec  OutputFormat;
 
     vector<Uint8*> Samples;
-    int            SampleSize;
-    int            SampleIndex = 0;
+    size_t         SampleSize;
+    size_t         SampleIndex = 0;
 
     int            TotalPossibleSamples;
     Uint8*         SampleBuffer = NULL;
@@ -30,15 +30,15 @@ PUBLIC VIRTUAL int    SoundFormat::LoadSamples(size_t count) {
     return 0;
 }
 PUBLIC VIRTUAL int    SoundFormat::GetSamples(Uint8* buffer, size_t count) {
-    if ((size_t)SampleIndex >= Samples.size()) {
+    if (SampleIndex >= Samples.size()) {
         if (LoadSamples(count) == 0) // If we've reached end of file
             return 0;
     }
 
-    if (count >= Samples.size() - (size_t)SampleIndex)
+    if (count > Samples.size() - SampleIndex)
         count = Samples.size() - SampleIndex;
 
-    int samplecount = 0;
+    size_t samplecount = 0;
     for (size_t i = SampleIndex; i < SampleIndex + count && i < Samples.size(); i++) {
         memcpy(buffer, Samples[i], SampleSize);
         buffer += SampleSize;
@@ -47,11 +47,11 @@ PUBLIC VIRTUAL int    SoundFormat::GetSamples(Uint8* buffer, size_t count) {
     SampleIndex += samplecount;
     return samplecount;
 }
-PUBLIC VIRTUAL int    SoundFormat::SeekSample(int index) {
-    SampleIndex = index;
+PUBLIC VIRTUAL size_t SoundFormat::SeekSample(int index) {
+    SampleIndex = (size_t)index;
     return SampleIndex;
 }
-PUBLIC VIRTUAL int    SoundFormat::TellSample() {
+PUBLIC VIRTUAL size_t SoundFormat::TellSample() {
     return SampleIndex;
 }
 
@@ -59,7 +59,7 @@ PUBLIC VIRTUAL double SoundFormat::GetPosition() {
     return (double)SampleIndex / InputFormat.freq;
 }
 PUBLIC VIRTUAL double SoundFormat::SetPosition(double seconds) {
-    SampleIndex = int(seconds * InputFormat.freq);
+    SampleIndex = (size_t)(seconds * InputFormat.freq);
     return GetPosition();
 }
 PUBLIC VIRTUAL double SoundFormat::GetDuration() {

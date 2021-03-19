@@ -97,7 +97,8 @@ PUBLIC STATIC SoundFormat* WAV::Load(const char* filename) {
     goto WAV_Load_SUCCESS;
 
     WAV_Load_FAIL:
-    wav->Dispose();
+    if (wav)
+        wav->Dispose();
     delete wav;
     wav = NULL;
 
@@ -106,7 +107,7 @@ PUBLIC STATIC SoundFormat* WAV::Load(const char* filename) {
 }
 
 PUBLIC        int          WAV::LoadSamples(size_t count) {
-    int read,
+    size_t read,
         bytesForSample = 0,
         total = 0;
 
@@ -129,7 +130,7 @@ PUBLIC        int          WAV::LoadSamples(size_t count) {
         total++;
     }
 
-    return total;
+    return (int)total;
 }
 
 PUBLIC        void         WAV::Dispose() {

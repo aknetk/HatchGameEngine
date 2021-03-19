@@ -17,6 +17,8 @@ class IModel;
 #include <Engine/Math/Matrix4x4.h>
 #include <Engine/ResourceTypes/ISprite.h>
 #include <Engine/ResourceTypes/IModel.h>
+#include <Engine/Scene/SceneLayer.h>
+#include <Engine/Scene/View.h>
 #include <Engine/Includes/HashMap.h>
 #include <Engine/Rendering/Enums.h>
 
@@ -103,6 +105,10 @@ public:
     static void     DrawTexture(Texture* texture, float sx, float sy, float sw, float sh, float x, float y, float w, float h);
     static void     DrawSprite(ISprite* sprite, int animation, int frame, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
     static void     DrawSpritePart(ISprite* sprite, int animation, int frame, int sx, int sy, int sw, int sh, int x, int y, bool flipX, bool flipY, float scaleW, float scaleH, float rotation);
+    static void     DrawTile(int tile, int x, int y, bool flipX, bool flipY);
+    static void     DrawSceneLayer_HorizontalParallax(SceneLayer* layer, View* currentView);
+    static void     DrawSceneLayer_VerticalParallax(SceneLayer* layer, View* currentView);
+    static void     DrawSceneLayer(SceneLayer* layer, View* currentView);
     static void     MakeFrameBufferID(ISprite* sprite, AnimFrame* frame);
     static bool     SpriteRangeCheck(ISprite* sprite, int animation, int frame);
 };

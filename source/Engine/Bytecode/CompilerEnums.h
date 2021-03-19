@@ -2,11 +2,11 @@
 #define ENGINE_COMPILER_ENUMS
 
 struct Token {
-    int   Type;
-    char* Start;
-    int   Length;
-    int   Line;
-    int   Pos;
+    int    Type;
+    char*  Start;
+	size_t Length;
+    int    Line;
+    size_t Pos;
 };
 
 class Parser {

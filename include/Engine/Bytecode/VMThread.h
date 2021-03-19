@@ -14,22 +14,12 @@
 
 class VMThread {
 public:
-    struct WithIter {
-    void* entity;
-    void* entityNext;
-    int   index;
-    void* list;
-    }; 
     VMValue   Stack[STACK_SIZE_MAX];
     VMValue*  StackTop = Stack;
     VMValue   RegisterValue;
     CallFrame Frames[FRAMES_MAX];
     Uint32    FrameCount;
     Uint32    ReturnFrame;
-    VMValue   WithReceiverStack[16];
-    VMValue*  WithReceiverStackTop = WithReceiverStack;
-    WithIter  WithIteratorStack[16];
-    WithIter* WithIteratorStackTop = WithIteratorStack;
     enum ThreadState {
     CREATED = 0,
     RUNNING = 1,

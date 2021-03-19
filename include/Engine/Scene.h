@@ -19,13 +19,15 @@ class Entity;
 #include <Engine/Types/ObjectList.h>
 #include <Engine/Scene/SceneLayer.h>
 #include <Engine/Scene/TileConfig.h>
-#include <Engine/Rendering/GL/GLShader.h>
+#include <Engine/Scene/TileSpriteInfo.h>
 #include <Engine/Scene/View.h>
+#include <Engine/Diagnostics/PerformanceTypes.h>
 
 class Scene {
 public:
     static Uint32                BackgroundColor;
     static int                   ShowTileCollisionFlag;
+    static int                   ShowObjectRegions;
     static HashMap<ObjectList*>* ObjectLists;
     static HashMap<ObjectList*>* ObjectRegistries;
     static int                   StaticObjectCount;
@@ -36,7 +38,8 @@ public:
     static Entity*               DynamicObjectLast;
     static int                   PriorityPerLayer;
     static vector<Entity*>*      PriorityLists;
-    static ISprite*              TileSprite;
+    static vector<ISprite*>      TileSprites;
+    static vector<TileSpriteInfo>TileSpriteInfos;
     static Uint16                EmptyTile;
     static float                 CameraX;
     static float                 CameraY;
@@ -52,7 +55,7 @@ public:
     static vector<ResourceType*> ImageList;
     static vector<ResourceType*> SoundList;
     static vector<ResourceType*> MusicList;
-    static vector<GLShader*>     ShaderList;
+    static vector<ResourceType*> ShaderList;
     static vector<ResourceType*> ModelList;
     static vector<ResourceType*> MediaList;
     static int                   Frame;
@@ -60,11 +63,7 @@ public:
     static int                   MainLayer;
     static View                  Views[8];
     static int                   ViewCurrent;
-    static float                 PreGameRenderViewRenderTimes[8];
-    static float                 GameRenderEarlyViewRenderTimes[8];
-    static float                 GameRenderViewRenderTimes[8];
-    static float                 GameRenderLateViewRenderTimes[8];
-    static float                 PostGameRenderViewRenderTimes[8];
+    static Perf_ViewRender       PERF_ViewRender[8];
     static char                  NextScene[256];
     static char                  CurrentScene[256];
     static bool                  DoRestart;
@@ -76,6 +75,7 @@ public:
     static void AddDynamic(ObjectList* objectList, Entity* obj);
     static void OnEvent(Uint32 event);
     static void Init();
+    static void ResetPerf();
     static void Update();
     static void Render();
     static void AfterScene();
@@ -87,9 +87,9 @@ public:
     static void Dispose();
     static void Exit();
     static void UpdateTileBatchAll();
-    static void UpdateTileBatch(int l, int batchx, int batchy);
     static void SetTile(int layer, int x, int y, int tileID, int flip_x, int flip_y, int collA, int collB);
     static int  CollisionAt(int x, int y, int collisionField, int collideSide, int* angle);
+    static int  CollisionInLine(int x, int y, int angleMode, int checkLen, int collisionField, bool compareAngle, Sensor* sensor);
 };
 
 #endif /* ENGINE_SCENE_H */

@@ -2,93 +2,146 @@
 #include <Engine/Includes/Standard.h>
 #include <Engine/Rendering/3D.h>
 #include <Engine/Graphics.h>
+#include <Engine/IO/Stream.h>
 
 class IModel {
 public:
-    vector<uint32_t>        Colors;
-    vector<IFace>           Faces;
-    vector<vector<IVertex>> Vertices;
-    vector<vector<IVertex>> Normals;
-    vector<vector<IVertex>> UVs;
+    Vector3* PositionBuffer;
+    Vector2* UVBuffer;
+    Uint32*  ColorBuffer;
+    Sint16*  VertexIndexBuffer;
 
-    int                     FaceCount;
+    Uint16   VertexCount;
+    Uint16   VertexIndexCount;
+    Uint16   FrameCount;
 
-    unsigned int            BufferID_V;
-    unsigned int            BufferID_N;
+    Uint8    VertexFlag;
+    Uint8    FaceVertexCount;
 };
 #endif
 
 #include <Engine/ResourceTypes/IModel.h>
 
+#include <Engine/Diagnostics/Memory.h>
 #include <Engine/IO/MemoryStream.h>
 #include <Engine/IO/ResourceStream.h>
+#include <Engine/ResourceTypes/ModelFormats/COLLADAReader.h>
+#include <Engine/Utilities/StringUtils.h>
 
 PUBLIC IModel::IModel() {
 
 }
-
 PUBLIC IModel::IModel(const char* filename) {
     ResourceStream* resourceStream = ResourceStream::New(filename);
     if (!resourceStream) return;
 
-    int f1, f2, f3, f4;
-    int HasVertColors, PolyType, VertexCount, FrameCount;
+    this->Load(resourceStream, filename);
 
-    MemoryStream* stream = MemoryStream::New(resourceStream);
-    if (!stream) goto CLOSE;
+    if (resourceStream) resourceStream->Close();
+}
+PUBLIC bool IModel::Load(Stream* stream, const char* filename) {
+    if (!stream) return false;
+    if (!filename) return false;
 
+    if (StringUtils::StrCaseStr(filename, ".dae"))
+        return !!COLLADAReader::Convert(this, stream);
+
+    return this->ReadRSDK(stream);
+}
+
+PUBLIC bool IModel::ReadRSDK(Stream* stream) {
     if (stream->ReadUInt32BE() != 0x4D444C00) { // MDL0
-        goto CLOSE;
+        Log::Print(Log::LOG_ERROR, "Model not of RSDK type!");
+        return false;
     }
 
-    HasVertColors = stream->ReadByte();
-    PolyType = stream->ReadByte();
+    // #define YES_PRINT 1
+
+    VertexFlag = stream->ReadByte();
+    FaceVertexCount = stream->ReadByte();
     VertexCount = stream->ReadUInt16();
     FrameCount = stream->ReadUInt16();
 
-    if (HasVertColors == 5) {
+    if (VertexFlag & VertexType_Normal)
+        PositionBuffer = (Vector3*)Memory::Malloc(VertexCount * FrameCount * 2 * sizeof(Vector3));
+    else
+        PositionBuffer = (Vector3*)Memory::Malloc(VertexCount * FrameCount * sizeof(Vector3));
+
+    if (VertexFlag & VertexType_UV)
+        UVBuffer = (Vector2*)Memory::Malloc(VertexCount * FrameCount * sizeof(Vector2));
+
+    if (VertexFlag & VertexType_Color)
+        ColorBuffer = (Uint32*)Memory::Malloc(VertexCount * FrameCount * sizeof(Uint32));
+
+    // Read UVs
+    if (VertexFlag & VertexType_UV) {
+        int uvX, uvY;
         for (int i = 0; i < VertexCount; i++) {
-            Colors.push_back(stream->ReadByte() << 16 | stream->ReadByte() << 8 | stream->ReadByte());
-            stream->ReadByte(); // read A (alpha), we don't it, but we need to read it
+            Vector2* uv = &UVBuffer[i];
+            uv->X = uvX = (int)(stream->ReadFloat() * 0x10000);
+            uv->Y = uvY = (int)(stream->ReadFloat() * 0x10000);
+            // Copy the values to other frames
+            for (int f = 1; f < FrameCount; f++) {
+                uv += VertexCount;
+                uv->X = uvX;
+                uv->Y = uvY;
+            }
         }
     }
-
-    FaceCount = stream->ReadUInt16() / PolyType;
-    for (int i = 0; i < FaceCount; i++) {
-        f1 = stream->ReadUInt16();
-        f2 = stream->ReadUInt16();
-        f3 = stream->ReadUInt16();
-        if (PolyType == 4) {
-            f4 = stream->ReadUInt16();
-            Faces.push_back(IFace(f1, f2, f3, f4));
-        }
-        else
-            Faces.push_back(IFace(f1, f2, f3));
-    }
-
-    for (int f = 0; f < FrameCount; f++) {
-        Vertices.push_back(vector<IVertex>());
-        Normals.push_back(vector<IVertex>());
+    // Read Colors
+    if (VertexFlag & VertexType_Color) {
+        Uint32* colorPtr, color;
         for (int i = 0; i < VertexCount; i++) {
-            Vertices[f].push_back(IVertex(stream->ReadFloat(), stream->ReadFloat(), stream->ReadFloat()));
-            Normals[f].push_back(IVertex(stream->ReadFloat(), stream->ReadFloat(), stream->ReadFloat()));
+            colorPtr = &ColorBuffer[i];
+            *colorPtr = color = stream->ReadUInt32();
+            // Copy the value to other frames
+            for (int f = 1; f < FrameCount; f++) {
+                colorPtr += VertexCount;
+                *colorPtr = color;
+            }
         }
     }
 
-    if (FrameCount == 0) goto CLOSE;
+    VertexIndexCount = stream->ReadInt16();
+    VertexIndexBuffer = (Sint16*)Memory::Malloc((VertexIndexCount + 1) * sizeof(Sint16));
 
-    CLOSE:
-        if (stream) stream->Close();
-        if (resourceStream) resourceStream->Close();
+    for (int i = 0; i < VertexIndexCount; i++) {
+        VertexIndexBuffer[i] = stream->ReadInt16();
+    }
+    VertexIndexBuffer[VertexIndexCount] = -1;
 
-    // BufferID_V = Graphics::MakeVertexBuffer(this, true);
-    // BufferID_N = Graphics::MakeVertexBuffer(this, false);
+
+    if (VertexFlag & VertexType_Normal) {
+        Vector3* vert = &PositionBuffer[0];
+        int totalVertexCount = VertexCount * FrameCount;
+        for (int v = 0; v < totalVertexCount; v++) {
+            vert->X = (int)(stream->ReadFloat() * 0x100);
+            vert->Y = (int)(stream->ReadFloat() * 0x100);
+            vert->Z = (int)(stream->ReadFloat() * 0x100);
+            vert++;
+
+            vert->X = (int)(stream->ReadFloat() * 0x10000);
+            vert->Y = (int)(stream->ReadFloat() * 0x10000);
+            vert->Z = (int)(stream->ReadFloat() * 0x10000);
+            vert++;
+        }
+    }
+    else {
+        Vector3* vert = &PositionBuffer[0];
+        int totalVertexCount = VertexCount * FrameCount;
+        for (int v = 0; v < totalVertexCount; v++) {
+            vert->X = (int)(stream->ReadFloat() * 0x100);
+            vert->Y = (int)(stream->ReadFloat() * 0x100);
+            vert->Z = (int)(stream->ReadFloat() * 0x100);
+            vert++;
+        }
+    }
+
+    return true;
 }
-
 PUBLIC bool IModel::HasColors() {
-    return Colors.size() > 0;
+    return false; // Colors.size() > 0;
 }
-
 PUBLIC void IModel::Cleanup() {
     // Does nothing
     // Graphics::DeleteBufferID(BufferID_V);

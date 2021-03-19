@@ -27,6 +27,8 @@ HashMap<Uint32>*          SourceFileMap::Checksums = NULL;
 HashMap<vector<Uint32>*>* SourceFileMap::ClassMap = NULL;
 Uint32                    SourceFileMap::DirectoryChecksum = 0;
 
+bool PreventObjectSaving = false;
+
 PUBLIC STATIC void SourceFileMap::CheckInit() {
     if (SourceFileMap::Initialized) return;
 
@@ -36,6 +38,25 @@ PUBLIC STATIC void SourceFileMap::CheckInit() {
     if (SourceFileMap::ClassMap == NULL) {
         SourceFileMap::ClassMap = new HashMap<vector<Uint32>*>(Murmur::EncryptData, 16);
     }
+
+    if (PreventObjectSaving) {
+        SourceFileMap::Initialized = true;
+        return;
+    }
+
+    // const SDL_MessageBoxButtonData buttonsError[] = {
+    //     { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Continue" },
+    // };
+    // const SDL_MessageBoxData messageBoxData = {
+    //     SDL_MESSAGEBOX_ERROR, NULL,
+    //     "hey",
+    //     getcwd(),
+    //     SDL_arraysize(buttonsError),
+    //     buttonsError,
+    //     NULL,
+    // };
+    // int buttonClicked;
+    // SDL_ShowMessageBox(&messageBoxData, &buttonClicked);
 
     if (ResourceManager::ResourceExists("Objects/Objects.hcm")) {
         ResourceStream* stream = ResourceStream::New("Objects/Objects.hcm");
@@ -86,8 +107,9 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
     SourceFileMap::CheckInit();
 
     #ifdef DEBUG
-
     bool anyChanges = false;
+
+    anyChanges |= PreventObjectSaving;
 
     bool freeTokens = true;
 

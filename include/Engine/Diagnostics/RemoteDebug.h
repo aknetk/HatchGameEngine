@@ -16,6 +16,7 @@ public:
     static bool        UsingRemoteDebug;
 
     static void Init();
+    static bool AwaitResponse();
 };
 
 #endif /* ENGINE_DIAGNOSTICS_REMOTEDEBUG_H */

@@ -21,6 +21,8 @@ public:
 #include <Engine/IO/MemoryStream.h>
 #include <Engine/IO/ResourceStream.h>
 
+
+#ifdef USING_LIBJPEG
 extern "C" {
     #include <setjmp.h>
     #include <jpeglib.h>
@@ -101,8 +103,10 @@ static void jpeg_Hatch_IO_src(j_decompress_ptr cinfo, Stream* stream) {
    src->pub.bytes_in_buffer = 0; /* forces fill_input_buffer on first read */
    src->pub.next_input_byte = NULL; /* until buffer loaded */
 }
+#endif
 
 PUBLIC STATIC JPEG*   JPEG::Load(const char* filename) {
+#ifdef USING_LIBJPEG
     JPEG* jpeg = new JPEG;
     Stream* stream = NULL;
     // size_t fileSize;
@@ -257,6 +261,8 @@ PUBLIC STATIC JPEG*   JPEG::Load(const char* filename) {
         if (stream)
             stream->Close();
         return jpeg;
+#endif
+	return NULL;
 }
 PUBLIC STATIC bool    JPEG::Save(JPEG* jpeg, const char* filename) {
     return jpeg->Save(filename);

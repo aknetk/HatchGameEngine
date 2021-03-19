@@ -5,6 +5,7 @@
 class ResourceManager {
 public:
     static bool      UsingDataFolder;
+    static bool      UsingModPack;
 };
 #endif
 
@@ -18,9 +19,12 @@ public:
 #include <Engine/Includes/StandardSDL2.h>
 #include <Engine/IO/Compression/ZLibStream.h>
 #include <Engine/IO/FileStream.h>
+#include <Engine/IO/SDLStream.h>
 #include <Engine/IO/MemoryStream.h>
 #include <Engine/IO/Stream.h>
 #include <Engine/Application.h>
+
+#define KEEP_DATA_PACKS_IN_MEMORY
 
 struct      StreamNode {
     Stream*            Table;
@@ -38,10 +42,13 @@ struct  ResourceRegistryItem {
 HashMap<ResourceRegistryItem>* ResourceRegistry = NULL;
 
 bool                 ResourceManager::UsingDataFolder = true;
+bool                 ResourceManager::UsingModPack = false;
 
 PUBLIC STATIC void   ResourceManager::PrefixResourcePath(char* out, const char* path) {
-    #if defined(MACOSX_APP_BUNDLE)
+    #if 0
         sprintf(out, "%s", path);
+    // #elif defined(MACOSX_APP_BUNDLE)
+    //     sprintf(out, "%s", path);
     #elif defined(SWITCH_ROMFS)
         sprintf(out, "romfs:/%s", path);
     #elif defined(ANDROID)
@@ -67,17 +74,18 @@ PUBLIC STATIC void   ResourceManager::Init(const char* filename) {
     if (File::Exists(filename)) {
         ResourceManager::UsingDataFolder = false;
 
-        Log::Print(Log::LOG_IMPORTANT, "Using \"%s\"", filename);
+        Log::Print(Log::LOG_INFO, "Using \"%s\"", filename);
         ResourceManager::Load(filename);
     }
     else {
-        Log::Print(Log::LOG_INFO, "Cannot find \"%s\".", filename);
+        Log::Print(Log::LOG_WARN, "Cannot find \"%s\".", filename);
     }
 
     char modpacksString[1024];
     if (Application::Settings->GetString("game", "modpacks", modpacksString)) {
         if (File::Exists(modpacksString)) {
-            ResourceManager::UsingDataFolder = false;
+            // ResourceManager::UsingDataFolder = false;
+            ResourceManager::UsingModPack = true;
 
             Log::Print(Log::LOG_IMPORTANT, "Using \"%s\"", modpacksString);
             ResourceManager::Load(modpacksString);
@@ -92,33 +100,34 @@ PUBLIC STATIC void   ResourceManager::Load(const char* filename) {
     char resourcePath[256];
     ResourceManager::PrefixParentPath(resourcePath, filename);
 
-    SDL_RWops* rw = SDL_RWFromFile(resourcePath, "rb");
-    if (!rw) {
-        // Log::Print(Log::LOG_ERROR, "ResourceManager::Load: No RW!: %s", resourcePath, SDL_GetError());
-        return;
-    }
+    // SDL_RWops* rw = SDL_RWFromFile(resourcePath, "rb");
+    // if (!rw) {
+    //     // Log::Print(Log::LOG_ERROR, "ResourceManager::Load: No RW!: %s", resourcePath, SDL_GetError());
+    //     return;
+    // }
+    //
+    // Sint64 rwSize = SDL_RWsize(rw);
+    // if (rwSize < 0) {
+    //     Log::Print(Log::LOG_ERROR, "Could not get size of file \"%s\": %s", resourcePath, SDL_GetError());
+    //     return;
+    // }
 
-    Sint64 rwSize = SDL_RWsize(rw);
-    if (rwSize < 0) {
-        Log::Print(Log::LOG_ERROR, "Could not get size of file \"%s\": %s", resourcePath, SDL_GetError());
-        return;
-    }
-
-    MemoryStream* dataTableStream = MemoryStream::New(rwSize);
+    // MemoryStream* dataTableStream = MemoryStream::New(rwSize);
+    SDLStream* dataTableStream = SDLStream::New(resourcePath, SDLStream::READ_ACCESS);
     if (!dataTableStream) {
         Log::Print(Log::LOG_ERROR, "Could not open MemoryStream!");
         return;
     }
 
-    SDL_RWread(rw, dataTableStream->pointer_start, rwSize, 1);
-    SDL_RWclose(rw);
+    // SDL_RWread(rw, dataTableStream->pointer_start, rwSize, 1);
+    // SDL_RWclose(rw);
 
     Uint16 fileCount;
     Uint8 magicHATCH[5];
     dataTableStream->ReadBytes(magicHATCH, 5);
     if (memcmp(magicHATCH, "HATCH", 5)) {
         Log::Print(Log::LOG_ERROR, "Invalid HATCH data file \"%s\"! (%02X %02X %02X %02X %02X)", filename, magicHATCH[0], magicHATCH[1], magicHATCH[2], magicHATCH[3], magicHATCH[4]);
-        Log::Print(Log::LOG_ERROR, "Size: %lld", rwSize);
+        // Log::Print(Log::LOG_ERROR, "Size: %lld", rwSize);
         dataTableStream->Close();
         return;
     }
@@ -153,7 +162,7 @@ PUBLIC STATIC bool   ResourceManager::LoadResource(const char* filename, Uint8**
     char resourcePath[256];
     ResourceRegistryItem item;
 
-    if (ResourceManager::UsingDataFolder)
+    if (ResourceManager::UsingDataFolder && !ResourceManager::UsingModPack)
         goto DATA_FOLDER;
 
     if (!ResourceRegistry)
@@ -281,7 +290,7 @@ PUBLIC STATIC bool   ResourceManager::LoadResource(const char* filename, Uint8**
 }
 PUBLIC STATIC bool   ResourceManager::ResourceExists(const char* filename) {
     char resourcePath[256];
-    if (ResourceManager::UsingDataFolder)
+    if (ResourceManager::UsingDataFolder && !ResourceManager::UsingModPack)
         goto DATA_FOLDER;
 
     if (!ResourceRegistry)

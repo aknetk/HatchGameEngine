@@ -22,9 +22,9 @@ public:
     int ChainLength = 16;
     HashMapElement<T>* Data = NULL;
 
-    Uint32 (*HashFunction)(const void*, Uint32) = NULL;
+    Uint32 (*HashFunction)(const void*, size_t) = NULL;
 
-    HashMap<T>(Uint32 (*hashFunc)(const void*, Uint32) = NULL, int capacity = 16) {
+    HashMap<T>(Uint32 (*hashFunc)(const void*, size_t) = NULL, int capacity = 16) {
         HashFunction = hashFunc;
         if (HashFunction == NULL)
             HashFunction = Murmur::EncryptData;
@@ -150,7 +150,11 @@ public:
             index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
         }
 
+#ifdef IOS
+		return T();
+#else
         return T { 0 };
+#endif
     }
     T      Get(const char* key) {
         Uint32 hash = HashFunction(key, strlen(key));

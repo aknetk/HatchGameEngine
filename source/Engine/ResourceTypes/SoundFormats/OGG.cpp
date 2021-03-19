@@ -4,14 +4,10 @@
 
 #include <Engine/ResourceTypes/SoundFormats/SoundFormat.h>
 
-#include <vorbis/vorbisfile.h>
-
 class OGG : public SoundFormat {
 private:
     // OGG Specific
-    OggVorbis_File VorbisFile;
-    vorbis_info*   VorbisInfo = NULL;
-    int            VorbisBitstream;
+    char           Vorbis[0x800];
 };
 #endif
 
@@ -22,22 +18,37 @@ private:
 #include <Engine/IO/ResourceStream.h>
 #include <Engine/ResourceTypes/SoundFormats/OGG.h>
 
+#define OV_EXCLUDE_STATIC_CALLBACKS
+#if defined(OGG_HEADER)
+    #include OGG_HEADER
+#elif defined(OGG_USE_TREMOR)
+    #include <tremor/ivorbisfile.h>
+#else
+    #include <vorbis/vorbisfile.h>
+#endif
+
+struct VorbisGroup {
+	OggVorbis_File File;
+	vorbis_info*   Info = NULL;
+	int            Bitstream;
+};
+
 PRIVATE STATIC size_t      OGG::StaticRead(void* mem, size_t size, size_t nmemb, void* ptr) {
 	class Stream* stream = (class Stream*)ptr;
 	return stream->ReadBytes(mem, size * nmemb);
 }
-PRIVATE STATIC Sint32      OGG::StaticSeek(void* ptr, ogg_int64_t offset, int whence) {
+PRIVATE STATIC Sint32      OGG::StaticSeek(void* ptr, Sint64 offset, int whence) {
 	class Stream* stream = (class Stream*)ptr;
     if (whence == SEEK_CUR) {
-		stream->Skip((Uint64)offset);
+		stream->Skip((Sint64)offset);
         return 0;
     }
     else if (whence == SEEK_SET) {
-		stream->Seek((Uint64)offset);
+		stream->Seek((Sint64)offset);
         return 0;
     }
     else if (whence == SEEK_END) {
-		stream->SeekEnd((Uint64)offset);
+		stream->SeekEnd((Sint64)offset);
         return 0;
     }
     else {
@@ -57,6 +68,7 @@ PRIVATE STATIC long        OGG::StaticTell(void* ptr) {
 
 PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
     OGG* ogg = NULL;
+	VorbisGroup* vorbis;
     class Stream* stream = ResourceStream::New(filename);
     if (!stream) {
         Log::Print(Log::LOG_ERROR, "Could not open file '%s'!", filename);
@@ -67,30 +79,55 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
     ogg->StreamPtr = stream;
 
     ov_callbacks callbacks;
-	callbacks = OV_CALLBACKS_STREAMONLY;
-	callbacks = OV_CALLBACKS_STREAMONLY_NOCLOSE;
-	callbacks = OV_CALLBACKS_DEFAULT;
-	callbacks = OV_CALLBACKS_NOCLOSE;
+	// callbacks = OV_CALLBACKS_STREAMONLY;
+	// callbacks = OV_CALLBACKS_STREAMONLY_NOCLOSE;
+	// callbacks = OV_CALLBACKS_DEFAULT;
+	// callbacks = OV_CALLBACKS_NOCLOSE;
 
     callbacks.read_func = OGG::StaticRead;
     callbacks.seek_func = OGG::StaticSeek;
     callbacks.tell_func = OGG::StaticTell;
+    callbacks.close_func = OGG::StaticCloseNoFree;
 
-    memset(&ogg->VorbisFile, 0, sizeof(OggVorbis_File));
-    if (ov_open_callbacks(ogg->StreamPtr, &ogg->VorbisFile, NULL, 0, callbacks) != 0) {
-        Log::Print(Log::LOG_ERROR, "Resource is not valid Vorbis stream!");
+    vorbis = (VorbisGroup*)ogg->Vorbis;
+
+    memset(&vorbis->File, 0, sizeof(OggVorbis_File));
+
+    int res;
+    if ((res = ov_open_callbacks(ogg->StreamPtr, &vorbis->File, NULL, 0, callbacks)) != 0) {
+        Log::Print(Log::LOG_ERROR, "Could not read file '%s'!", filename);
+        switch (res) {
+            case OV_EREAD:
+                Log::Print(Log::LOG_ERROR, "A read from media returned an error.");
+                break;
+            case OV_ENOTVORBIS:
+                Log::Print(Log::LOG_ERROR, "Bitstream does not contain any Vorbis data.");
+                break;
+            case OV_EVERSION:
+                Log::Print(Log::LOG_ERROR, "Vorbis version mismatch.");
+                break;
+            case OV_EBADHEADER:
+                Log::Print(Log::LOG_ERROR, "Invalid Vorbis bitstream header.");
+                break;
+            case OV_EFAULT:
+                Log::Print(Log::LOG_ERROR, "Internal logic fault; indicates a bug or heap/stack corruption.");
+                break;
+            default:
+                Log::Print(Log::LOG_ERROR, "Resource is not valid Vorbis stream!");
+                break;
+        }
         goto OGG_Load_FAIL;
     }
 
-    ogg->VorbisInfo = ov_info(&ogg->VorbisFile, -1);
+    vorbis->Info = ov_info(&vorbis->File, -1);
 
     memset(&ogg->InputFormat, 0, sizeof(SDL_AudioSpec));
     ogg->InputFormat.format    = AUDIO_S16;
-    ogg->InputFormat.channels  = ogg->VorbisInfo->channels;
-    ogg->InputFormat.freq      = ogg->VorbisInfo->rate;
+    ogg->InputFormat.channels  = vorbis->Info->channels;
+    ogg->InputFormat.freq      = (int)vorbis->Info->rate;
     ogg->InputFormat.samples   = 4096;
 
-    ogg->TotalPossibleSamples = (int)ov_pcm_total(&ogg->VorbisFile, -1);
+    ogg->TotalPossibleSamples = (int)ov_pcm_total(&vorbis->File, -1);
 
     // Common
     ogg->LoadFinish();
@@ -98,7 +135,8 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
     goto OGG_Load_SUCCESS;
 
     OGG_Load_FAIL:
-    ogg->Dispose();
+    if (ogg)
+        ogg->Dispose();
     delete ogg;
     ogg = NULL;
 
@@ -107,30 +145,35 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
 }
 
 PUBLIC        int          OGG::LoadSamples(size_t count) {
-    int read,
-        total = 0,
-        bytesForSample = 0;
+    int read;
+    Uint32 total = 0,
+           bytesForSample = 0;
 
-    if ((size_t)count > TotalPossibleSamples - Samples.size())
+    if (count > TotalPossibleSamples - Samples.size())
         count = TotalPossibleSamples - Samples.size();
 
-    int remainingBytes = count * SampleSize;
-    int sampleSizeForOneChannel = SampleSize / InputFormat.channels;
+    size_t remainingBytes = count * SampleSize;
+    size_t sampleSizeForOneChannel = SampleSize / InputFormat.channels;
 
     char* buffer = (char*)SampleBuffer + Samples.size() * SampleSize;
     char* bufferStartSample = buffer;
 
-    while (remainingBytes && (read = ov_read(&VorbisFile, buffer, remainingBytes, 0, sampleSizeForOneChannel, 1, &VorbisBitstream))) {
+    VorbisGroup* vorbis = (VorbisGroup*)this->Vorbis;
+
+    while (remainingBytes && (read =
+		#ifdef OGG_USE_TREMOR
+	    ov_read(&vorbis->File, buffer, remainingBytes, &vorbis->Bitstream)
+		#else
+		ov_read(&vorbis->File, buffer, remainingBytes, 0, sampleSizeForOneChannel, 1, &vorbis->Bitstream)
+		#endif
+		)) {
         #ifdef DEBUG
-            if (read == OV_HOLE) {
+            if (read == OV_HOLE)
                 return 0;
-            }
-            if (read == OV_EBADLINK) {
+            if (read == OV_EBADLINK)
                 return 0;
-            }
-            if (read == OV_EINVAL) {
+            if (read == OV_EINVAL)
                 return 0;
-            }
         #endif
 
         remainingBytes -= read;
@@ -149,9 +192,9 @@ PUBLIC        int          OGG::LoadSamples(size_t count) {
 }
 
 PUBLIC        void         OGG::Dispose() {
-	// BUG: If we try to free rockon.ogg after it's done playing.
-    // OGG specific clean up functions
-    ov_clear(&VorbisFile);
+	// OGG specific clean up functions
+	VorbisGroup* vorbis = (VorbisGroup*)this->Vorbis;
+	ov_clear(&vorbis->File);
     // Common cleanup
     SoundFormat::Dispose();
 }

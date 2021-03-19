@@ -25,9 +25,16 @@ public:
     static SDL_Window* Window;
     static char        WindowTitle[256];
     static Platforms   Platform;
+    static int         UpdatesPerFrame;
+    static bool        Stepper;
+    static bool        Step;
 
     static void Init(int argc, char* args[]);
     static void GetPerformanceSnapshot();
+    static void UpdateWindowTitle();
+    static void PollEvents();
+    static void RunFrame(void* p);
+    static void DelayFrame();
     static void Run(int argc, char* args[]);
     static void Cleanup();
     static void LoadGameConfig();
