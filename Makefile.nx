@@ -27,10 +27,10 @@ INCLUDES	:= source include
 
 EXEFS_SRC   := exefs
 
-APP_TITLE 	:= Sonic Galactic Demo
+APP_TITLE 	:= HatchGameEngine
 APP_AUTHOR 	:= aknetk
 APP_VERSION	:= 1.0
-ICON       	:= meta/icon.jpg
+ICON       	:= meta/nx/icon.jpg
 
 
 #---------------------------------------------------------------------------------

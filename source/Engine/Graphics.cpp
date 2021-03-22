@@ -334,7 +334,7 @@ PUBLIC STATIC void     Graphics::Present() {
 PUBLIC STATIC void     Graphics::SoftwareStart() {
 	Graphics::GfxFunctions = &SoftwareRenderer::BackendFunctions;
     for (int i = 0; i < 32; i++)
-        SoftwareRenderer::PaletteColors[i][0] = 0;
+        SoftwareRenderer::PaletteColors[i][0] &= 0xFFFFFF;
 }
 PUBLIC STATIC void     Graphics::SoftwareEnd() {
 	// Present to current view texture

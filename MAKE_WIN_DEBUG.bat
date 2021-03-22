@@ -1,40 +1,37 @@
 @ECHO OFF
 SETLOCAL ENABLEDELAYEDEXPANSION
 
-SET DEFINES=
-SET LIBRARIES=
+REM User define-able options
+REM =================================
+REM =================================
 
-SET INCLUDE=^
-C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include;^
-C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um;^
-C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared;^
-C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt;^
-include;^
-source;^
-%~dp0meta\win\include;
+REM --------====> NOTE: <====--------
+REM All directories must end in an "\"
+REM =================================
 
-SET LIB=^
-C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\lib;^
-C:\Program Files (x86)\Windows Kits\10\lib\10.0.16299.0\ucrt\x86;^
-C:\Program Files (x86)\Windows Kits\10\lib\10.0.16299.0\um\x86;^
-%~dp0meta\win\lib;
+REM ====> Directory where Visual C is installed.
+SET VC_DIR=C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\
 
-SET PATH=^
-%SystemRoot%\system32;^
-C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin;^
-C:\Program Files (x86)\Microsoft Visual Studio 12.0\Common7\IDE;^
-C:\Program Files (x86)\Windows Kits\10\bin\10.0.16299.0\x86;^
-%~dp0meta\win\bin;
+REM ====> Directory where Windows SDK is installed.
+SET WIN_SDK_DIR=C:\Program Files (x86)\Windows Kits\10\
 
-SET SRC_FOLDER=%~dp0source\
+REM ====> Version of Windows SDK.
+SET WIN_SDK_VER=10.0.16299.0
 
+REM ====> Name of .EXE and name of .LOG file when game is run.
 SET TARGET_NAME=HatchGameEngine
+
+REM ====> Temporary directory to store .EXE file.
 SET TARGET_FOLDER=%temp%\HatchGameEngine\builds\win\
-SET TARGET_SUBSYSTEM=/SUBSYSTEM:WINDOWS
+
+REM ====> Temporary directory to store compilation files.
 SET OBJ_FOLDER=%temp%\HatchGameEngine\out\win\
-SET OBJ_LIST=
-SET ICO_FOLDER=%~dp0meta\win\
-SET ICO_FOLDER=%~dp0source_galactic\Meta\win\
+
+REM ====> Directory of where to place the finished .EXE file.
+SET BUILD_OUTPUT_FOLDER=%~dp0builds\win\
+
+REM ====> Directory of where to find program libraries, and create Windows .EXE metadata and icons.
+SET META_WIN_FOLDER=%~dp0meta\win\
 
 SET USING_CONSOLE_WINDOW=1
 SET USING_COMPILER_OPTS=0
@@ -44,6 +41,37 @@ SET USING_LIBPNG=1
 SET USING_LIBJPEG=1
 SET USING_LIBOGG=1
 SET USING_FREETYPE=1
+
+REM Automatically made variables
+REM =================================
+REM =================================
+SET DEFINES=/DDEBUG /Zi /Gm
+SET LIBRARIES=
+SET OBJ_LIST=
+
+SET INCLUDE=^
+%VC_DIR%include;^
+%WIN_SDK_DIR%Include\%WIN_SDK_VER%\um;^
+%WIN_SDK_DIR%Include\%WIN_SDK_VER%\shared;^
+%WIN_SDK_DIR%Include\%WIN_SDK_VER%\winrt;^
+include;^
+source;^
+%~dp0meta\win\include;
+
+SET LIB=^
+%VC_DIR%lib;^
+%WIN_SDK_DIR%Lib\%WIN_SDK_VER%\ucrt\x86;^
+%WIN_SDK_DIR%Lib\%WIN_SDK_VER%\um\x86;^
+%~dp0meta\win\lib;
+
+SET PATH=^
+%SystemRoot%\system32;^
+%VC_DIR%bin;^
+%WIN_SDK_DIR%Bin\%WIN_SDK_VER%\x86;^
+%~dp0meta\win\bin;
+
+SET SRC_FOLDER=%~dp0source\
+SET TARGET_SUBSYSTEM=/SUBSYSTEM:WINDOWS
 
 IF %USING_CONSOLE_WINDOW%==1 (
    SET TARGET_SUBSYSTEM=/SUBSYSTEM:CONSOLE
@@ -56,7 +84,7 @@ IF %USING_LIBAV%==1 (
    SET LIBRARIES=!LIBRARIES! avcodec.lib avformat.lib avutil.lib swscale.lib swresample.lib
 )
 IF %USING_CURL%==1 (
-   SET DEFINES=!DEFINES! /DUSING_CURL
+   SET DEFINES=!DEFINES! /DUSING_CURL /DCURL_STATICLIB
    SET LIBRARIES=!LIBRARIES! libcurl.lib
 )
 IF %USING_LIBPNG%==1 (
@@ -87,10 +115,10 @@ CD "tools"
 CD ..
 
 REM Make Icon and Executable Info if needed
-IF EXIST %ICO_FOLDER%icon.ico (
-   DEL /F %ICO_FOLDER%icon.res
-   RC /nologo %ICO_FOLDER%icon.rc
-   SET OBJ_LIST=%ICO_FOLDER%icon.res !OBJ_LIST!
+IF EXIST %META_WIN_FOLDER%icon.ico (
+   DEL /F %META_WIN_FOLDER%icon.res
+   RC /nologo %META_WIN_FOLDER%icon.rc
+   SET OBJ_LIST=%META_WIN_FOLDER%icon.res !OBJ_LIST!
 )
 
 FOR /f %%j IN ('dir /s /b %SRC_FOLDER%*.cpp') DO (
@@ -103,7 +131,7 @@ FOR /f %%j IN ('dir /s /b %SRC_FOLDER%*.cpp') DO (
    FOR %%k IN (!OBJ_FILE!) DO (
       IF NOT EXIST %%~dpk MKDIR %%~dpk
    )
-   CL "!SRC_FILE!" /nologo /c /DWIN32 /DGLEW_STATIC /DCURL_STATICLIB /DTARGET_NAME=\"!TARGET_NAME!\" /DDEBUG %DEFINES% /EHsc /FS /Gm /Gd /MD /Zi /Fo!OBJ_FILE! /Fd%OBJ_FOLDER%%TARGET_NAME%.pdb
+   CL "!SRC_FILE!" /nologo /c /DWIN32 /DTARGET_NAME=\"!TARGET_NAME!\" /DGLEW_STATIC %DEFINES% /EHsc /FS /Gd /MD /Fo!OBJ_FILE! /Fd%OBJ_FOLDER%%TARGET_NAME%.pdb
    IF NOT !errorlevel! == 0 (
       GOTO END_OF_BAT
    )
@@ -135,7 +163,8 @@ LINK ^
    user32.lib
 
 ECHO Finishing: %TARGET_NAME%.exe
-copy %TARGET_FOLDER%%TARGET_NAME%.exe %~dp0builds\win\%TARGET_NAME%.exe
-copy %TARGET_FOLDER%%TARGET_NAME%.exe C:\Users\Justin\GitRepos\SonicLegends\%TARGET_NAME%.exe
+IF NOT !TARGET_FOLDER! == !BUILD_OUTPUT_FOLDER! (
+   COPY %TARGET_FOLDER%%TARGET_NAME%.exe %BUILD_OUTPUT_FOLDER%%TARGET_NAME%.exe
+)
 :END_OF_BAT
 PAUSE

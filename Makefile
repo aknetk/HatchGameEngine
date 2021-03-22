@@ -133,7 +133,7 @@ package:
 	@cp "$(TARGETDIR)" "$(TARGETDIR).app/Contents/MacOS/$(TARGET)"
 	@[ -f "source/Data.hatch" ] && cp "source/Data.hatch" "$(TARGETDIR).app/Contents/Resources/Data.hatch" || true
 	@[ -f "source/config.ini" ] && cp "source/config.ini" "$(TARGETDIR).app/Contents/Resources/config.ini" || true
-	@[ -f "meta/icon.icns" ] && cp "meta/icon.icns" "$(TARGETDIR).app/Contents/Resources/icon.icns" || true
+	@[ -f "meta/mac/icon.icns" ] && cp "meta/mac/icon.icns" "$(TARGETDIR).app/Contents/Resources/icon.icns" || true
 	@# Making PkgInfo
 	@echo "APPL????" > "$(TARGETDIR).app/Contents/PkgInfo"
 	@# Making Info.plist
@@ -145,7 +145,7 @@ package:
 	@echo "        <string>$(TARGET)</string>" >> "$(TARGETDIR).app/Contents/Info.plist"
 	@echo "        <key>CFBundleDisplayName</key>" >> "$(TARGETDIR).app/Contents/Info.plist"
 	@echo "        <string>$(TARGET)</string>" >> "$(TARGETDIR).app/Contents/Info.plist"
-	@[ -f "meta/icon.icns" ] && echo "        <key>CFBundleIconFile</key>" >> "$(TARGETDIR).app/Contents/Info.plist" && echo "        <string>icon</string>" >> "$(TARGETDIR).app/Contents/Info.plist" || true
+	@[ -f "meta/mac/icon.icns" ] && echo "        <key>CFBundleIconFile</key>" >> "$(TARGETDIR).app/Contents/Info.plist" && echo "        <string>icon</string>" >> "$(TARGETDIR).app/Contents/Info.plist" || true
 	@# GCSupportsControllerUserInteraction
 	@echo "        <key>CFBundlePackageType</key>" >> "$(TARGETDIR).app/Contents/Info.plist"
 	@echo "        <string>APPL</string>" >> "$(TARGETDIR).app/Contents/Info.plist"

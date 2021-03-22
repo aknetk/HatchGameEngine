@@ -3470,10 +3470,11 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                 ) * Scene::TileCount;
 
                 bool flipY = !!(*tile & TILE_FLIPY_MASK);
+                bool isCeiling = !!baseTileCfg[tileID].IsCeiling;
                 TileConfig* tile = (&baseTileCfg[tileID] + tileFlipOffset);
                 for (int gg = c_pixelsOfTileRemaining; gg < 16; gg++) {
-                    if ((flipY == baseTileCfg[tileID].IsCeiling && (srcY & 15) >= tile->CollisionTop[gg] && tile->CollisionTop[gg] < 0xF0) ||
-                        (flipY != baseTileCfg[tileID].IsCeiling && (srcY & 15) <= tile->CollisionBottom[gg] && tile->CollisionBottom[gg] < 0xF0)) {
+                    if ((flipY == isCeiling && (srcY & 15) >= tile->CollisionTop[gg] && tile->CollisionTop[gg] < 0xF0) ||
+                        (flipY != isCeiling && (srcY & 15) <= tile->CollisionBottom[gg] && tile->CollisionBottom[gg] < 0xF0)) {
                         PixelNoFiltSetOpaque(&DRAW_COLLISION, &dstPxLine[c_dst_x], 0, NULL, NULL);
                     }
                     c_dst_x++;
@@ -3609,10 +3610,11 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                     ) * Scene::TileCount;
 
                     bool flipY = !!(*tile & TILE_FLIPY_MASK);
+                    bool isCeiling = !!baseTileCfg[tileID].IsCeiling;
                     TileConfig* tile = (&baseTileCfg[tileID] + tileFlipOffset);
                     for (int gg = 0; gg < 16; gg++) {
-                        if ((flipY == baseTileCfg[tileID].IsCeiling && (srcY & 15) >= tile->CollisionTop[gg] && tile->CollisionTop[gg] < 0xF0) ||
-                            (flipY != baseTileCfg[tileID].IsCeiling && (srcY & 15) <= tile->CollisionBottom[gg] && tile->CollisionBottom[gg] < 0xF0)) {
+                        if ((flipY == isCeiling && (srcY & 15) >= tile->CollisionTop[gg] && tile->CollisionTop[gg] < 0xF0) ||
+                            (flipY != isCeiling && (srcY & 15) <= tile->CollisionBottom[gg] && tile->CollisionBottom[gg] < 0xF0)) {
                             PixelNoFiltSetOpaque(&DRAW_COLLISION, &dstPxLine[c_dst_x], 0, NULL, NULL);
                         }
                         c_dst_x++;
