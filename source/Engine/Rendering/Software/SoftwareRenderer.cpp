@@ -72,6 +72,12 @@ inline Uint32 ColorSubtract(Uint32 color1, Uint32 color2, int percent) {
 	if (b < 0) b = 0;
 	return r | g | b;
 }
+inline int ColorMultiply(Uint32 color, Uint32 colorMult) {
+    Uint32 R = (((colorMult >> 16) & 0xFF) + 1) * (color & 0xFF0000);
+    Uint32 G = (((colorMult >> 8) & 0xFF) + 1) * (color & 0x00FF00);
+    Uint32 B = (((colorMult) & 0xFF) + 1) * (color & 0x0000FF);
+    return (int)((R >> 8) | (G >> 8) | (B >> 8));
+}
 
 inline void SetPixel(int x, int y, Uint32 color) {
 	// if (DoDeform) x += Deform[y];
@@ -1905,7 +1911,6 @@ PUBLIC STATIC void     SoftwareRenderer::DrawModel(IModel* model, int frame, Mat
 
     int color = ColRGB;
 
-    int w;
     #define APPLY_MAT4X4(vec3out, vec3in, M) \
         vec3out.X = M->Column[0][3] + ((vec3in.X * M->Column[0][0]) >> 8) + ((vec3in.Y * M->Column[0][1]) >> 8) + ((vec3in.Z * M->Column[0][2]) >> 8); \
         vec3out.Y = M->Column[1][3] + ((vec3in.X * M->Column[1][0]) >> 8) + ((vec3in.Y * M->Column[1][1]) >> 8) + ((vec3in.Z * M->Column[1][2]) >> 8); \
@@ -2484,6 +2489,45 @@ PUBLIC STATIC void     SoftwareRenderer::FillTriangle(float x1, float y1, float 
     vectors[1].X = ((int)x2 + x) << 16; vectors[1].Y = ((int)y2 + y) << 16;
     vectors[2].X = ((int)x3 + x) << 16; vectors[2].Y = ((int)y3 + y) << 16;
     DrawPolygon(vectors, ColRGB, 3, Alpha, BlendFlag);
+}
+PUBLIC STATIC void     SoftwareRenderer::FillTriangleBlend(float x1, float y1, float x2, float y2, float x3, float y3, int c1, int c2, int c3) {
+    int x = 0, y = 0;
+    View* currentView = &Scene::Views[Scene::ViewCurrent];
+    int cx = (int)std::floor(currentView->X);
+    int cy = (int)std::floor(currentView->Y);
+
+    Matrix4x4* out = Graphics::ModelViewMatrix.top();
+    x += out->Values[12];
+    y += out->Values[13];
+    x -= cx;
+    y -= cy;
+
+    int colors[3];
+    Vector2 vectors[3];
+    vectors[0].X = ((int)x1 + x) << 16; vectors[0].Y = ((int)y1 + y) << 16; colors[0] = ColorMultiply(c1, ColRGB);
+    vectors[1].X = ((int)x2 + x) << 16; vectors[1].Y = ((int)y2 + y) << 16; colors[1] = ColorMultiply(c2, ColRGB);
+    vectors[2].X = ((int)x3 + x) << 16; vectors[2].Y = ((int)y3 + y) << 16; colors[2] = ColorMultiply(c3, ColRGB);
+    DrawPolygonBlend(vectors, colors, 3, Alpha, BlendFlag);
+}
+PUBLIC STATIC void     SoftwareRenderer::FillQuadBlend(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, int c1, int c2, int c3, int c4) {
+    int x = 0, y = 0;
+    View* currentView = &Scene::Views[Scene::ViewCurrent];
+    int cx = (int)std::floor(currentView->X);
+    int cy = (int)std::floor(currentView->Y);
+
+    Matrix4x4* out = Graphics::ModelViewMatrix.top();
+    x += out->Values[12];
+    y += out->Values[13];
+    x -= cx;
+    y -= cy;
+
+    int colors[4];
+    Vector2 vectors[4];
+    vectors[0].X = ((int)x1 + x) << 16; vectors[0].Y = ((int)y1 + y) << 16; colors[0] = ColorMultiply(c1, ColRGB);
+    vectors[1].X = ((int)x2 + x) << 16; vectors[1].Y = ((int)y2 + y) << 16; colors[1] = ColorMultiply(c2, ColRGB);
+    vectors[2].X = ((int)x3 + x) << 16; vectors[2].Y = ((int)y3 + y) << 16; colors[2] = ColorMultiply(c3, ColRGB);
+    vectors[3].X = ((int)x4 + x) << 16; vectors[3].Y = ((int)y4 + y) << 16; colors[3] = ColorMultiply(c4, ColRGB);
+    DrawPolygonBlend(vectors, colors, 4, Alpha, BlendFlag);
 }
 
 void DrawSpriteImage(Texture* texture, int x, int y, int w, int h, int sx, int sy, int flipFlag, int blendFlag, int opacity) {
@@ -3333,19 +3377,19 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
     bool canCollide = (layer->Flags & SceneLayer::FLAGS_COLLIDEABLE);
 
     int layerWidthInBits = layer->WidthInBits;
-    int layerWidthTileMask = layer->WidthMask;
-    int layerHeightTileMask = layer->HeightMask;
+    // int layerWidthTileMask = layer->WidthMask;
+    // int layerHeightTileMask = layer->HeightMask;
     int layerWidthInPixels = layer->Width * 16;
-    int layerHeightInPixels = layer->Height * 16;
+    // int layerHeightInPixels = layer->Height * 16;
     int layerWidth = layer->Width;
-    int layerHeight = layer->Height;
+    // int layerHeight = layer->Height;
     int sourceTileCellX, sourceTileCellY;
     TileSpriteInfo info;
     AnimFrame frameStr;
     Texture* texture;
 
-    int blendFlag = 0;
-    int opacity = 0x100;
+    // int blendFlag = 0;
+    // int opacity = 0x100;
 
     Uint32* tile;
     Uint32* color;
@@ -3726,9 +3770,9 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_CustomTileScanLines(Scen
     int dst_x2 = (int)Graphics::CurrentRenderTarget->Width;
     int dst_y2 = (int)Graphics::CurrentRenderTarget->Height;
 
-    Uint32* srcPx = NULL;
+    // Uint32* srcPx = NULL;
     Uint32  srcStride = 0;
-    Uint32* srcPxLine;
+    // Uint32* srcPxLine;
 
     Uint32* dstPx = (Uint32*)Graphics::CurrentRenderTarget->Pixels;
     Uint32  dstStride = Graphics::CurrentRenderTarget->Width;
@@ -3752,14 +3796,14 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_CustomTileScanLines(Scen
     AnimFrame frameStr;
     Texture* texture;
 
-    int blendFlag = 0;
-    int opacity = 0x100;
+    // int blendFlag = 0;
+    // int opacity = 0x100;
 
     Uint32 color;
     Uint32* index;
     int dst_strideY = dst_y1 * dstStride;
-    int* multTableAt = &MultTable[0x100 << 8];
-    int* multSubTableAt = &MultSubTable[0x100 << 8];
+    // int* multTableAt = &MultTable[0x100 << 8];
+    // int* multSubTableAt = &MultSubTable[0x100 << 8];
 
     vector<Uint32> srcStrides;
     vector<Uint32*> tileSources;

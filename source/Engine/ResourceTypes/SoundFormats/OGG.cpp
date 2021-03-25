@@ -27,11 +27,14 @@ private:
     #include <vorbis/vorbisfile.h>
 #endif
 
+
+#ifdef USING_LIBOGG
 struct VorbisGroup {
 	OggVorbis_File File;
 	vorbis_info*   Info = NULL;
 	int            Bitstream;
 };
+#endif
 
 PRIVATE STATIC size_t      OGG::StaticRead(void* mem, size_t size, size_t nmemb, void* ptr) {
 	class Stream* stream = (class Stream*)ptr;
@@ -67,13 +70,17 @@ PRIVATE STATIC long        OGG::StaticTell(void* ptr) {
 }
 
 PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
+#ifdef USING_LIBOGG
+    VorbisGroup* vorbis;
+#endif
     OGG* ogg = NULL;
-	VorbisGroup* vorbis;
     class Stream* stream = ResourceStream::New(filename);
     if (!stream) {
         Log::Print(Log::LOG_ERROR, "Could not open file '%s'!", filename);
         goto OGG_Load_FAIL;
     }
+
+#ifdef USING_LIBOGG
 
     ogg = new OGG;
     ogg->StreamPtr = stream;
@@ -134,6 +141,8 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
 
     goto OGG_Load_SUCCESS;
 
+#endif
+
     OGG_Load_FAIL:
     if (ogg)
         ogg->Dispose();
@@ -145,6 +154,7 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
 }
 
 PUBLIC        int          OGG::LoadSamples(size_t count) {
+#ifdef USING_LIBOGG
     int read;
     Uint32 total = 0,
            bytesForSample = 0;
@@ -189,12 +199,17 @@ PUBLIC        int          OGG::LoadSamples(size_t count) {
     }
     total /= SampleSize;
     return total;
+#else
+    return 0;
+#endif
 }
 
 PUBLIC        void         OGG::Dispose() {
+#ifdef USING_LIBOGG
 	// OGG specific clean up functions
 	VorbisGroup* vorbis = (VorbisGroup*)this->Vorbis;
 	ov_clear(&vorbis->File);
+#endif
     // Common cleanup
     SoundFormat::Dispose();
 }

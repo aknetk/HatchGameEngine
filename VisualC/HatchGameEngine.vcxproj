@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{EE5F89ED-FA81-458F-A2D2-3370351D9E23}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)..\meta\win\include;$(SolutionDir)..\include;$(SolutionDir)..\source;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\meta\win\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;TARGET_NAME="$(ProjectName)";GLEW_STATIC;USING_LIBPNG;USING_LIBPNG_HEADER=&lt;png.h&gt;;USING_LIBJPEG;USING_LIBOGG;USING_FREETYPE;_DEBUG;_WINDOWS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>Ws2_32.lib;Wldap32.lib;Advapi32.lib;Crypt32.lib;Normaliz.lib;zlibstat.lib;glew32s.lib;opengl32.lib;libpng16.lib;libjpeg.lib;libogg_static.lib;libvorbis_static.lib;libvorbisfile_static.lib;freetype.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PreBuildEvent>
+      <Command>CD "..\tools"
+"makeheaders.exe" ../source
+CD ..</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)..\builds\win\$(TargetName).exe"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\source\engine\Application.cpp" />
+    <ClCompile Include="..\source\engine\audio\AudioManager.cpp" />
+    <ClCompile Include="..\source\engine\bytecode\BytecodeObject.cpp" />
+    <ClCompile Include="..\source\engine\bytecode\BytecodeObjectManager.cpp" />
+    <ClCompile Include="..\source\engine\bytecode\Compiler.cpp" />
+    <ClCompile Include="..\source\engine\bytecode\GarbageCollector.cpp" />
+    <ClCompile Include="..\source\engine\bytecode\SourceFileMap.cpp" />
+    <ClCompile Include="..\source\engine\bytecode\StandardLibrary.cpp" />
+    <ClCompile Include="..\source\engine\bytecode\Types.cpp" />
+    <ClCompile Include="..\source\engine\bytecode\Values.cpp" />
+    <ClCompile Include="..\source\engine\bytecode\VMThread.cpp" />
+    <ClCompile Include="..\source\engine\diagnostics\Clock.cpp" />
+    <ClCompile Include="..\source\engine\diagnostics\Log.cpp" />
+    <ClCompile Include="..\source\engine\diagnostics\Memory.cpp" />
+    <ClCompile Include="..\source\engine\diagnostics\PerformanceMeasure.cpp" />
+    <ClCompile Include="..\source\engine\diagnostics\RemoteDebug.cpp" />
+    <ClCompile Include="..\source\engine\extensions\Discord.cpp" />
+    <ClCompile Include="..\source\engine\filesystem\Directory.cpp" />
+    <ClCompile Include="..\source\engine\filesystem\File.cpp" />
+    <ClCompile Include="..\source\engine\FontFace.cpp" />
+    <ClCompile Include="..\source\engine\Graphics.cpp" />
+    <ClCompile Include="..\source\engine\hashing\CombinedHash.cpp" />
+    <ClCompile Include="..\source\engine\hashing\CRC32.cpp" />
+    <ClCompile Include="..\source\engine\hashing\FNV1A.cpp" />
+    <ClCompile Include="..\source\engine\hashing\MD5.cpp" />
+    <ClCompile Include="..\source\engine\hashing\Murmur.cpp" />
+    <ClCompile Include="..\source\engine\InputManager.cpp" />
+    <ClCompile Include="..\source\engine\io\compression\Huffman.cpp" />
+    <ClCompile Include="..\source\engine\io\compression\LZ11.cpp" />
+    <ClCompile Include="..\source\engine\io\compression\LZSS.cpp" />
+    <ClCompile Include="..\source\engine\io\compression\RunLength.cpp" />
+    <ClCompile Include="..\source\engine\io\compression\ZLibStream.cpp" />
+    <ClCompile Include="..\source\engine\io\FileStream.cpp" />
+    <ClCompile Include="..\source\engine\io\MemoryStream.cpp" />
+    <ClCompile Include="..\source\engine\io\NetworkStream.cpp" />
+    <ClCompile Include="..\source\engine\io\ResourceStream.cpp" />
+    <ClCompile Include="..\source\engine\io\SDLStream.cpp" />
+    <ClCompile Include="..\source\engine\io\Stream.cpp" />
+    <ClCompile Include="..\source\engine\Main.cpp" />
+    <ClCompile Include="..\source\engine\math\Ease.cpp" />
+    <ClCompile Include="..\source\engine\math\Math.cpp" />
+    <ClCompile Include="..\source\engine\math\Matrix4x4.cpp" />
+    <ClCompile Include="..\source\engine\media\Decoder.cpp" />
+    <ClCompile Include="..\source\engine\media\decoders\AudioDecoder.cpp" />
+    <ClCompile Include="..\source\engine\media\decoders\VideoDecoder.cpp" />
+    <ClCompile Include="..\source\engine\media\MediaPlayer.cpp" />
+    <ClCompile Include="..\source\engine\media\MediaSource.cpp" />
+    <ClCompile Include="..\source\engine\media\utils\MediaPlayerState.cpp" />
+    <ClCompile Include="..\source\engine\media\utils\PtrBuffer.cpp" />
+    <ClCompile Include="..\source\engine\media\utils\RingBuffer.cpp" />
+    <ClCompile Include="..\source\engine\network\AndroidWifiP2P.cpp" />
+    <ClCompile Include="..\source\engine\network\HTTP.cpp" />
+    <ClCompile Include="..\source\engine\network\WebSocketClient.cpp" />
+    <ClCompile Include="..\source\engine\rendering\d3d\D3DRenderer.cpp" />
+    <ClCompile Include="..\source\engine\rendering\gl\GLRenderer.cpp" />
+    <ClCompile Include="..\source\engine\rendering\gl\GLShader.cpp" />
+    <ClCompile Include="..\source\engine\rendering\sdl2\SDL2Renderer.cpp" />
+    <ClCompile Include="..\source\engine\rendering\Shader.cpp" />
+    <ClCompile Include="..\source\engine\rendering\software\SoftwareRenderer.cpp" />
+    <ClCompile Include="..\source\engine\rendering\Texture.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\Image.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\imageformats\GIF.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\imageformats\ImageFormat.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\imageformats\JPEG.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\imageformats\PNG.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\IModel.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\ISound.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\ISprite.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\modelformats\COLLADAReader.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\ResourceManager.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\sceneformats\RSDKSceneReader.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\sceneformats\TiledMapReader.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\soundformats\OGG.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\soundformats\SoundFormat.cpp" />
+    <ClCompile Include="..\source\engine\resourcetypes\soundformats\WAV.cpp" />
+    <ClCompile Include="..\source\engine\Scene.cpp" />
+    <ClCompile Include="..\source\engine\scene\SceneLayer.cpp" />
+    <ClCompile Include="..\source\engine\scene\ScrollingIndex.cpp" />
+    <ClCompile Include="..\source\engine\scene\ScrollingInfo.cpp" />
+    <ClCompile Include="..\source\engine\scene\TileConfig.cpp" />
+    <ClCompile Include="..\source\engine\scene\TileSpriteInfo.cpp" />
+    <ClCompile Include="..\source\engine\scene\View.cpp" />
+    <ClCompile Include="..\source\engine\textformats\INI.cpp" />
+    <ClCompile Include="..\source\engine\textformats\xml\XMLParser.cpp" />
+    <ClCompile Include="..\source\engine\types\Entity.cpp" />
+    <ClCompile Include="..\source\engine\types\ObjectList.cpp" />
+    <ClCompile Include="..\source\engine\utilities\StringUtils.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\engine\audio\StackNode.h" />
+    <ClInclude Include="..\include\engine\bytecode\CompilerEnums.h" />
+    <ClInclude Include="..\include\engine\bytecode\Types.h" />
+    <ClInclude Include="..\include\engine\diagnostics\PerformanceTypes.h" />
+    <ClInclude Include="..\include\engine\includes\HashMap.h" />
+    <ClInclude Include="..\include\engine\includes\Standard.h" />
+    <ClInclude Include="..\include\engine\includes\StandardSDL2.h" />
+    <ClInclude Include="..\include\engine\io\compression\CompressionEnums.h" />
+    <ClInclude Include="..\include\engine\media\includes\AVCodec.h" />
+    <ClInclude Include="..\include\engine\media\includes\AVFormat.h" />
+    <ClInclude Include="..\include\engine\media\includes\AVUtils.h" />
+    <ClInclude Include="..\include\engine\media\includes\SWResample.h" />
+    <ClInclude Include="..\include\engine\media\includes\SWScale.h" />
+    <ClInclude Include="..\include\engine\media\utils\Codec.h" />
+    <ClInclude Include="..\include\engine\network\WebSocketIncludes.h" />
+    <ClInclude Include="..\include\engine\platforms\macos\Filesystem.h" />
+    <ClInclude Include="..\include\engine\rendering\3D.h" />
+    <ClInclude Include="..\include\engine\rendering\Enums.h" />
+    <ClInclude Include="..\include\engine\rendering\gl\Includes.h" />
+    <ClInclude Include="..\include\engine\rendering\metal\Includes.h" />
+    <ClInclude Include="..\include\engine\rendering\metal\MetalFuncs.h" />
+    <ClInclude Include="..\include\engine\rendering\sdl2\SDL2MetalFunc.h" />
+    <ClInclude Include="..\include\engine\resourcetypes\modelformats\COLLADA.h" />
+    <ClInclude Include="..\include\engine\resourcetypes\ResourceType.h" />
+    <ClInclude Include="..\include\engine\sprites\Animation.h" />
+    <ClInclude Include="..\include\engine\textformats\json\jsmn.h" />
+    <ClInclude Include="..\include\engine\textformats\xml\XMLNode.h" />
+    <ClInclude Include="..\include\engine\types\EntityTypes.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

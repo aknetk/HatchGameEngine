@@ -2087,6 +2087,61 @@ VMValue Draw_Triangle(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
 /***
+ * Draw.TriangleBlend
+ * \desc Draws a triangle, blending the colors at the vertices. (Colors are multipled by the global Draw Blend Color, do <code>Draw.SetBlendColor(0xFFFFFF, 1.0)</code> if you want the vertex colors unaffected.)
+ * \param x1 (Number): X position of the first vertex.
+ * \param y1 (Number): Y position of the first vertex.
+ * \param x2 (Number): X position of the second vertex.
+ * \param y2 (Number): Y position of the second vertex.
+ * \param x3 (Number): X position of the third vertex.
+ * \param y3 (Number): Y position of the third vertex.
+ * \param color1 (Integer): Color of the first vertex.
+ * \param color2 (Integer): Color of the second vertex.
+ * \param color3 (Integer): Color of the third vertex.
+ * \ns Draw
+ */
+VMValue Draw_TriangleBlend(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(9);
+    SoftwareRenderer::FillTriangleBlend(
+        GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID),
+        GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID),
+        GetDecimal(args, 4, threadID), GetDecimal(args, 5, threadID),
+        GetInteger(args, 6, threadID),
+        GetInteger(args, 7, threadID),
+        GetInteger(args, 8, threadID));
+    return NULL_VAL;
+}
+/***
+ * Draw.QuadBlend
+ * \desc Draws a triangle, blending the colors at the vertices. (Colors are multipled by the global Draw Blend Color, do <code>Draw.SetBlendColor(0xFFFFFF, 1.0)</code> if you want the vertex colors unaffected.)
+ * \param x1 (Number): X position of the first vertex.
+ * \param y1 (Number): Y position of the first vertex.
+ * \param x2 (Number): X position of the second vertex.
+ * \param y2 (Number): Y position of the second vertex.
+ * \param x3 (Number): X position of the third vertex.
+ * \param y3 (Number): Y position of the third vertex.
+ * \param x4 (Number): X position of the fourth vertex.
+ * \param y4 (Number): Y position of the fourth vertex.
+ * \param color1 (Integer): Color of the first vertex.
+ * \param color2 (Integer): Color of the second vertex.
+ * \param color3 (Integer): Color of the third vertex.
+ * \param color4 (Integer): Color of the fourth vertex.
+ * \ns Draw
+ */
+VMValue Draw_QuadBlend(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(12);
+    SoftwareRenderer::FillQuadBlend(
+        GetDecimal(args, 0, threadID), GetDecimal(args, 1, threadID),
+        GetDecimal(args, 2, threadID), GetDecimal(args, 3, threadID),
+        GetDecimal(args, 4, threadID), GetDecimal(args, 5, threadID),
+        GetDecimal(args, 6, threadID), GetDecimal(args, 7, threadID),
+        GetInteger(args, 8, threadID),
+        GetInteger(args, 9, threadID),
+        GetInteger(args, 10, threadID),
+        GetInteger(args, 11, threadID));
+    return NULL_VAL;
+}
+/***
  * Draw.Rectangle
  * \desc Draws a rectangle.
  * \param x (Number): X position of where to draw the rectangle.
@@ -3757,7 +3812,7 @@ VMValue Matrix_Multiply(int argCount, VMValue* args, Uint32 threadID) {
 VMValue Matrix_Translate(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(4);
     ObjArray* out = GetArray(args, 0, threadID);
-    ObjArray* a = out;
+    // ObjArray* a = out;
     float x = GetDecimal(args, 1, threadID);
     float y = GetDecimal(args, 2, threadID);
     float z = GetDecimal(args, 3, threadID);
@@ -3816,7 +3871,7 @@ VMValue Matrix_Scale(int argCount, VMValue* args, Uint32 threadID) {
 VMValue Matrix_Rotate(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     ObjArray* out = GetArray(args, 0, threadID);
-    ObjArray* a = out;
+    // ObjArray* a = out;
     float x = GetDecimal(args, 1, threadID);
     float y = GetDecimal(args, 2, threadID);
     float z = GetDecimal(args, 3, threadID);
@@ -7438,6 +7493,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Draw, Circle);
     DEF_NATIVE(Draw, Ellipse);
     DEF_NATIVE(Draw, Triangle);
+    DEF_NATIVE(Draw, TriangleBlend);
+    DEF_NATIVE(Draw, QuadBlend);
     DEF_NATIVE(Draw, Rectangle);
     DEF_NATIVE(Draw, CircleStroke);
     DEF_NATIVE(Draw, EllipseStroke);

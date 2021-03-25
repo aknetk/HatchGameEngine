@@ -97,8 +97,8 @@ PUBLIC STATIC void        ZLibStream::Decompress(void* dst, size_t dstLen, void*
 
     infstream.next_in = (Bytef*)src;
     infstream.next_out = (Bytef*)dst;
-    infstream.avail_in = srcLen;
-    infstream.avail_out = dstLen;
+    infstream.avail_in = (int)srcLen;
+    infstream.avail_out = (int)dstLen;
 
     inflateInit(&infstream);
     inflate(&infstream, Z_NO_FLUSH);

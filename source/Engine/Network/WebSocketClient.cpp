@@ -300,7 +300,7 @@ PUBLIC STATIC WebSocketClient* WebSocketClient::New(const char* url) {
     socket_send_string(sockfd, "Upgrade: websocket\r\n");
     socket_send_string(sockfd, "Connection: Upgrade\r\n");
 
-    srand(time(NULL));
+    srand((Uint32)time(NULL));
     for (int z = 0; z < 16; z++) {
 		key_nonce[z] = rand() & 0xff;
 	}

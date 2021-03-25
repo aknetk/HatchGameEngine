@@ -87,7 +87,6 @@ PUBLIC STATIC void Log::SetLogLevel(int sev) {
 PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
     if (sev < Log::LogLevel) return;
 
-    int ColorCode = 0;
     char string[1024];
     const char* severityText = NULL;
 
@@ -113,6 +112,7 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
     }
 
     #if WIN32
+	int ColorCode = 0;
     switch (sev) {
         case   LOG_VERBOSE: ColorCode = 0xD; break;
         case      LOG_INFO: ColorCode = 0x8; break;

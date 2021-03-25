@@ -100,7 +100,7 @@ PUBLIC STATIC void          Directory::GetFiles(vector<char*>* files, const char
         char fullpath[MAX_PATH_SIZE];
         DIR* dir = opendir(path);
         if (dir) {
-            int i;
+            size_t i;
             struct dirent* d;
 
             while ((d = readdir(dir)) != NULL) {

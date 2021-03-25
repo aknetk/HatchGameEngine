@@ -146,7 +146,7 @@ PUBLIC VIRTUAL Uint32  Stream::ReadCompressed(void* out, size_t outSz) {
     ZLibStream::Decompress(out, outSz, buffer, compressed_size);
     Memory::Free(buffer);
 
-    return outSz;
+    return (Uint32)outSz;
 }
 
 PUBLIC VIRTUAL size_t  Stream::WriteBytes(void* data, size_t n) {

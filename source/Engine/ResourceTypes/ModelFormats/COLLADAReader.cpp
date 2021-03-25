@@ -735,7 +735,7 @@ void ProcessPrimitive(ConversionBuffer* convBuf, int meshIndex, ColladaInput* in
     }
 }
 PRIVATE STATIC void COLLADAReader::DoConversion(ColladaModel* daemodel, IModel* imodel) {
-    int meshCount = daemodel->Meshes.size();
+	size_t meshCount = daemodel->Meshes.size();
     if (!meshCount)
         return;
 
@@ -758,7 +758,7 @@ PRIVATE STATIC void COLLADAReader::DoConversion(ColladaModel* daemodel, IModel* 
     for (int meshNum = 0; meshNum < imodel->FrameCount; meshNum++) {
         ColladaMesh* mesh = daemodel->Meshes[meshNum];
 
-        int numInputs = mesh->Triangles.Inputs.size();
+        size_t numInputs = mesh->Triangles.Inputs.size();
 
         int numVertices = 0;
         int numProcessedInputs = 0;

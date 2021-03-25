@@ -9,7 +9,7 @@ public:
 #include <time.h>
 
 PUBLIC STATIC void Math::Init() {
-    srand(time(NULL));
+    srand((Uint32)time(NULL));
 }
 // Trig functions
 PUBLIC STATIC float Math::Cos(float n) {

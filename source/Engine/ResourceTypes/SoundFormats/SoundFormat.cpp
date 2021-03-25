@@ -45,7 +45,7 @@ PUBLIC VIRTUAL int    SoundFormat::GetSamples(Uint8* buffer, size_t count) {
         samplecount++;
     }
     SampleIndex += samplecount;
-    return samplecount;
+    return (int)samplecount;
 }
 PUBLIC VIRTUAL size_t SoundFormat::SeekSample(int index) {
     SampleIndex = (size_t)index;

@@ -158,7 +158,6 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
     Uint8  hashTemp[16];
     int    argumentTypes[0x10];
     Uint32 argumentHashes[0x10];
-    char   entitySpecialFunctions[256];
     int    argumentCount;
     int    entityCount;
     int      maxObjSlots;
