@@ -226,6 +226,13 @@ CD ..</Command>
     <ClInclude Include="..\include\engine\textformats\json\jsmn.h" />
     <ClInclude Include="..\include\engine\textformats\xml\XMLNode.h" />
     <ClInclude Include="..\include\engine\types\EntityTypes.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="HatchGameEngine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\meta\win\icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

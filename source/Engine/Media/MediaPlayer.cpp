@@ -26,6 +26,8 @@ public:
 };
 #endif
 
+#ifdef USING_LIBAV
+
 #include <Engine/Media/MediaPlayer.h>
 #include <Engine/Media/Decoders/VideoDecoder.h>
 #include <Engine/Media/Decoders/AudioDecoder.h>
@@ -51,8 +53,6 @@ enum DemuxerReturn {
     DEMUXER_INPUT_FULL = 0,
     DEMUXER_NO_PACKET = 1,
 };
-
-#ifdef USING_LIBAV
 
 /*
 
@@ -800,7 +800,7 @@ PUBLIC STATIC Uint32       MediaPlayer::GetOutputLength(MediaPlayer* player, int
     return dec->GetOutputLength();
 }
 
-#else
+#elif 0
 
 int          MediaPlayer::DemuxAllStreams(MediaPlayer* player) {
     return DEMUXER_KEEP_READING;
