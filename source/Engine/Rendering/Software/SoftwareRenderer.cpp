@@ -332,7 +332,7 @@ PUBLIC STATIC void     SoftwareRenderer::SetGraphicsFunctions() {
     for (int alpha = 0; alpha < 0x100; alpha++) {
         for (int color = 0; color < 0x100; color++) {
             MultTable[alpha << 8 | color] = (alpha * color) >> 8;
-            MultTableInv[alpha << 8 | color] = (alpha * (color ^ 0xFF)) >> 8;
+            MultTableInv[alpha << 8 | color] = ((alpha ^ 0xFF) * color) >> 8;
             MultSubTable[alpha << 8 | color] = (alpha * -(color ^ 0xFF)) >> 8;
         }
     }
@@ -627,6 +627,16 @@ PUBLIC STATIC void     SoftwareRenderer::Restore() {
 
 }
 
+enum BlendFlags {
+    BlendFlag_OPAQUE = 0,
+    BlendFlag_TRANSPARENT,
+    BlendFlag_ADDITIVE,
+    BlendFlag_SUBTRACT,
+    BlendFlag_MATCH_EQUAL,
+    BlendFlag_MATCH_NOT_EQUAL,
+    BlendFlag_FILTER,
+};
+
 #define SRC_CHECK false
 #define GET_CLIP_BOUNDS(x1, y1, x2, y2) \
     if (Graphics::CurrentClip.Enabled) { \
@@ -641,100 +651,59 @@ PUBLIC STATIC void     SoftwareRenderer::Restore() {
         x2 = (int)Graphics::CurrentRenderTarget->Width; \
         y2 = (int)Graphics::CurrentRenderTarget->Height; \
     }
-
-// Filter versions
-inline void PixelSetOpaque(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    // if ((*src) & 0xFF000000U) {
-        Uint32 col = *src;
-        *dst = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
-        // *dst = col;
-    // }
-}
-inline void PixelSetTransparent(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    if (SRC_CHECK) {
-        Uint32 col = *src;
-        col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
-        *dst = ColorBlend(*dst, col, opacity) | 0xFF000000U;
-    }
-}
-inline void PixelSetAdditive(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    if (SRC_CHECK) {
-        Uint32 col = *src;
-        col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
-
-        Uint32 R = (multTableAt[(col >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
-        Uint32 G = (multTableAt[(col >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
-        Uint32 B = (multTableAt[(col) & 0xFF]) + (*dst & 0x0000FF);
-        if (R > 0xFF0000) R = 0xFF0000;
-        if (G > 0x00FF00) G = 0x00FF00;
-        if (B > 0x0000FF) B = 0x0000FF;
-        *dst = R | G | B | 0xFF000000U;
-    }
-}
-inline void PixelSetSubtract(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    if (SRC_CHECK) {
-        Uint32 col = *src;
-        col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
-
-        // Sint32 R = (multSubTableAt[(col >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
-        // Sint32 G = (multSubTableAt[(col >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
-        // Sint32 B = (multSubTableAt[(col) & 0xFF]) + (*dst & 0x0000FF);
-        Sint32 R = -(col & 0xFF0000) + (*dst & 0xFF0000);
-        Sint32 G = -(col & 0x00FF00) + (*dst & 0x00FF00);
-        Sint32 B = -(col & 0x0000FF) + (*dst & 0x0000FF);
-        if (R < 0) R = 0;
-        if (G < 0) G = 0;
-        if (B < 0) B = 0;
-        *dst = R | G | B | 0xFF000000U;
-    }
-}
-inline void PixelSetMatchEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    if (*dst == SoftwareRenderer::CompareColor) {
-        Uint32 col = *src;
-        *dst = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
-    }
-}
-inline void PixelSetMatchNotEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    if (*dst != SoftwareRenderer::CompareColor) {
-        Uint32 col = *src;
-        *dst = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
-    }
-}
+#define ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity) \
+    if (FilterTable != &FilterColor[0]) \
+        blendFlag = BlendFlag_FILTER; \
+    if (opacity == 0 && blendFlag != BlendFlag_OPAQUE) \
+        return; \
+    if (opacity != 0 && blendFlag == BlendFlag_OPAQUE) \
+        blendFlag = BlendFlag_TRANSPARENT; \
+    if (opacity == 0xFF && blendFlag == BlendFlag_TRANSPARENT) \
+        blendFlag = 0;
 
 // Filterless versions
+#define GET_R(color) ((color >> 16) & 0xFF)
+#define GET_G(color) ((color >> 8) & 0xFF)
+#define GET_B(color) ((color) & 0xFF)
+#define ISOLATE_R(color) (color & 0xFF0000)
+#define ISOLATE_G(color) (color & 0x00FF00)
+#define ISOLATE_B(color) (color & 0x0000FF)
+
 inline void PixelNoFiltSetOpaque(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
     *dst = *src;
 }
 inline void PixelNoFiltSetTransparent(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    *dst = ColorBlend(*dst, *src, opacity) | 0xFF000000U;
+    int* multInvTableAt = &MultTableInv[opacity << 8];
+    *dst = 0xFF000000U
+        | (multTableAt[GET_R(*src)] + multInvTableAt[GET_R(*dst)]) << 16
+        | (multTableAt[GET_G(*src)] + multInvTableAt[GET_G(*dst)]) << 8
+        | (multTableAt[GET_B(*src)] + multInvTableAt[GET_B(*dst)]);
 }
 inline void PixelNoFiltSetAdditive(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    Uint32 R = (multTableAt[(*src >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
-    Uint32 G = (multTableAt[(*src >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
-    Uint32 B = (multTableAt[(*src) & 0xFF]) + (*dst & 0x0000FF);
+    Uint32 R = (multTableAt[GET_R(*src)] << 16) + ISOLATE_R(*dst);
+    Uint32 G = (multTableAt[GET_G(*src)] << 8) + ISOLATE_G(*dst);
+    Uint32 B = (multTableAt[GET_B(*src)]) + ISOLATE_B(*dst);
     if (R > 0xFF0000) R = 0xFF0000;
     if (G > 0x00FF00) G = 0x00FF00;
     if (B > 0x0000FF) B = 0x0000FF;
-    *dst = R | G | B | 0xFF000000U;
+    *dst = 0xFF000000U | R | G | B;
 }
 inline void PixelNoFiltSetSubtract(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    Sint32 R = (multSubTableAt[(*src >> 16) & 0xFF] << 16) + (*dst & 0xFF0000);
-    Sint32 G = (multSubTableAt[(*src >> 8) & 0xFF] << 8) + (*dst & 0x00FF00);
-    Sint32 B = (multSubTableAt[(*src) & 0xFF]) + (*dst & 0x0000FF);
+    Sint32 R = (multSubTableAt[GET_R(*src)] << 16) + ISOLATE_R(*dst);
+    Sint32 G = (multSubTableAt[GET_G(*src)] << 8) + ISOLATE_G(*dst);
+    Sint32 B = (multSubTableAt[GET_B(*src)]) + ISOLATE_B(*dst);
     if (R < 0) R = 0;
     if (G < 0) G = 0;
     if (B < 0) B = 0;
-    *dst = R | G | B | 0xFF000000U;
+    *dst = 0xFF000000U | R | G | B;
 }
 inline void PixelNoFiltSetMatchEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    if (*dst == SoftwareRenderer::CompareColor) {
+    if (*dst == SoftwareRenderer::CompareColor)
         *dst = *src;
-    }
 }
 inline void PixelNoFiltSetMatchNotEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    if (*dst != SoftwareRenderer::CompareColor) {
+    if (*dst != SoftwareRenderer::CompareColor)
         *dst = *src;
-    }
 }
 inline void PixelNoFiltSetFilter(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
     Uint32 col = *dst;
@@ -865,6 +834,8 @@ void DrawPolygonBlendUV(Texture* texture, Vector2* positions, Vector2* uvs, int*
     if (count == 0)
         return;
 
+    ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity);
+
     Vector2* tempVertex = positions;
     int      tempCount = count;
     int      tempY;
@@ -919,13 +890,6 @@ void DrawPolygonBlendUV(Texture* texture, Vector2* positions, Vector2* uvs, int*
 
     DrawPolygonBlendUVScanLine(lastColor[0], colors[0], lastUV[0], uvs[0], lastPosition[0].X, lastPosition[0].Y, positions[0].X, positions[0].Y);
 
-    // int blendFlag = BlendFlag;
-    // int opacity = Alpha;
-    // if (Alpha == 0 && blendFlag != 0)
-    //     return;
-    // if (Alpha != 0 && blendFlag == 0)
-    //     blendFlag = 1;
-
     Sint32 col, colR, colG, colB, colU, colV, dxR, dxG, dxB, dxU, dxV, contLen;
 
     #define DRAW_POLYGONBLENDUV(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
@@ -976,6 +940,9 @@ void DrawPolygonBlendUV(Texture* texture, Vector2* positions, Vector2* uvs, int*
             break;
         case 5:
             DRAW_POLYGONBLENDUV(PixelNoFiltSetMatchNotEqual);
+            break;
+        case 6:
+            DRAW_POLYGONBLENDUV(PixelNoFiltSetFilter);
             break;
     }
 
@@ -1089,6 +1056,8 @@ void DrawPolygonBlend(Vector2* positions, int* colors, int count, int opacity, i
     if (count == 0)
         return;
 
+    ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity);
+
     Vector2* tempVertex = positions;
     int      tempCount = count;
     int      tempY;
@@ -1110,12 +1079,10 @@ void DrawPolygonBlend(Vector2* positions, int* colors, int count, int opacity, i
         if (dst_y1 < Graphics::CurrentClip.Y)
             dst_y1 = Graphics::CurrentClip.Y;
     }
-    else {
-        if (dst_y2 > (int)Graphics::CurrentRenderTarget->Height)
-            dst_y2 = (int)Graphics::CurrentRenderTarget->Height;
-        if (dst_y1 < 0)
-            dst_y1 = 0;
-    }
+    if (dst_y2 > (int)Graphics::CurrentRenderTarget->Height)
+        dst_y2 = (int)Graphics::CurrentRenderTarget->Height;
+    if (dst_y1 < 0)
+        dst_y1 = 0;
 
     if (dst_y1 >= dst_y2)
         return;
@@ -1140,13 +1107,6 @@ void DrawPolygonBlend(Vector2* positions, int* colors, int count, int opacity, i
     }
 
     DrawPolygonBlendScanLine(lastColor[0], colors[0], lastVector[0].X, lastVector[0].Y, positions[0].X, positions[0].Y);
-
-    // int blendFlag = BlendFlag;
-    // int opacity = Alpha;
-    // if (Alpha == 0 && blendFlag != 0)
-    //     return;
-    // if (Alpha != 0 && blendFlag == 0)
-    //     blendFlag = 1;
 
     Sint32 col, colR, colG, colB, dxR, dxG, dxB, contLen;
 
@@ -1194,6 +1154,9 @@ void DrawPolygonBlend(Vector2* positions, int* colors, int count, int opacity, i
             break;
         case 5:
             DRAW_POLYGONBLEND(PixelNoFiltSetMatchNotEqual);
+            break;
+        case 6:
+            DRAW_POLYGONBLEND(PixelNoFiltSetFilter);
             break;
     }
 
@@ -1265,6 +1228,8 @@ void DrawPolygon(Vector2* positions, Uint32 color, int count, int opacity, int b
     if (count == 0)
         return;
 
+    ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity);
+
     Vector2* tempVertex = positions;
     int      tempCount = count;
     int      tempY;
@@ -1314,13 +1279,6 @@ void DrawPolygon(Vector2* positions, Uint32 color, int count, int opacity, int b
     }
     DrawPolygonScanLine(lastVector[0].X, lastVector[0].Y, positions[0].X, positions[0].Y);
 
-    // int blendFlag = BlendFlag;
-    // int opacity = Alpha;
-    // if (Alpha == 0 && blendFlag != 0)
-    //     return;
-    // if (Alpha != 0 && blendFlag == 0)
-    //     blendFlag = 1;
-
     #define DRAW_POLYGON(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
         Contour contour = ContourField[dst_y]; \
         if (contour.MaxX < contour.MinX) { \
@@ -1363,6 +1321,9 @@ void DrawPolygon(Vector2* positions, Uint32 color, int count, int opacity, int b
             break;
         case 5:
             DRAW_POLYGON(PixelNoFiltSetMatchNotEqual);
+            break;
+        case 6:
+            DRAW_POLYGON(PixelNoFiltSetFilter);
             break;
     }
 
@@ -1483,6 +1444,8 @@ PUBLIC STATIC void     SoftwareRenderer::ArrayBuffer_DrawFinish(Uint32 arrayBuff
         return;
     if (Alpha != 0 && blendFlag == 0)
         blendFlag = 1;
+    if (Alpha == 0xFF && blendFlag == 1)
+        blendFlag = 0;
 
     arrayBuffer = &ArrayBuffers[arrayBufferIndex];
     if (!arrayBuffer->Initialized)
@@ -2168,13 +2131,9 @@ PUBLIC STATIC void     SoftwareRenderer::StrokeLine(float x1, float y1, float x2
 
     int blendFlag = BlendFlag;
     int opacity = Alpha;
-    if (Alpha == 0 && blendFlag != 0)
-        return;
-    if (Alpha != 0 && blendFlag == 0)
-        blendFlag = 1;
+    ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity);
 
     Uint32 col = ColRGB;
-    // col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
 
     #define DRAW_LINE(pixelFunction) while (true) { \
         if (dst_x1 >= minX && dst_y1 >= minY && dst_x1 < maxX && dst_y1 < maxY) \
@@ -2200,6 +2159,15 @@ PUBLIC STATIC void     SoftwareRenderer::StrokeLine(float x1, float y1, float x2
             break;
         case 3:
             DRAW_LINE(PixelNoFiltSetSubtract);
+            break;
+        case 4:
+            DRAW_LINE(PixelNoFiltSetMatchEqual);
+            break;
+        case 5:
+            DRAW_LINE(PixelNoFiltSetMatchNotEqual);
+            break;
+        case 6:
+            DRAW_LINE(PixelNoFiltSetFilter);
             break;
     }
 
@@ -2266,12 +2234,7 @@ PUBLIC STATIC void     SoftwareRenderer::FillCircle(float x, float y, float rad)
 
     int blendFlag = BlendFlag;
     int opacity = Alpha;
-    if (FilterTable != &FilterColor[0])
-        blendFlag = 6;
-    if (Alpha == 0 && blendFlag != 0)
-        return;
-    if (Alpha != 0 && blendFlag == 0)
-        blendFlag = 1;
+    ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity);
 
     int scanLineCount = dst_y2 - dst_y1 + 1;
     Contour* contourPtr = &ContourField[dst_y1];
@@ -2312,7 +2275,6 @@ PUBLIC STATIC void     SoftwareRenderer::FillCircle(float x, float y, float rad)
     }
 
     Uint32 col = ColRGB;
-    // col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
 
     #define DRAW_CIRCLE(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
         Contour contour = ContourField[dst_y]; \
@@ -2423,15 +2385,9 @@ PUBLIC STATIC void     SoftwareRenderer::FillRectangle(float x, float y, float w
 
     int blendFlag = BlendFlag;
     int opacity = Alpha;
-    if (FilterTable != &FilterColor[0])
-        blendFlag = 6;
-    if (Alpha == 0 && blendFlag != 0)
-        return;
-    if (Alpha != 0 && blendFlag == 0)
-        blendFlag = 1;
+    ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity);
 
     Uint32 col = ColRGB;
-    // col = FilterTable[(col & 0xF80000) >> 9 | (col & 0xF800) >> 6 | (col & 0xF8) >> 3];
 
     #define DRAW_RECT(pixelFunction) for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) { \
         for (int dst_x = dst_x1; dst_x < dst_x2; dst_x++) { \
@@ -2666,6 +2622,9 @@ void DrawSpriteImage(Texture* texture, int x, int y, int w, int h, int sx, int s
                 break; \
             case 5: \
                 flipMacro(PixelNoFiltSetMatchNotEqual, placePixelMacro); \
+                break; \
+            case 6: \
+                flipMacro(PixelNoFiltSetFilter, placePixelMacro); \
                 break; \
         }
 
@@ -2945,6 +2904,9 @@ void DrawSpriteImageTransformed(Texture* texture, int x, int y, int offx, int of
                 break; \
             case 5: \
                 flipMacro(PixelNoFiltSetMatchNotEqual, placePixelMacro); \
+                break; \
+            case 6: \
+                flipMacro(PixelNoFiltSetFilter, placePixelMacro); \
                 break; \
         }
 

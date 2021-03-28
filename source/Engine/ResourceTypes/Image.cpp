@@ -56,8 +56,8 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
 
     Uint32 magic = 0x000000;
     Stream* stream;
-    if (strncmp(altered, "file:", 5) == 0)
-        stream = FileStream::New(altered + 5, FileStream::READ_ACCESS);
+    if (strncmp(altered, "file://", 7) == 0)
+        stream = FileStream::New(altered + 7, FileStream::READ_ACCESS);
     else
         stream = ResourceStream::New(altered);
     if (stream) {

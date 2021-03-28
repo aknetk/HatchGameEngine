@@ -66,6 +66,7 @@ PUBLIC STATIC void   ResourceManager::PrefixParentPath(char* out, const char* pa
 }
 
 PUBLIC STATIC void   ResourceManager::Init(const char* filename) {
+    StreamNodeHead = NULL;
     ResourceRegistry = new HashMap<ResourceRegistryItem>(CRC32::EncryptData, 16);
 
     if (filename == NULL)

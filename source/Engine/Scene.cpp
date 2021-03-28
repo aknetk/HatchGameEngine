@@ -8,6 +8,7 @@
 #include <Engine/Types/EntityTypes.h>
 #include <Engine/Includes/HashMap.h>
 #include <Engine/Types/ObjectList.h>
+#include <Engine/Types/DrawGroupList.h>
 #include <Engine/Scene/SceneLayer.h>
 #include <Engine/Scene/TileConfig.h>
 #include <Engine/Scene/TileSpriteInfo.h>
@@ -34,7 +35,7 @@ public:
     static Entity*               DynamicObjectLast;
 
     static int                   PriorityPerLayer;
-    static vector<Entity*>*      PriorityLists;
+    static DrawGroupList*        PriorityLists;
 
     static vector<ISprite*>      TileSprites;
     static vector<TileSpriteInfo>TileSpriteInfos;
@@ -109,7 +110,7 @@ vector<SceneLayer>    Scene::Layers;
 bool                  Scene::AnyLayerTileChange = false;
 int                   Scene::MainLayer = 0;
 int                   Scene::PriorityPerLayer = 16;
-vector<Entity*>*      Scene::PriorityLists = NULL;
+DrawGroupList*        Scene::PriorityLists = NULL;
 
 // Rendering variables
 Uint32                Scene::BackgroundColor = 0x000000;
@@ -275,27 +276,13 @@ void _UpdateObject(Entity* ent) {
 
     // If hasn't been put in a list yet.
     if (ent->PriorityListIndex == -1) {
-        ent->PriorityListIndex = (int)Scene::PriorityLists[ent->Priority].size();
-        Scene::PriorityLists[ent->Priority].push_back(ent);
+        ent->PriorityListIndex = Scene::PriorityLists[ent->Priority].Add(ent);
     }
     // If Priority is changed.
     else if (ent->Priority != oldPriority) {
         // Remove entry in old list.
-        Scene::PriorityLists[oldPriority][ent->PriorityListIndex] = NULL;
-        int a = -1;
-        for (size_t p = 0, pSz = Scene::PriorityLists[ent->Priority].size(); p < pSz; p++) {
-            if (!Scene::PriorityLists[ent->Priority][p]) {
-                Scene::PriorityLists[ent->Priority][p] = ent;
-                a = (int)p;
-                break;
-            }
-        }
-        if (a < 0) {
-            a = (int)Scene::PriorityLists[ent->Priority].size();
-            Scene::PriorityLists[ent->Priority].push_back(ent);
-        }
-
-        ent->PriorityListIndex = a;
+        Scene::PriorityLists[oldPriority].Remove(ent);
+        ent->PriorityListIndex = Scene::PriorityLists[ent->Priority].Add(ent);
     }
     ent->PriorityOld = ent->Priority;
 }
@@ -594,10 +581,10 @@ PUBLIC STATIC void Scene::Render() {
             if (DEV_NoObjectRender)
                 break;
 
-            size_t oSz = PriorityLists[l].size();
-            for (size_t o = 0; o < oSz; o++) {
-                if (PriorityLists[l][o] && PriorityLists[l][o]->Active)
-                    PriorityLists[l][o]->RenderEarly();
+            DrawGroupList* drawGroupList = &PriorityLists[l];
+            for (size_t o = 0; o < drawGroupList->EntityCapacity; o++) {
+                if (drawGroupList->Entities[o] && drawGroupList->Entities[o]->Active)
+                    drawGroupList->Entities[o]->RenderEarly();
             }
         }
         PERF_END(Scene::PERF_ViewRender[i].ObjectRenderEarlyTime);
@@ -608,8 +595,9 @@ PUBLIC STATIC void Scene::Render() {
         float _vw = currentView->Width;
         float _vh = currentView->Height;
         double objectTimeTotal = 0.0;
+		DrawGroupList* drawGroupList;
         for (int l = 0; l < Scene::PriorityPerLayer; l++) {
-            size_t oSz = PriorityLists[l].size();
+            size_t oSz = PriorityLists[l].EntityCapacity;
 
             if (DEV_NoObjectRender)
                 goto DEV_NoTilesCheck;
@@ -621,9 +609,11 @@ PUBLIC STATIC void Scene::Render() {
             float _ox;
             float _oy;
             objectTime = Clock::GetTicks();
+
+            drawGroupList = &PriorityLists[l];
             for (size_t o = 0; o < oSz; o++) {
-                if (PriorityLists[l][o] && PriorityLists[l][o]->Active) {
-                    Entity* ent = PriorityLists[l][o];
+                if (drawGroupList->Entities[o] && drawGroupList->Entities[o]->Active) {
+                    Entity* ent = drawGroupList->Entities[o];
 
                     if (ent->RenderRegionW == 0.0f || ent->RenderRegionH == 0.0f)
                         goto DoCheckRender;
@@ -721,10 +711,11 @@ PUBLIC STATIC void Scene::Render() {
             if (DEV_NoObjectRender)
                 break;
 
-            size_t oSz = PriorityLists[l].size();
+            DrawGroupList* drawGroupList = &PriorityLists[l];
+            size_t oSz = drawGroupList->EntityCapacity;
             for (size_t o = 0; o < oSz; o++) {
-                if (PriorityLists[l][o] && PriorityLists[l][o]->Active)
-                    PriorityLists[l][o]->RenderLate();
+                if (drawGroupList->Entities[o] && drawGroupList->Entities[o]->Active)
+                    drawGroupList->Entities[o]->RenderLate();
             }
         }
         PERF_END(Scene::PERF_ViewRender[i].ObjectRenderLateTime);
@@ -832,7 +823,8 @@ PUBLIC STATIC void Scene::Restart() {
     if (Scene::AnyLayerTileChange) {
         // Copy backup tiles into main tiles
         for (int l = 0; l < (int)Layers.size(); l++) {
-            memcpy(Layers[l].Tiles, Layers[l].TilesBackup, (Layers[l].WidthMask + 1) * (Layers[l].HeightMask + 1) * sizeof(Uint32));
+            // printf("layer: w %d h %d data %d == %d\n", Layers[l].WidthData, Layers[l].HeightData, Layers[l].DataSize, (Layers[l].WidthMask + 1) * (Layers[l].HeightMask + 1) * sizeof(Uint32));
+            memcpy(Layers[l].Tiles, Layers[l].TilesBackup, Layers[l].DataSize);
         }
         Scene::AnyLayerTileChange = false;
     }
@@ -840,7 +832,7 @@ PUBLIC STATIC void Scene::Restart() {
 
     if (Scene::PriorityLists) {
         for (int l = 0; l < Scene::PriorityPerLayer; l++) {
-            Scene::PriorityLists[l].clear();
+            Scene::PriorityLists[l].Clear();
         }
     }
 
@@ -933,7 +925,7 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     if (Scene::PriorityLists) {
         int layerSize = Scene::PriorityPerLayer;
         for (int l = 0; l < layerSize; l++) {
-            Scene::PriorityLists[l].clear();
+            Scene::PriorityLists[l].Clear();
         }
     }
 
@@ -976,8 +968,9 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
 
 
     Log::Print(Log::LOG_INFO, "Starting scene \"%s\"...", filename);
-    if (StringUtils::StrCaseStr(filename, ".bin"))
+    if (StringUtils::StrCaseStr(filename, ".bin")) {
         RSDKSceneReader::Read(filename, pathParent);
+    }
     else
         TiledMapReader::Read(filename, pathParent);
 

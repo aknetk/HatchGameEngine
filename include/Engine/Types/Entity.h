@@ -9,6 +9,7 @@
 #define EXPOSED
 
 class ObjectList;
+class DrawGroupList;
 class Entity;
 class Entity;
 class ObjectList;

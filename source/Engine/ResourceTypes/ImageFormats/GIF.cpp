@@ -170,8 +170,8 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
     size_t fileSize;
     void*  fileBuffer = NULL;
 
-    if (strncmp(filename, "file:", 5) == 0)
-        stream = FileStream::New(filename + 5, FileStream::READ_ACCESS);
+    if (strncmp(filename, "file://", 7) == 0)
+        stream = FileStream::New(filename + 7, FileStream::READ_ACCESS);
     else
         stream = ResourceStream::New(filename);
     if (!stream) {

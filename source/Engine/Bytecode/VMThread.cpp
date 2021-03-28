@@ -243,7 +243,7 @@ PUBLIC VMValue VMThread::ReadConstant(CallFrame* frame) {
 }
 
 PUBLIC int     VMThread::RunInstruction() {
-    // #define VM_DEBUG_INSTRUCTIONS 0
+    // #define VM_DEBUG_INSTRUCTIONS 1
 
     // NOTE: MSVC cannot take advantage of the dispatch table.
     #ifdef USING_VM_DISPATCH_TABLE
@@ -966,8 +966,11 @@ PUBLIC int     VMThread::RunInstruction() {
                     }
                     else if (IS_STRING(receiver)) {
                         // iterate through objectlist
-                        ObjectList* objectList = Scene::ObjectRegistries->Get(AS_CSTRING(receiver));
-                        if (!objectList)
+                        char* objectNameChar = AS_CSTRING(receiver);
+                        ObjectList* objectList = NULL;
+                        if (Scene::ObjectRegistries->Exists(objectNameChar))
+                            objectList = Scene::ObjectRegistries->Get(objectNameChar);
+                        else if (Scene::ObjectLists->Exists(objectNameChar))
                             objectList = Scene::ObjectLists->Get(AS_CSTRING(receiver));
 
                         Pop(); // pop receiver

@@ -8,10 +8,9 @@
 #include <Engine/Diagnostics/Memory.h>
 #include <functional>
 
-template <typename T> class HashMapElement {
-public:
-    Uint32 Key = 0x00000000U;
-    bool   Used = false;
+template <typename T> struct HashMapElement {
+    Uint32 Key;
+    bool   Used;
     T      Data;
 };
 template <typename T> class HashMap {

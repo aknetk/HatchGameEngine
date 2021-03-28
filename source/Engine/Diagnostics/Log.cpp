@@ -43,6 +43,10 @@ const char* Log::LogFilename = TARGET_NAME ".log";
 
 bool        Log_Initialized = false;
 
+#if WIN32 || MACOSX || LINUX
+#define USING_COLOR_CODES 1
+#endif
+
 PUBLIC STATIC void Log::Init() {
     if (Log_Initialized)
         return;
@@ -85,6 +89,10 @@ PUBLIC STATIC void Log::SetLogLevel(int sev) {
 }
 
 PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
+    #ifdef USING_COLOR_CODES
+    int ColorCode = 0;
+    #endif
+
     if (sev < Log::LogLevel) return;
 
     char string[1024];
@@ -96,14 +104,14 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
     va_end(args);
     string[1023] = 0;
 
-    #if ANDROID
-    switch (sev) {
-        case   LOG_VERBOSE: __android_log_print(ANDROID_LOG_VERBOSE, TARGET_NAME, "%s", string); return;
-        case      LOG_INFO: __android_log_print(ANDROID_LOG_INFO,    TARGET_NAME, "%s", string); return;
-        case      LOG_WARN: __android_log_print(ANDROID_LOG_WARN,    TARGET_NAME, "%s", string); return;
-        case     LOG_ERROR: __android_log_print(ANDROID_LOG_ERROR,   TARGET_NAME, "%s", string); return;
-        case LOG_IMPORTANT: __android_log_print(ANDROID_LOG_FATAL,   TARGET_NAME, "%s", string); return;
-    }
+    #if defined(ANDROID)
+        switch (sev) {
+            case   LOG_VERBOSE: __android_log_print(ANDROID_LOG_VERBOSE, TARGET_NAME, "%s", string); return;
+            case      LOG_INFO: __android_log_print(ANDROID_LOG_INFO,    TARGET_NAME, "%s", string); return;
+            case      LOG_WARN: __android_log_print(ANDROID_LOG_WARN,    TARGET_NAME, "%s", string); return;
+            case     LOG_ERROR: __android_log_print(ANDROID_LOG_ERROR,   TARGET_NAME, "%s", string); return;
+            case LOG_IMPORTANT: __android_log_print(ANDROID_LOG_FATAL,   TARGET_NAME, "%s", string); return;
+        }
     #endif
 
     FILE* f = NULL;
@@ -111,31 +119,30 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
         f = fopen(LogFilename, "a");
     }
 
-    #if WIN32
-	int ColorCode = 0;
-    switch (sev) {
-        case   LOG_VERBOSE: ColorCode = 0xD; break;
-        case      LOG_INFO: ColorCode = 0x8; break;
-        case      LOG_WARN: ColorCode = 0xE; break;
-        case     LOG_ERROR: ColorCode = 0xC; break;
-        case LOG_IMPORTANT: ColorCode = 0xB; break;
-    }
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (GetConsoleScreenBufferInfo(hStdOut, &csbi)) {
-        WORD wColor = (csbi.wAttributes & 0xF0) + ColorCode;
-        SetConsoleTextAttribute(hStdOut, wColor);
-    }
-    #elif MACOSX || LINUX
-    switch (sev) {
-        case   LOG_VERBOSE: ColorCode = 94; break;
-        case      LOG_INFO: ColorCode = 00; break;
-        case      LOG_WARN: ColorCode = 93; break;
-        case     LOG_ERROR: ColorCode = 91; break;
-        case LOG_IMPORTANT: ColorCode = 96; break;
-    }
-    // if (!WriteToFile)
-        printf("\x1b[%d;1m", ColorCode);
+    #if defined(WIN32)
+        switch (sev) {
+            case   LOG_VERBOSE: ColorCode = 0xD; break;
+            case      LOG_INFO: ColorCode = 0x8; break;
+            case      LOG_WARN: ColorCode = 0xE; break;
+            case     LOG_ERROR: ColorCode = 0xC; break;
+            case LOG_IMPORTANT: ColorCode = 0xB; break;
+        }
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (GetConsoleScreenBufferInfo(hStdOut, &csbi)) {
+            WORD wColor = (csbi.wAttributes & 0xF0) + ColorCode;
+            SetConsoleTextAttribute(hStdOut, wColor);
+        }
+    #elif defined(MACOSX) || defined(LINUX)
+        switch (sev) {
+            case   LOG_VERBOSE: ColorCode = 94; break;
+            case      LOG_INFO: ColorCode = 00; break;
+            case      LOG_WARN: ColorCode = 93; break;
+            case     LOG_ERROR: ColorCode = 91; break;
+            case LOG_IMPORTANT: ColorCode = 96; break;
+        }
+        // if (!WriteToFile)
+            printf("\x1b[%d;1m", ColorCode);
     #endif
 
     switch (sev) {

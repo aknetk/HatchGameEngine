@@ -189,6 +189,7 @@ PUBLIC STATIC void   Memory::Free(void* pointer) {
                         debug[d] = 0xCDCDCDCDCDCDCDCDU;
                     }
                 }
+                // Log::Print(Log::LOG_VERBOSE, "Freeing: %p [%u bytes] (%s)", TrackedMemory[i], TrackedSizes[i], TrackedMemoryNames[i] ? TrackedMemoryNames[i] : "no name");
                 break;
             }
         }

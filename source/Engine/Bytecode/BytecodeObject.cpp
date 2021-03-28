@@ -169,7 +169,6 @@ PUBLIC void BytecodeObject::GameStart() {
     RunFunction(Hash_GameStart);
 }
 PUBLIC void BytecodeObject::Setup() {
-    if (!Active) return;
     if (!Instance) return;
 
     // RunFunction(Hash_Setup);

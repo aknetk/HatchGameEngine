@@ -81,7 +81,6 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
     }
 
 #ifdef USING_LIBOGG
-
     ogg = new OGG;
     ogg->StreamPtr = stream;
 
@@ -140,7 +139,6 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
     ogg->LoadFinish();
 
     goto OGG_Load_SUCCESS;
-
 #endif
 
     OGG_Load_FAIL:

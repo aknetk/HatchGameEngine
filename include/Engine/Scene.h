@@ -17,6 +17,7 @@ class Entity;
 #include <Engine/Types/EntityTypes.h>
 #include <Engine/Includes/HashMap.h>
 #include <Engine/Types/ObjectList.h>
+#include <Engine/Types/DrawGroupList.h>
 #include <Engine/Scene/SceneLayer.h>
 #include <Engine/Scene/TileConfig.h>
 #include <Engine/Scene/TileSpriteInfo.h>
@@ -37,7 +38,7 @@ public:
     static Entity*               DynamicObjectFirst;
     static Entity*               DynamicObjectLast;
     static int                   PriorityPerLayer;
-    static vector<Entity*>*      PriorityLists;
+    static DrawGroupList*        PriorityLists;
     static vector<ISprite*>      TileSprites;
     static vector<TileSpriteInfo>TileSpriteInfos;
     static Uint16                EmptyTile;

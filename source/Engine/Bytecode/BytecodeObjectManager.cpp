@@ -61,6 +61,8 @@ vector<char*>        BytecodeObjectManager::TokensList;
 
 SDL_mutex*           BytecodeObjectManager::GlobalLock = NULL;
 
+// #define DEBUG_STRESS_GC
+
 PUBLIC STATIC bool    BytecodeObjectManager::ThrowRuntimeError(bool fatal, const char* errorMessage, ...) {
     va_list args;
     va_start(args, errorMessage);
@@ -70,10 +72,10 @@ PUBLIC STATIC bool    BytecodeObjectManager::ThrowRuntimeError(bool fatal, const
 }
 
 PUBLIC STATIC void    BytecodeObjectManager::RequestGarbageCollection() {
-    #ifdef DEBUG_STRESS_GC
-        ForceGarbageCollection();
-    #endif
-    if (GarbageCollector::GarbageSize > GarbageCollector::NextGC) {
+#ifndef DEBUG_STRESS_GC
+    if (GarbageCollector::GarbageSize > GarbageCollector::NextGC)
+#endif
+    {
         // size_t startSize = GarbageCollector::GarbageSize;
 
         ForceGarbageCollection();
@@ -220,6 +222,7 @@ PUBLIC STATIC void    BytecodeObjectManager::RemoveNonGlobalableValue(Uint32 has
 }
 PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValue value) {
     if (IS_OBJECT(value)) {
+        // Log::Print(Log::LOG_VERBOSE, "Freeing object %p of type %s", AS_OBJECT(value), GetTypeString(value));
         switch (OBJECT_TYPE(value)) {
             case OBJ_CLASS: {
                 ObjClass* klass = AS_CLASS(value);
@@ -236,7 +239,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValu
             case OBJ_FUNCTION: {
                 ObjFunction* function = AS_FUNCTION(value);
 				/*
-				printf("OBJ_FUNCTION: %p (%s)\n", function, 
+				printf("OBJ_FUNCTION: %p (%s)\n", function,
 					function->Name ?
 						(function->Name->Chars ? function->Name->Chars : "NULL") :
 						"NULL");
@@ -651,17 +654,8 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
 
     int chunkCount = stream->ReadInt32();
     for (int i = 0; i < chunkCount; i++) {
-        #ifdef ANDROID
-        // Log::Print(-1, "head: %p", head);
-        #endif
         int   count = stream->ReadInt32();
-        #ifdef ANDROID
-        // Log::Print(-1, "head: %p", head);
-        #endif
         int   arity = stream->ReadInt32();
-        #ifdef ANDROID
-        // Log::Print(-1, "head: %p", head);
-        #endif
         Uint32 hash = stream->ReadUInt32();
 
         ObjFunction* function = NewFunction();
@@ -670,7 +664,7 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
         function->Chunk.Count = count;
 
         size_t srcFnLen = strlen(CurrentObjectName);
-        strcpy(function->SourceFilename, CurrentObjectName);
+        strncpy(function->SourceFilename, CurrentObjectName, sizeof(function->SourceFilename));
         function->SourceFilename[srcFnLen] = 0;
 
         function->Chunk.Code = stream->pointer;
@@ -697,7 +691,7 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
                         ChunkAddConstant(&function->Chunk, OBJECT_VAL(CopyString(str, strlen(str))));
                     // }
                     // else {
-                    //     printf("Unsupported object type...Chief.\n");
+                        // printf("Unsupported object type...Chief.\n");
                     // }
                     break;
             }
@@ -741,7 +735,6 @@ PUBLIC STATIC bool    BytecodeObjectManager::CallFunction(char* functionName) {
     return true;
 }
 PUBLIC STATIC Entity* BytecodeObjectManager::SpawnFunction() {
-    BytecodeObject* object = new BytecodeObject;
     ObjClass* klass = AS_CLASS(Globals->Get(CurrentObjectHash));
     if (!klass) {
         if (Tokens && Tokens->Exists(CurrentObjectHash))
@@ -751,9 +744,12 @@ PUBLIC STATIC Entity* BytecodeObjectManager::SpawnFunction() {
         exit(0);
     }
 
+    BytecodeObject* object = new BytecodeObject;
+
     ObjInstance* instance = NewInstance(klass);
     object->Link(instance);
 
+    /*
     char* badbadbadbad = (char*)malloc(256);
     if (Tokens && Tokens->Exists(CurrentObjectHash))
         sprintf(badbadbadbad, "BytecodeObject::Instance [%s]", Tokens->Get(CurrentObjectHash));
@@ -764,16 +760,17 @@ PUBLIC STATIC Entity* BytecodeObjectManager::SpawnFunction() {
     // Memory::Track(instance, "BytecodeObject::Instance");
     Memory::Track(instance->Fields->Data, "BytecodeObject::Instance::Fields::Data");
     Memory::Track(object->Properties->Data, "BytecodeObject::Properties::Data");
+    //*/
 
     return object;
 }
 PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameHash, const char* objectName) {
     Uint8* bytecode;
-    if (*objectName == 0)
+    if (!objectName || !*objectName)
         return NULL;
 
     memset(CurrentObjectName, 0, 256);
-    strncpy(CurrentObjectName, objectName, 255);
+    strncpy(CurrentObjectName, objectName, 256);
 
     if (!SourceFileMap::ClassMap->Exists(objectName)) {
         Log::Print(Log::LOG_VERBOSE, "Could not find classmap for %s%s%s! (Hash: 0x%08X)", FG_YELLOW, objectName, FG_RESET, SourceFileMap::ClassMap->HashFunction(objectName, strlen(objectName)));
@@ -803,7 +800,7 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
             }
 
             size_t size = stream->Length();
-            bytecode = (Uint8*)Memory::Malloc(size + 1); bytecode[size] = 0;
+            bytecode = (Uint8*)Memory::TrackedMalloc("BytecodeObjectManager::GetSpawnFunction::bytecode", size + 1); bytecode[size] = 0;
             stream->ReadBytes(bytecode, size);
             stream->Close();
 

@@ -9,7 +9,7 @@
 #define ALLOCATE_OBJ(type, objectType) \
     (type*)AllocateObject(sizeof(type), objectType)
 #define ALLOCATE(type, size) \
-    (type*)Memory::Malloc(sizeof(type) * size)
+    (type*)Memory::TrackedMalloc(#type, sizeof(type) * size)
 
 #define GROW_CAPACITY(val) ((val) < 8 ? 8 : val * 2)
 
@@ -18,7 +18,7 @@ static Obj*       AllocateObject(size_t size, ObjType type) {
     GarbageCollector::GarbageSize += size;
     // BytecodeObjectManager::RequestGarbageCollection();
 
-    Obj* object = (Obj*)Memory::Malloc(size);
+    Obj* object = (Obj*)Memory::TrackedMalloc("AllocateObject", size);
     object->Type = type;
     object->IsDark = false;
     object->Next = GarbageCollector::RootObject;

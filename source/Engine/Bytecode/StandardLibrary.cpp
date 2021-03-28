@@ -2655,8 +2655,8 @@ VMValue File_ReadAllText(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     char* filePath = GetString(args, 0, threadID);
     Stream* stream = NULL;
-    if (strncmp(filePath, "save:", 5) == 0)
-        stream = FileStream::New(filePath + 5, FileStream::SAVEGAME_ACCESS | FileStream::READ_ACCESS);
+    if (strncmp(filePath, "save://", 7) == 0)
+        stream = FileStream::New(filePath + 7, FileStream::SAVEGAME_ACCESS | FileStream::READ_ACCESS);
     else
         stream = FileStream::New(filePath, FileStream::READ_ACCESS);
     if (!stream)
@@ -2689,8 +2689,8 @@ VMValue File_WriteAllText(int argCount, VMValue* args, Uint32 threadID) {
         ObjString* text = AS_STRING(args[1]);
 
         Stream* stream = NULL;
-        if (strncmp(filePath, "save:", 5) == 0)
-            stream = FileStream::New(filePath + 5, FileStream::SAVEGAME_ACCESS | FileStream::WRITE_ACCESS);
+        if (strncmp(filePath, "save://", 7) == 0)
+            stream = FileStream::New(filePath + 7, FileStream::SAVEGAME_ACCESS | FileStream::WRITE_ACCESS);
         else
             stream = FileStream::New(filePath, FileStream::WRITE_ACCESS);
         if (!stream) {
@@ -2721,8 +2721,8 @@ int _HTTP_GetToFile(void* opaque) {
     Uint8* data = NULL;
     if (HTTP::GET(bundle->url, &data, &length, NULL)) {
         Stream* stream = NULL;
-        if (strncmp(bundle->filename, "save:", 5) == 0)
-            stream = FileStream::New(bundle->filename + 5, FileStream::SAVEGAME_ACCESS | FileStream::WRITE_ACCESS);
+        if (strncmp(bundle->filename, "save://", 7) == 0)
+            stream = FileStream::New(bundle->filename + 7, FileStream::SAVEGAME_ACCESS | FileStream::WRITE_ACCESS);
         else
             stream = FileStream::New(bundle->filename, FileStream::WRITE_ACCESS);
         if (stream) {
@@ -4723,8 +4723,8 @@ VMValue Resources_LoadVideo(int argCount, VMValue* args, Uint32 threadID) {
     MediaPlayer* Player = NULL;
 
     Stream* stream = NULL;
-    if (strncmp(filename, "file:", 5) == 0)
-        stream = FileStream::New(filename + 5, FileStream::READ_ACCESS);
+    if (strncmp(filename, "file://", 7) == 0)
+        stream = FileStream::New(filename + 7, FileStream::READ_ACCESS);
     else
         stream = ResourceStream::New(filename);
     if (!stream) {

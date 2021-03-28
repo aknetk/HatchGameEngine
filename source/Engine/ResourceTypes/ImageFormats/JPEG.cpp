@@ -124,8 +124,8 @@ PUBLIC STATIC JPEG*   JPEG::Load(const char* filename) {
     Uint32 Rmask, Gmask, Bmask, Amask;
     bool doConvert;
 
-    if (strncmp(filename, "file:", 5) == 0)
-        stream = FileStream::New(filename + 5, FileStream::READ_ACCESS);
+    if (strncmp(filename, "file://", 7) == 0)
+        stream = FileStream::New(filename + 7, FileStream::READ_ACCESS);
     else
         stream = ResourceStream::New(filename);
     if (!stream) {
