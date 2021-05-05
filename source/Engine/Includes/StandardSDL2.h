@@ -7,6 +7,9 @@
 #elif MACOSX
     // SDL2 includes
     #include <SDL.h>
+#elif LINUX
+    // SDL2 includes
+    #include <SDL.h>
 #elif SWITCH
     // SDL2 includes
     #include <SDL2/SDL.h>
