@@ -41,6 +41,12 @@ public:
 #include <Engine/Media/MediaSource.h>
 #include <Engine/Media/MediaPlayer.h>
 
+#ifdef IOS
+extern "C" {
+    #include <Engine/Platforms/iOS/MediaPlayer.h>
+}
+#endif
+
 #if   WIN32
     Platforms Application::Platform = Platforms::Windows;
 #elif MACOSX
@@ -91,13 +97,17 @@ void        DEBUG_DrawText(char* text, float x, float y) {
 PUBLIC STATIC void Application::Init(int argc, char* args[]) {
     Log::Init();
 
-    // SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown"); // iOS only
     SDL_SetHint(SDL_HINT_WINDOWS_DISABLE_THREAD_NAMING, "1");
     SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "0");
+
     #ifdef IOS
-    // SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, "1");
+    // SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown"); // iOS only
+    // SDL_SetHint(SDL_HINT_AUDIO_CATEGORY, "playback"); // Background Playback
+    SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, "1");
+    iOS_InitMediaPlayer();
     #endif
+
     #ifdef ANDROID
     SDL_SetHint(SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH, "1");
     #endif
@@ -131,7 +141,8 @@ PUBLIC STATIC void Application::Init(int argc, char* args[]) {
         640, 480, window_flags);
 
     if (Application::Platform == Platforms::iOS) {
-        SDL_SetWindowFullscreen(Application::Window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        // SDL_SetWindowFullscreen(Application::Window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        SDL_SetWindowFullscreen(Application::Window, SDL_WINDOW_FULLSCREEN);
     }
     else if (Application::Platform == Platforms::Switch) {
         SDL_SetWindowFullscreen(Application::Window, SDL_WINDOW_FULLSCREEN);

@@ -42,7 +42,7 @@ PUBLIC        void            ResourceStream::Seek(Sint64 offset) {
     pointer = pointer_start + offset;
 }
 PUBLIC        void            ResourceStream::SeekEnd(Sint64 offset) {
-    pointer = pointer_start + size - offset;
+    pointer = pointer_start + size + offset;
 }
 PUBLIC        void            ResourceStream::Skip(Sint64 offset) {
     pointer = pointer + offset;

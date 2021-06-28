@@ -243,7 +243,7 @@ PUBLIC VMValue VMThread::ReadConstant(CallFrame* frame) {
 }
 
 PUBLIC int     VMThread::RunInstruction() {
-    // #define VM_DEBUG_INSTRUCTIONS 1
+    #define VM_DEBUG_INSTRUCTIONS 1
 
     // NOTE: MSVC cannot take advantage of the dispatch table.
     #ifdef USING_VM_DISPATCH_TABLE

@@ -10,6 +10,8 @@
 
 template <typename T> struct HashMapElement {
     Uint32 Key;
+    Uint32 PrevKey;
+    Uint32 NextKey;
     bool   Used;
     T      Data;
 };
@@ -20,6 +22,8 @@ public:
     int CapacityMask = 0;
     int ChainLength = 16;
     HashMapElement<T>* Data = NULL;
+    Uint32 FirstKey = 0;
+    Uint32 LastKey = 0;
 
     Uint32 (*HashFunction)(const void*, size_t) = NULL;
 
@@ -62,6 +66,54 @@ public:
         index = index & CapacityMask; // index = index % Capacity;
         return index;
     }
+    Uint32 FindKey(Uint32 key) {
+        Uint32 index = TranslateIndex(key);
+        for (int i = 0; i < ChainLength; i++) {
+            if (Data[index].Used && Data[index].Key == key)
+                return index;
+
+            index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
+        }
+        return 0xFFFFFFFFU;
+    }
+    void   RemoveKey(HashMapElement<T>* data) {
+        Uint32 index;
+        if (data->PrevKey == 0 && data->NextKey != 0) {
+            FirstKey = data->NextKey;
+            index = FindKey(FirstKey);
+            if (index != 0xFFFFFFFFU)
+                Data[index].PrevKey = 0;
+        }
+        else if (data->PrevKey != 0 && data->NextKey == 0) {
+            LastKey = data->PrevKey;
+            index = FindKey(LastKey);
+            if (index != 0xFFFFFFFFU)
+                Data[index].NextKey = 0;
+        }
+        else {
+            index = FindKey(data->PrevKey);
+            if (index != 0xFFFFFFFFU)
+                Data[index].NextKey = data->NextKey;
+
+            index = FindKey(data->NextKey);
+            if (index != 0xFFFFFFFFU)
+                Data[index].PrevKey = data->PrevKey;
+        }
+    }
+    void   AppendKey(HashMapElement<T>* data) {
+        data->PrevKey = LastKey;
+        data->NextKey = 0;
+        if (LastKey != 0) {
+            Uint32 lastIndex = FindKey(LastKey);
+            if (lastIndex != 0xFFFFFFFFU)
+                Data[lastIndex].NextKey = data->Key;
+        }
+        else {
+            FirstKey = data->Key;
+        }
+        LastKey = data->Key;
+    }
+
     int    Resize() {
         Capacity <<= 1;
         CapacityMask = Capacity - 1;
@@ -92,6 +144,8 @@ public:
             	}
 
                 Data[index].Key = oldData[i].Key;
+                Data[index].PrevKey = oldData[i].PrevKey;
+                Data[index].NextKey = oldData[i].NextKey;
                 Data[index].Used = true;
                 Data[index].Data = oldData[i].Data;
             }
@@ -128,6 +182,8 @@ public:
         while (index == 0xFFFFFFFFU);
 
         Data[index].Key = hash;
+        if (!Data[index].Used)
+            AppendKey(&Data[index]);
         Data[index].Used = true;
         Data[index].Data = data;
     }
@@ -193,6 +249,7 @@ public:
         for (int i = 0; i < ChainLength; i++) {
             if (Data[index].Used && Data[index].Key == hash) {
                 Count--;
+                RemoveKey(&Data[index]);
                 Data[index].Used = false;
                 return true;
             }
@@ -227,6 +284,36 @@ public:
                 forFunc(Data[i].Key, Data[i].Data);
             }
         }
+    }
+    void   ForAllOrdered(void (*forFunc)(Uint32, T)) {
+        Uint32 index;
+        if (FirstKey == 0) return;
+
+        Uint32 nextKey = FirstKey;
+        do {
+            index = FindKey(nextKey);
+            nextKey = 0;
+            if (index != 0xFFFFFFFFU) {
+                forFunc(Data[index].Key, Data[index].Data);
+                nextKey = Data[index].NextKey;
+            }
+        }
+        while (nextKey);
+    }
+    void   WithAllOrdered(std::function<void(Uint32, T)> forFunc) {
+        Uint32 index;
+        if (FirstKey == 0) return;
+
+        Uint32 nextKey = FirstKey;
+        do {
+            index = FindKey(nextKey);
+            nextKey = 0;
+            if (index != 0xFFFFFFFFU) {
+                forFunc(Data[index].Key, Data[index].Data);
+                nextKey = Data[index].NextKey;
+            }
+        }
+        while (nextKey);
     }
 
     void   PrintHashes() {

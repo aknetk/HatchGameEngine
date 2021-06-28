@@ -51,6 +51,7 @@ PUBLIC STATIC FileStream* FileStream::New(const char* filename, Uint32 access) {
 
             char documentPath[256];
             snprintf(documentPath, 256, "%s/%s", saveDataPath, filename);
+            printf("documentPath: %s\n", documentPath);
             stream->f = fopen(documentPath, accessString);
         }
     #elif defined(MACOSX)

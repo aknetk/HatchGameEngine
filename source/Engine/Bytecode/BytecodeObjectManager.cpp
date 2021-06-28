@@ -61,7 +61,7 @@ vector<char*>        BytecodeObjectManager::TokensList;
 
 SDL_mutex*           BytecodeObjectManager::GlobalLock = NULL;
 
-// #define DEBUG_STRESS_GC
+#define DEBUG_STRESS_GC
 
 PUBLIC STATIC bool    BytecodeObjectManager::ThrowRuntimeError(bool fatal, const char* errorMessage, ...) {
     va_list args;

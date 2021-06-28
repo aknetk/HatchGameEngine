@@ -189,14 +189,14 @@ PUBLIC STATIC void   AudioManager::Init() {
         else Log::Print(Log::LOG_ERROR, "Could not open audio device!");
     }
 
-    Log::Print(Log::LOG_INFO, "%s", "Audio Device:");
-    Log::Print(Log::LOG_INFO, "%s = %d", "Freq", DeviceFormat.freq);
-    Log::Print(Log::LOG_INFO, "%s = %s%d-bit%s", "Format",
+    Log::Print(Log::LOG_VERBOSE, "%s", "Audio Device:");
+    Log::Print(Log::LOG_VERBOSE, "%s = %d", "Freq", DeviceFormat.freq);
+    Log::Print(Log::LOG_VERBOSE, "%s = %s%d-bit%s", "Format",
         SDL_AUDIO_ISSIGNED(DeviceFormat.format) ? "signed " : "unsigned ",
         SDL_AUDIO_BITSIZE(DeviceFormat.format),
         SDL_AUDIO_ISFLOAT(DeviceFormat.format) ? " (float)" : SDL_AUDIO_ISBIGENDIAN(DeviceFormat.format) ? " BE" : " LE");
-    Log::Print(Log::LOG_INFO, "%s = %X", "Samples", DeviceFormat.samples);
-    Log::Print(Log::LOG_INFO, "%s = %X", "Channels", DeviceFormat.channels);
+    Log::Print(Log::LOG_VERBOSE, "%s = %X", "Samples", DeviceFormat.samples);
+    Log::Print(Log::LOG_VERBOSE, "%s = %X", "Channels", DeviceFormat.channels);
 
     // AudioQueue
     AudioQueueMaxSize = DeviceFormat.samples * DeviceFormat.channels * (SDL_AUDIO_BITSIZE(DeviceFormat.format) >> 3);

@@ -418,7 +418,7 @@ PUBLIC STATIC void Scene::ResetPerf() {
 PUBLIC STATIC void Scene::Update() {
     // Call global updates
     if (Scene::ObjectLists)
-        Scene::ObjectLists->ForAll(_ObjectList_CallGlobalUpdates);
+        Scene::ObjectLists->ForAllOrdered(_ObjectList_CallGlobalUpdates);
 
     // Early Update
     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
@@ -871,7 +871,7 @@ PUBLIC STATIC void Scene::Restart() {
 
     // Run "Load" on all object classes
     if (Scene::ObjectLists)
-		Scene::ObjectLists->ForAll(_ObjectList_CallLoads);
+		Scene::ObjectLists->ForAllOrdered(_ObjectList_CallLoads);
 
     // Run "Create" on all objects
     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {

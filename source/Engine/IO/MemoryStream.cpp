@@ -62,7 +62,7 @@ PUBLIC        void          MemoryStream::Seek(Sint64 offset) {
     pointer = pointer_start + offset;
 }
 PUBLIC        void          MemoryStream::SeekEnd(Sint64 offset) {
-    pointer = pointer_start + size - offset;
+    pointer = pointer_start + size + offset;
 }
 PUBLIC        void          MemoryStream::Skip(Sint64 offset) {
     pointer = pointer + offset;

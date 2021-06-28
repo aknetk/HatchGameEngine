@@ -32,7 +32,7 @@ PUBLIC STATIC void   Clock::Init() {
         if (QueryPerformanceFrequency(&Win32_Frequency)) {
             Win32_PerformanceFrequencyEnabled = true;
             Win32_CPUFreq = (double)Win32_Frequency.QuadPart / 1000.0;
-            Log::Print(Log::LOG_INFO, "CPU Frequency: %.1f GHz", Win32_Frequency.QuadPart / 1000000.0);
+            // Log::Print(Log::LOG_INFO, "CPU Frequency: %.1f GHz", Win32_Frequency.QuadPart / 1000000.0);
 
             LARGE_INTEGER ticks;
             if (QueryPerformanceCounter(&ticks)) {
