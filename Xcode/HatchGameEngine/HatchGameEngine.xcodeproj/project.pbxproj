@@ -12,7 +12,6 @@
 		D0B1451E268B6BB000CDA5EF /* libpng16.16.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14518268B6BB000CDA5EF /* libpng16.16.dylib */; };
 		D0B1451F268B6BB000CDA5EF /* libvorbisfile.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14519268B6BB000CDA5EF /* libvorbisfile.3.dylib */; };
 		D0B14520268B6BB000CDA5EF /* libcurl.4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B1451A268B6BB000CDA5EF /* libcurl.4.dylib */; };
-		D0B14522268B6F8300CDA5EF /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14517268B6BB000CDA5EF /* SDL2.framework */; };
 		D0B145C9268B6FA700CDA5EF /* Filesystem.m in Sources */ = {isa = PBXBuildFile; fileRef = D0B14529268B6FA700CDA5EF /* Filesystem.m */; };
 		D0B145CA268B6FA700CDA5EF /* DrawGroupList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0B14530268B6FA700CDA5EF /* DrawGroupList.cpp */; };
 		D0B145CB268B6FA700CDA5EF /* Entity.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0B14531268B6FA700CDA5EF /* Entity.cpp */; };
@@ -104,6 +103,7 @@
 		D0B14621268B6FA800CDA5EF /* VideoDecoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0B145C7268B6FA700CDA5EF /* VideoDecoder.cpp */; };
 		D0B14622268B6FA800CDA5EF /* Decoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0B145C8268B6FA700CDA5EF /* Decoder.cpp */; };
 		D0B14624268B723B00CDA5EF /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14623268B723B00CDA5EF /* libz.tbd */; };
+		D0B14626268B74B000CDA5EF /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14625268B74B000CDA5EF /* SDL2.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -252,6 +252,7 @@
 		D0B145C7268B6FA700CDA5EF /* VideoDecoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoDecoder.cpp; sourceTree = "<group>"; };
 		D0B145C8268B6FA700CDA5EF /* Decoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Decoder.cpp; sourceTree = "<group>"; };
 		D0B14623268B723B00CDA5EF /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		D0B14625268B74B000CDA5EF /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = ../../../../../../Library/Frameworks/SDL2.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -259,8 +260,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0B14626268B74B000CDA5EF /* SDL2.framework in Frameworks */,
 				D0B14624268B723B00CDA5EF /* libz.tbd in Frameworks */,
-				D0B14522268B6F8300CDA5EF /* SDL2.framework in Frameworks */,
 				D0B1451B268B6BB000CDA5EF /* libvorbis.0.dylib in Frameworks */,
 				D0B1451C268B6BB000CDA5EF /* libogg.0.dylib in Frameworks */,
 				D0B1451E268B6BB000CDA5EF /* libpng16.16.dylib in Frameworks */,
@@ -292,6 +293,7 @@
 		D0B14514268B6BB000CDA5EF /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0B14625268B74B000CDA5EF /* SDL2.framework */,
 				D0B14623268B723B00CDA5EF /* libz.tbd */,
 				D0B1451A268B6BB000CDA5EF /* libcurl.4.dylib */,
 				D0B14516268B6BB000CDA5EF /* libogg.0.dylib */,
@@ -1023,7 +1025,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				FRAMEWORK_SEARCH_PATHS = ../../meta/mac;
+				FRAMEWORK_SEARCH_PATHS = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -1049,7 +1051,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				FRAMEWORK_SEARCH_PATHS = ../../meta/mac;
+				FRAMEWORK_SEARCH_PATHS = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				GCC_PREPROCESSOR_DEFINITIONS = MACOSX;
 				HEADER_SEARCH_PATHS = (
 					../../include,
