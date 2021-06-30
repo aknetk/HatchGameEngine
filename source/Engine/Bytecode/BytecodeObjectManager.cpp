@@ -61,7 +61,7 @@ vector<char*>        BytecodeObjectManager::TokensList;
 
 SDL_mutex*           BytecodeObjectManager::GlobalLock = NULL;
 
-#define DEBUG_STRESS_GC
+// #define DEBUG_STRESS_GC
 
 PUBLIC STATIC bool    BytecodeObjectManager::ThrowRuntimeError(bool fatal, const char* errorMessage, ...) {
     va_list args;
@@ -626,7 +626,7 @@ PUBLIC STATIC void    BytecodeObjectManager::LinkExtensions() {
 #define FG_YELLOW ""
 #define FG_RESET ""
 
-#if defined(MACOSX) || defined(LINUX)
+#if defined(LINUX)
     #undef FG_YELLOW
     #undef FG_RESET
     #define FG_YELLOW "\x1b[1;93m"

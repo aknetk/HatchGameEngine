@@ -211,6 +211,7 @@ void              ChunkInit(Chunk* chunk) {
     chunk->Code = NULL;
     chunk->Lines = NULL;
     chunk->Constants = new vector<VMValue>();
+    assert(chunk->Constants != NULL);
 }
 void              ChunkAlloc(Chunk* chunk) {
     if (!chunk->Code)

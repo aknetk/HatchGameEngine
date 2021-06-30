@@ -43,7 +43,7 @@ const char* Log::LogFilename = TARGET_NAME ".log";
 
 bool        Log_Initialized = false;
 
-#if WIN32 || MACOSX || LINUX
+#if WIN32 || LINUX
 #define USING_COLOR_CODES 1
 #endif
 
@@ -133,7 +133,7 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
             WORD wColor = (csbi.wAttributes & 0xF0) + ColorCode;
             SetConsoleTextAttribute(hStdOut, wColor);
         }
-    #elif defined(MACOSX) || defined(LINUX)
+    #elif USING_COLOR_CODES
         switch (sev) {
             case   LOG_VERBOSE: ColorCode = 94; break;
             case      LOG_INFO: ColorCode = 00; break;
@@ -170,7 +170,7 @@ PUBLIC STATIC void Log::Print(int sev, const char* format, ...) {
         SendMessage(edit, EM_REPLACESEL, TRUE, (LPARAM)string);
         SendMessage(edit, EM_REPLACESEL, TRUE, (LPARAM)"\r\n");
         //*/
-    #elif MACOSX || LINUX
+    #elif USING_COLOR_CODES
         // if (!WriteToFile)
             printf("\x1b[0m");
     #endif
