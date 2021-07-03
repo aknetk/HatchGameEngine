@@ -143,6 +143,8 @@ PUBLIC STATIC void     SDL2Renderer::DisposeTexture(Texture* texture) {
     if (!textureData)
         return;
 
+    Graphics::TextureMap->Remove(texture->ID);
+
     SDL_DestroyTexture(*textureData);
     Memory::Free(texture->DriverData);
 }

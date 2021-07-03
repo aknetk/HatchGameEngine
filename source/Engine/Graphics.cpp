@@ -313,6 +313,9 @@ PUBLIC STATIC void     Graphics::DisposeTexture(Texture* texture) {
 	else
 		Graphics::TextureHead = texture->Next;
 
+	if (texture->Pixels)
+		Memory::Free(texture->Pixels);
+
 	Memory::Free(texture);
 }
 

@@ -446,6 +446,9 @@ PUBLIC STATIC void Application::PollEvents() {
                             BenchmarkFrameCount = 0;
 
                             Scene::Dispose();
+                            Graphics::SpriteSheetTextureMap->WithAll([](Uint32, Texture* tex) -> void {
+                                Graphics::DisposeTexture(tex);
+                            });
                             Graphics::SpriteSheetTextureMap->Clear();
 
                             Application::LoadGameConfig();
@@ -500,6 +503,10 @@ PUBLIC STATIC void Application::PollEvents() {
                             BenchmarkFrameCount = 0;
 
                             Scene::Dispose();
+
+                            Graphics::SpriteSheetTextureMap->WithAll([](Uint32, Texture* tex) -> void {
+                                Graphics::DisposeTexture(tex);
+                            });
                             Graphics::SpriteSheetTextureMap->Clear();
 
                             Application::LoadGameConfig();

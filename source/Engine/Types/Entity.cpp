@@ -96,8 +96,13 @@ PUBLIC void Entity::Animate() {
                 OnAnimationFinish();
             }
 
-            sprite = Scene::SpriteList[Sprite]->AsSprite;
-            CurrentFrameTimeLeft = sprite->Animations[CurrentAnimation].Frames[CurrentFrame].Duration;
+            if ((size_t)CurrentFrame < sprite->Animations[CurrentAnimation].Frames.size()) {
+                sprite = Scene::SpriteList[Sprite]->AsSprite;
+                CurrentFrameTimeLeft = sprite->Animations[CurrentAnimation].Frames[CurrentFrame].Duration;
+            }
+            else {
+                CurrentFrameTimeLeft = 1.0f;
+            }
         }
     }
     else {

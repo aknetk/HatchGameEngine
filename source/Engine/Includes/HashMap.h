@@ -123,6 +123,7 @@ public:
 
         Data = (HashMapElement<T>*)Memory::TrackedCalloc(oldTrack, Capacity, sizeof(HashMapElement<T>));
         if (!Data) {
+            Memory::Free(oldData);
             Log::Print(Log::LOG_ERROR, "Could not allocate memory for HashMap data!");
             exit(0);
         }

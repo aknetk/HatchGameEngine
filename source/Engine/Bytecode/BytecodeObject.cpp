@@ -273,7 +273,9 @@ PUBLIC void BytecodeObject::OnAnimationFinish() {
 
 PUBLIC void BytecodeObject::Dispose() {
     Entity::Dispose();
-    Properties->Dispose();
+    if (Properties) {
+        delete Properties;
+    }
     if (Instance) {
         // Instance->Fields->ForAll(BytecodeObjectManager::FreeValue);
         // delete Instance->Fields;

@@ -81,6 +81,9 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
             paletted = png->Paletted;
             Memory::Track(data, "Texture::Data");
 
+            if (png->Colors)
+                Memory::Free(png->Colors);
+
             delete png;
         }
         else {
@@ -448,7 +451,13 @@ PUBLIC void ISprite::Dispose() {
             Memory::Free(Animations[a].Name);
             Animations[a].Name = NULL;
         }
+
+        Animations[a].Frames.clear();
+        Animations[a].Frames.shrink_to_fit();
     }
+
+    Animations.clear();
+    Animations.shrink_to_fit();
 
     for (int a = 0; a < SpritesheetCount; a++) {
         if (Spritesheets[a]) {

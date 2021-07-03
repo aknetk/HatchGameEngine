@@ -478,11 +478,14 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
         size_t size = Scene::PriorityPerLayer * sizeof(vector<Entity*>);
         // Scene::PriorityLists = (vector<Entity*>*)Memory::Realloc(Scene::PriorityLists, size);
 
-        memset(Scene::PriorityLists, 0, size);
+        for (int i = Scene::PriorityPerLayer - 1; i >= 0; i--) {
+            Scene::PriorityLists[i].Dispose();
+        }
     }
     else {
         Scene::PriorityLists = (DrawGroupList*)Memory::TrackedCalloc("Scene::PriorityLists", Scene::PriorityPerLayer, sizeof(DrawGroupList));
     }
+
     for (int i = Scene::PriorityPerLayer - 1; i >= 0; i--) {
         Scene::PriorityLists[i].Init();
     }

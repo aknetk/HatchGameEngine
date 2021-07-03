@@ -120,6 +120,9 @@ PUBLIC STATIC void*  Memory::TrackedMalloc(const char* identifier, size_t size) 
             Log::Print(Log::LOG_ERROR, "Could not allocate memory for TrackedMalloc!");
         }
     }
+    else if (!mem) {
+        Log::Print(Log::LOG_ERROR, "Could not allocate memory for TrackedMalloc!");
+    }
     return mem;
 }
 PUBLIC STATIC void*  Memory::TrackedCalloc(const char* identifier, size_t count, size_t size) {
@@ -170,7 +173,7 @@ PUBLIC STATIC void   Memory::TrackLast(const char* identifier) {
     }
 }
 PUBLIC STATIC void   Memory::Free(void* pointer) {
-    if (Memory::IsTracking) {
+    //if (Memory::IsTracking) {
         #ifdef DEBUG
         for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
             if (TrackedMemory[i] == pointer) {
@@ -194,7 +197,7 @@ PUBLIC STATIC void   Memory::Free(void* pointer) {
             }
         }
         #endif
-    }
+    //}
     Memory::Remove(pointer);
     if (!pointer) return;
 

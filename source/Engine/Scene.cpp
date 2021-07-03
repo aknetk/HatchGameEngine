@@ -162,6 +162,7 @@ vector<ResourceType*> Scene::ModelList;
 vector<ResourceType*> Scene::MediaList;
 
 Entity*               StaticObject = NULL;
+ObjectList*           StaticObjectList = NULL;
 bool                  DEV_NoTiles = false;
 bool                  DEV_NoObjectRender = false;
 const char*           DEBUG_lastTileColFilename = NULL;
@@ -344,6 +345,18 @@ PUBLIC STATIC void Scene::Remove(Entity** first, Entity** last, int* count, Enti
         exit(0);
     }
     obj->List->Remove(obj);
+
+    // Remove from DrawGroups
+    for (int l = 0; l < Scene::PriorityPerLayer; l++) {
+        DrawGroupList* drawGroupList = &PriorityLists[l];
+        for (size_t o = 0; o < drawGroupList->EntityCapacity; o++) {
+            if (drawGroupList->Entities[o] == obj)
+                drawGroupList->Entities[o] = NULL;
+        }
+    }
+
+    obj->Dispose();
+    delete obj;
 }
 PUBLIC STATIC void Scene::Clear(Entity** first, Entity** last, int* count) {
     (*first) = NULL;
@@ -456,7 +469,6 @@ PUBLIC STATIC void Scene::Update() {
 
         if (!ent->Active) {
             Scene::Remove(&Scene::DynamicObjectFirst, &Scene::DynamicObjectLast, &Scene::DynamicObjectCount, ent);
-            ent->Dispose();
         }
     }
 
@@ -897,9 +909,7 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     }
 
     // Dispose of resources in SCOPE_SCENE
-    AudioManager::Lock();
     Scene::DisposeInScope(SCOPE_SCENE);
-    AudioManager::Unlock();
 
     // Clear and dispose of objects
     // TODO: Alter this for persistency
@@ -907,6 +917,9 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
         next = ent->NextEntity;
         if (!ent->Persistent) {
             ent->Dispose();
+            delete ent;
+
+            // Don't remove since we're clearing anyways, until persistence works
             // Scene::Remove(&Scene::StaticObjectFirst, &Scene::StaticObjectLast, &Scene::StaticObjectCount, ent);
         }
     }
@@ -916,6 +929,9 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
         next = ent->NextEntity;
         if (!ent->Persistent) {
             ent->Dispose();
+            delete ent;
+
+            // Don't remove since we're clearing anyways, until persistence works
             // Scene::Remove(&Scene::DynamicObjectFirst, &Scene::DynamicObjectLast, &Scene::DynamicObjectCount, ent);
         }
     }
@@ -979,31 +995,33 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
         Entity* obj = NULL;
         const char* objectName;
         Uint32 objectNameHash;
-        ObjectList* objectList;
 
         objectName = "Static";
         objectNameHash = CombinedHash::EncryptString(objectName);
-        objectList = new ObjectList();
-        strcpy(objectList->ObjectName, objectName);
-        objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, (char*)objectName);
+        StaticObjectList = new ObjectList();
+        strcpy(StaticObjectList->ObjectName, objectName);
+        StaticObjectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, (char*)objectName);
         // Scene::ObjectLists->Put(objectNameHash, objectList);
 
-        if (objectList->SpawnFunction) {
-            obj = objectList->SpawnFunction();
+        if (StaticObjectList->SpawnFunction) {
+            obj = StaticObjectList->SpawnFunction();
             if (obj) {
                 obj->X = 0.0f;
                 obj->Y = 0.0f;
                 obj->InitialX = obj->X;
                 obj->InitialY = obj->Y;
-                obj->List = objectList;
+                obj->List = StaticObjectList;
                 obj->Persistent = true;
                 // Scene::AddStatic(objectList, obj);
 
                 BytecodeObjectManager::Globals->Put("global", OBJECT_VAL(((BytecodeObject*)obj)->Instance));
 
                 if (Application::GameStart) {
-                    if (StaticObject)
+                    if (StaticObject) {
                         StaticObject->Dispose();
+                        delete StaticObject;
+                        StaticObject = NULL;
+                    }
 
                     obj->GameStart();
                     Application::GameStart = false;
@@ -1466,6 +1484,7 @@ PUBLIC STATIC void Scene::DisposeInScope(Uint32 scope) {
 
         Scene::ImageList[i]->AsImage->Dispose();
         delete Scene::ImageList[i]->AsImage;
+        delete Scene::ImageList[i];
         Scene::ImageList[i] = NULL;
     }
     // Sprites
@@ -1475,18 +1494,22 @@ PUBLIC STATIC void Scene::DisposeInScope(Uint32 scope) {
 
         Scene::SpriteList[i]->AsSprite->Dispose();
         delete Scene::SpriteList[i]->AsSprite;
+        delete Scene::SpriteList[i];
         Scene::SpriteList[i] = NULL;
     }
     // Sounds
     // AudioManager::AudioPauseAll();
     AudioManager::ClearMusic();
     AudioManager::AudioStopAll();
+
+    AudioManager::Lock();
     for (size_t i = 0, i_sz = Scene::SoundList.size(); i < i_sz; i++) {
         if (!Scene::SoundList[i]) continue;
         if (Scene::SoundList[i]->UnloadPolicy > scope) continue;
 
         Scene::SoundList[i]->AsSound->Dispose();
         delete Scene::SoundList[i]->AsSound;
+        delete Scene::SoundList[i];
         Scene::SoundList[i] = NULL;
     }
     // Music
@@ -1498,6 +1521,7 @@ PUBLIC STATIC void Scene::DisposeInScope(Uint32 scope) {
 
         Scene::MusicList[i]->AsMusic->Dispose();
         delete Scene::MusicList[i]->AsMusic;
+        delete Scene::MusicList[i];
         Scene::MusicList[i] = NULL;
     }
     // Media
@@ -1511,8 +1535,10 @@ PUBLIC STATIC void Scene::DisposeInScope(Uint32 scope) {
         #endif
         delete Scene::MediaList[i]->AsMedia;
 
+        delete Scene::MediaList[i];
         Scene::MediaList[i] = NULL;
     }
+    AudioManager::Unlock();
 }
 PUBLIC STATIC void Scene::Dispose() {
     for (int i = 0; i < 8; i++) {
@@ -1532,11 +1558,6 @@ PUBLIC STATIC void Scene::Dispose() {
         }
     }
 
-    AudioManager::Lock();
-    // Make sure no audio is playing (really we don't want any audio to be playing, otherwise we'll get a EXC_BAD_ACCESS)
-    AudioManager::ClearMusic();
-    AudioManager::AudioStopAll();
-
     Scene::DisposeInScope(SCOPE_GAME);
     // Dispose of all resources
     Scene::ImageList.clear();
@@ -1545,15 +1566,17 @@ PUBLIC STATIC void Scene::Dispose() {
     Scene::MusicList.clear();
     Scene::MediaList.clear();
 
-    AudioManager::Unlock();
-
-    if (StaticObject)
+    if (StaticObject) {
         StaticObject->Dispose();
+        delete StaticObject;
+        StaticObject = NULL;
+    }
 
     // Dispose and clear Static objects
     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
         next = ent->NextEntity;
         ent->Dispose();
+        delete ent;
     }
     Scene::Clear(&Scene::StaticObjectFirst, &Scene::StaticObjectLast, &Scene::StaticObjectCount);
 
@@ -1561,12 +1584,17 @@ PUBLIC STATIC void Scene::Dispose() {
     for (Entity* ent = Scene::DynamicObjectFirst, *next; ent; ent = next) {
         next = ent->NextEntity;
         ent->Dispose();
+        delete ent;
     }
     Scene::Clear(&Scene::DynamicObjectFirst, &Scene::DynamicObjectLast, &Scene::DynamicObjectCount);
 
     // Free Priority Lists
-    if (Scene::PriorityLists)
+    if (Scene::PriorityLists) {
+        for (int i = Scene::PriorityPerLayer - 1; i >= 0; i--) {
+            Scene::PriorityLists[i].Dispose();
+        }
         Memory::Free(Scene::PriorityLists);
+    }
     Scene::PriorityLists = NULL;
 
     for (size_t i = 0; i < Scene::Layers.size(); i++) {
@@ -1581,13 +1609,26 @@ PUBLIC STATIC void Scene::Dispose() {
     Scene::TileSprites.clear();
     Scene::TileSpriteInfos.clear();
 
-    if (Scene::ObjectLists)
+    if (Scene::ObjectLists) {
+        Scene::ObjectLists->ForAll([](Uint32, ObjectList* list) -> void {
+            delete list;
+        });
         delete Scene::ObjectLists;
+    }
     Scene::ObjectLists = NULL;
 
-    if (Scene::ObjectRegistries)
+    if (Scene::ObjectRegistries) {
+        Scene::ObjectRegistries->ForAll([](Uint32, ObjectList* list) -> void {
+            delete list;
+        });
         delete Scene::ObjectRegistries;
+    }
     Scene::ObjectRegistries = NULL;
+
+    if (StaticObjectList) {
+        delete StaticObjectList;
+        StaticObjectList = NULL;
+    }
 
     if (Scene::ExtraPalettes)
         Memory::Free(Scene::ExtraPalettes);

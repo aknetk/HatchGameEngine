@@ -85,6 +85,7 @@ PUBLIC VIRTUAL void   SoundFormat::Close() {
 }
 PUBLIC VIRTUAL void   SoundFormat::Dispose() {
     Samples.clear();
+    Samples.shrink_to_fit();
 
     if (SampleBuffer)
         Memory::Free(SampleBuffer);

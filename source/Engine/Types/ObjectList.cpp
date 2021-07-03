@@ -147,6 +147,9 @@ PUBLIC Entity* ObjectList::GetClosest(int x, int y) {
 }
 
 PUBLIC void    ObjectList::Dispose() {
+    List.clear();
+    List.shrink_to_fit();
+
     // for (Uint32 i = 0; i < StaticEntities.size(); i++) {
     //     // obj->Dispose();
     //     Memory::Free(StaticEntities[i]);

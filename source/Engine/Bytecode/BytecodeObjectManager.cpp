@@ -26,6 +26,8 @@ public:
     static HashMap<char*>*      Tokens;
     static vector<char*>        TokensList;
 
+    static vector<VMValue>      EjectedGlobals;
+
     static SDL_mutex*           GlobalLock;
 };
 #endif
@@ -59,9 +61,11 @@ HashMap<Uint8*>*     BytecodeObjectManager::Sources = NULL;
 HashMap<char*>*      BytecodeObjectManager::Tokens = NULL;
 vector<char*>        BytecodeObjectManager::TokensList;
 
+vector<VMValue>      BytecodeObjectManager::EjectedGlobals;
+
 SDL_mutex*           BytecodeObjectManager::GlobalLock = NULL;
 
-// #define DEBUG_STRESS_GC
+#define DEBUG_STRESS_GC
 
 PUBLIC STATIC bool    BytecodeObjectManager::ThrowRuntimeError(bool fatal, const char* errorMessage, ...) {
     va_list args;
@@ -112,6 +116,9 @@ PUBLIC STATIC void    BytecodeObjectManager::Init() {
     if (Tokens == NULL)
         Tokens = new HashMap<char*>(NULL, 64);
 
+    BytecodeObjectManager::EjectedGlobals.clear();
+    BytecodeObjectManager::EjectedGlobals.shrink_to_fit();
+
     GarbageCollector::RootObject = NULL;
     GarbageCollector::NextGC = 1024 * 1024;
     memset(VMThread::InstructionIgnoreMap, 0, sizeof(VMThread::InstructionIgnoreMap));
@@ -150,10 +157,10 @@ PUBLIC STATIC void    BytecodeObjectManager::Dispose() {
     Threads[0].ResetStack();
     ForceGarbageCollection();
 
-    for (size_t i = 0; i < AllFunctionList.size(); i++) {
-        FreeGlobalValue(0, OBJECT_VAL(AllFunctionList[i]));
+    for (size_t i = 0; i < BytecodeObjectManager::EjectedGlobals.size(); i++) {
+        // FreeGlobalValue(0, BytecodeObjectManager::EjectedGlobals[i]);
     }
-    AllFunctionList.clear();
+    BytecodeObjectManager::EjectedGlobals.clear();
 
     if (Globals) {
         Log::Print(Log::LOG_VERBOSE, "Freeing values in Globals list...");
@@ -163,6 +170,12 @@ PUBLIC STATIC void    BytecodeObjectManager::Dispose() {
         delete Globals;
         Globals = NULL;
     }
+
+    for (size_t i = 0; i < AllFunctionList.size(); i++) {
+        FreeGlobalValue(0, OBJECT_VAL(AllFunctionList[i]));
+    }
+    AllFunctionList.clear();
+
     if (Sources) {
         Sources->WithAll([](Uint32 hash, Uint8* ptr) -> void {
             Memory::Free(ptr);
@@ -220,17 +233,31 @@ PUBLIC STATIC void    BytecodeObjectManager::RemoveNonGlobalableValue(Uint32 has
         }
     }
 }
+PUBLIC STATIC void    BytecodeObjectManager::FreeNativeValue(Uint32 hash, VMValue value) {
+    if (IS_OBJECT(value)) {
+        // Log::Print(Log::LOG_VERBOSE, "Freeing object %p of type %s", AS_OBJECT(value), GetTypeString(value));
+        switch (OBJECT_TYPE(value)) {
+            case OBJ_NATIVE:
+                GarbageCollector::GarbageSize -= sizeof(ObjNative);
+                Memory::Free(AS_OBJECT(value));
+                break;
+        }
+    }
+}
 PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValue value) {
     if (IS_OBJECT(value)) {
         // Log::Print(Log::LOG_VERBOSE, "Freeing object %p of type %s", AS_OBJECT(value), GetTypeString(value));
         switch (OBJECT_TYPE(value)) {
             case OBJ_CLASS: {
                 ObjClass* klass = AS_CLASS(value);
-                if (klass->Name != NULL)
-                    FreeValue(OBJECT_VAL(klass->Name));
-
-                klass->Methods->ForAll(FreeGlobalValue);
+                
+                // Subfunctions are already freed as a byproduct of the AllFunctionList,
+                // so just do natives.
+                klass->Methods->ForAll(FreeNativeValue);
                 delete klass->Methods;
+
+                if (klass->Name)
+                    FreeValue(OBJECT_VAL(klass->Name));
 
                 GarbageCollector::GarbageSize -= sizeof(ObjClass);
                 Memory::Free(klass);
@@ -249,6 +276,9 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValu
 
                 for (size_t i = 0; i < function->Chunk.Constants->size(); i++)
                     FreeValue((*function->Chunk.Constants)[i]);
+                function->Chunk.Constants->clear();
+
+                ChunkFree(&function->Chunk);
 
                 GarbageCollector::GarbageSize -= sizeof(ObjFunction);
                 Memory::Free(function);
@@ -467,6 +497,9 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
                 Memory::Free(string);
                 break;
             }
+            case OBJ_FUNCTION: {
+                break;
+            }
             case OBJ_ARRAY: {
                 ObjArray* array = AS_ARRAY(value);
 
@@ -524,7 +557,8 @@ PUBLIC STATIC void    BytecodeObjectManager::DefineNative(ObjClass* klass, const
     if (klass == NULL) return;
     if (name == NULL) return;
 
-    klass->Methods->Put(name, OBJECT_VAL(NewNative(function)));
+    if (!klass->Methods->Exists(name))
+        klass->Methods->Put(name, OBJECT_VAL(NewNative(function)));
 }
 PUBLIC STATIC void    BytecodeObjectManager::GlobalLinkInteger(ObjClass* klass, const char* name, int* value) {
     if (name == NULL) return;
@@ -667,6 +701,8 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
         strncpy(function->SourceFilename, CurrentObjectName, sizeof(function->SourceFilename));
         function->SourceFilename[srcFnLen] = 0;
 
+        function->Chunk.OwnsMemory = false;
+
         function->Chunk.Code = stream->pointer;
         stream->Skip(count * sizeof(Uint8));
 
@@ -689,6 +725,7 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
                     // if (OBJECT_TYPE(constt) == OBJ_STRING) {
                         char* str = stream->ReadString();
                         ChunkAddConstant(&function->Chunk, OBJECT_VAL(CopyString(str, strlen(str))));
+                        Memory::Free(str);
                     // }
                     // else {
                         // printf("Unsupported object type...Chief.\n");
@@ -698,9 +735,10 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
         }
 
         FunctionList.push_back(function);
-        if (i == 0) {
+
+        // if (i == 0) {
             AllFunctionList.push_back(function);
-        }
+        // }
     }
 
     if (doLineNumbers && Tokens) {
@@ -709,8 +747,12 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
             char* string = stream->ReadString();
             Uint32 hash = Murmur::EncryptString(string);
 
-            Tokens->Put(hash, string);
-            TokensList.push_back(string);
+            if (!Tokens->Exists(hash)) {
+                Tokens->Put(hash, string);
+                TokensList.push_back(string);
+            }
+            else
+                Memory::Free(string);
         }
     }
 

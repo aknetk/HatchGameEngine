@@ -3008,7 +3008,7 @@ VMValue Instance_Create(int argCount, VMValue* args, Uint32 threadID) {
 
     ObjectList* objectList = NULL;
     if (!Scene::ObjectLists->Exists(objectName)) {
-        objectList = new ObjectList();
+        objectList = new (nothrow) ObjectList();
         strcpy(objectList->ObjectName, objectName);
         objectList->SpawnFunction = (Entity* (*)())BytecodeObjectManager::GetSpawnFunction(CombinedHash::EncryptString(objectName), objectName);
         Scene::ObjectLists->Put(objectName, objectList);
@@ -4414,6 +4414,7 @@ bool    GetResourceListSpace(vector<ResourceType*>* list, ResourceType* resource
         }
         if ((*list)[i]->FilenameHash == resource->FilenameHash) {
             *index = i;
+            delete resource;
             return true;
         }
     }
@@ -4431,7 +4432,7 @@ VMValue Resources_LoadSprite(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4446,7 +4447,7 @@ VMValue Resources_LoadSprite(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL((int)index);
     else if (emptySlot) (*list)[index] = resource; else list->push_back(resource);
 
-    resource->AsSprite = new ISprite(filename);
+    resource->AsSprite = new (nothrow) ISprite(filename);
     return INTEGER_VAL((int)index);
 }
 /***
@@ -4461,7 +4462,7 @@ VMValue Resources_LoadImage(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4472,7 +4473,7 @@ VMValue Resources_LoadImage(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL((int)index);
     else if (emptySlot) (*list)[index] = resource; else list->push_back(resource);
 
-    resource->AsImage = new Image(filename);
+    resource->AsImage = new (nothrow) Image(filename);
     if (!resource->AsImage->TexturePtr) {
         delete resource->AsImage;
         delete resource;
@@ -4495,7 +4496,7 @@ VMValue Resources_LoadFont(int argCount, VMValue* args, Uint32 threadID) {
     char*  filename = GET_ARG(0, GetString);
     int    pixel_sz = (int)GET_ARG(1, GetDecimal);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->FilenameHash = CRC32::EncryptData(&pixel_sz, sizeof(int), resource->FilenameHash);
     resource->UnloadPolicy = GET_ARG(2, GetInteger);
@@ -4610,7 +4611,7 @@ VMValue Resources_LoadModel(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4628,7 +4629,7 @@ VMValue Resources_LoadModel(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL(-1);
     }
 
-    resource->AsModel = new IModel();
+    resource->AsModel = new (nothrow) IModel();
     if (!resource->AsModel->Load(stream, filename)) {
         delete resource->AsModel;
         resource->AsModel = NULL;
@@ -4652,7 +4653,7 @@ VMValue Resources_LoadMusic(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4663,7 +4664,7 @@ VMValue Resources_LoadMusic(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL((int)index);
     else if (emptySlot) (*list)[index] = resource; else list->push_back(resource);
 
-    resource->AsMusic = new ISound(filename);
+    resource->AsMusic = new (nothrow) ISound(filename);
     return INTEGER_VAL((int)index);
 }
 /***
@@ -4678,7 +4679,7 @@ VMValue Resources_LoadSound(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4689,7 +4690,7 @@ VMValue Resources_LoadSound(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL((int)index);
     else if (emptySlot) (*list)[index] = resource; else list->push_back(resource);
 
-    resource->AsMusic = new ISound(filename);
+    resource->AsSound = new (nothrow) ISound(filename);
     return INTEGER_VAL((int)index);
 }
 /***
@@ -4704,7 +4705,7 @@ VMValue Resources_LoadVideo(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4777,7 +4778,7 @@ VMValue Resources_LoadVideo(int argCount, VMValue* args, Uint32 threadID) {
         Log::Print(Log::LOG_INFO, "    Channels:    %d", playerInfo.Audio.Output.Channels);
     }
 
-    MediaBag* newMediaBag = new MediaBag;
+    MediaBag* newMediaBag = new (nothrow) MediaBag;
     newMediaBag->Source = Source;
     newMediaBag->Player = Player;
     newMediaBag->VideoTexture = VideoTexture;
