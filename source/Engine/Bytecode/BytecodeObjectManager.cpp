@@ -65,7 +65,7 @@ vector<VMValue>      BytecodeObjectManager::EjectedGlobals;
 
 SDL_mutex*           BytecodeObjectManager::GlobalLock = NULL;
 
-#define DEBUG_STRESS_GC
+// #define DEBUG_STRESS_GC
 
 PUBLIC STATIC bool    BytecodeObjectManager::ThrowRuntimeError(bool fatal, const char* errorMessage, ...) {
     va_list args;
@@ -80,12 +80,12 @@ PUBLIC STATIC void    BytecodeObjectManager::RequestGarbageCollection() {
     if (GarbageCollector::GarbageSize > GarbageCollector::NextGC)
 #endif
     {
-        // size_t startSize = GarbageCollector::GarbageSize;
+        size_t startSize = GarbageCollector::GarbageSize;
 
         ForceGarbageCollection();
 
         // startSize = GarbageCollector::GarbageSize - startSize;
-        // Log::Print(Log::LOG_INFO, "Freed garbage from %u to %u (%d), next GC at %d", (Uint32)startSize, (Uint32)GarbageCollector::GarbageSize, GarbageCollector::GarbageSize - startSize, GarbageCollector::NextGC);
+        Log::Print(Log::LOG_INFO, "%04X: Freed garbage from %u to %u (%d), next GC at %d", Scene::Frame, (Uint32)startSize, (Uint32)GarbageCollector::GarbageSize, GarbageCollector::GarbageSize - startSize, GarbageCollector::NextGC);
     }
 }
 PUBLIC STATIC void    BytecodeObjectManager::ForceGarbageCollection() {
@@ -120,7 +120,7 @@ PUBLIC STATIC void    BytecodeObjectManager::Init() {
     BytecodeObjectManager::EjectedGlobals.shrink_to_fit();
 
     GarbageCollector::RootObject = NULL;
-    GarbageCollector::NextGC = 1024 * 1024;
+    GarbageCollector::NextGC = 0x100000;
     memset(VMThread::InstructionIgnoreMap, 0, sizeof(VMThread::InstructionIgnoreMap));
 
     GlobalLock = SDL_CreateMutex();
@@ -238,6 +238,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeNativeValue(Uint32 hash, VMValu
         // Log::Print(Log::LOG_VERBOSE, "Freeing object %p of type %s", AS_OBJECT(value), GetTypeString(value));
         switch (OBJECT_TYPE(value)) {
             case OBJ_NATIVE:
+                assert(GarbageCollector::GarbageSize >= sizeof(ObjNative));
                 GarbageCollector::GarbageSize -= sizeof(ObjNative);
                 Memory::Free(AS_OBJECT(value));
                 break;
@@ -259,6 +260,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValu
                 if (klass->Name)
                     FreeValue(OBJECT_VAL(klass->Name));
 
+                assert(GarbageCollector::GarbageSize >= sizeof(ObjClass));
                 GarbageCollector::GarbageSize -= sizeof(ObjClass);
                 Memory::Free(klass);
                 break;
@@ -280,11 +282,13 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValu
 
                 ChunkFree(&function->Chunk);
 
+                assert(GarbageCollector::GarbageSize >= sizeof(ObjFunction));
                 GarbageCollector::GarbageSize -= sizeof(ObjFunction);
                 Memory::Free(function);
                 break;
             }
             case OBJ_NATIVE: {
+                assert(GarbageCollector::GarbageSize >= sizeof(ObjNative));
                 GarbageCollector::GarbageSize -= sizeof(ObjNative);
                 Memory::Free(AS_OBJECT(value));
                 break;
@@ -471,6 +475,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
         Obj* objectPointer = AS_OBJECT(value);
         switch (OBJECT_TYPE(value)) {
             case OBJ_BOUND_METHOD: {
+                assert(GarbageCollector::GarbageSize >= sizeof(ObjBoundMethod));
                 GarbageCollector::GarbageSize -= sizeof(ObjBoundMethod);
                 Memory::Free(objectPointer);
                 break;
@@ -483,6 +488,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
 
                 delete instance->Fields;
 
+                assert(GarbageCollector::GarbageSize >= sizeof(ObjInstance));
                 GarbageCollector::GarbageSize -= sizeof(ObjInstance);
                 Memory::Free(instance);
                 break;
@@ -493,6 +499,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
                     Memory::Free(string->Chars);
                 string->Chars = NULL;
 
+                assert(GarbageCollector::GarbageSize >= sizeof(ObjString));
                 GarbageCollector::GarbageSize -= sizeof(ObjString);
                 Memory::Free(string);
                 break;
@@ -509,6 +516,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
                 array->Values->clear();
                 delete array->Values;
 
+                assert(GarbageCollector::GarbageSize >= sizeof(ObjArray));
                 GarbageCollector::GarbageSize -= sizeof(ObjArray);
                 Memory::Free(array);
                 break;
@@ -526,6 +534,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
                 map->Values->Clear();
                 delete map->Values;
                 //
+                assert(GarbageCollector::GarbageSize >= sizeof(ObjMap));
                 GarbageCollector::GarbageSize -= sizeof(ObjMap);
                 Memory::Free(map);
                 break;

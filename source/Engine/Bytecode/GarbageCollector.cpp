@@ -85,6 +85,10 @@ PUBLIC STATIC void GarbageCollector::Collect() {
         BlackenObject(GrayList[i]);
     }
 
+    int objectTypeCounts[] = {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    };
+
     // Collect the white objects
     Obj** object = &GarbageCollector::RootObject;
     while (*object != NULL) {
@@ -93,6 +97,8 @@ PUBLIC STATIC void GarbageCollector::Collect() {
             // free it.
             Obj* unreached = *object;
             *object = unreached->Next;
+
+            objectTypeCounts[unreached->Type]++;
 
             BytecodeObjectManager::FreeValue(OBJECT_VAL(unreached));
         }
@@ -104,7 +110,21 @@ PUBLIC STATIC void GarbageCollector::Collect() {
         }
     }
 
-    GarbageCollector::NextGC = GarbageCollector::GarbageSize * GC_HEAP_GROW_FACTOR;
+#define LOG_ME(yo) Log::Print(Log::LOG_VERBOSE, "Freed %d " #yo " objects.", objectTypeCounts[yo]);
+
+    LOG_ME(OBJ_BOUND_METHOD);
+    LOG_ME(OBJ_CLASS);
+    LOG_ME(OBJ_FUNCTION);
+    LOG_ME(OBJ_INSTANCE);
+    LOG_ME(OBJ_ARRAY);
+    LOG_ME(OBJ_MAP);
+    LOG_ME(OBJ_NATIVE);
+    LOG_ME(OBJ_STRING);
+    LOG_ME(OBJ_UPVALUE);
+
+    // Max GC Size = 1 MiB
+    // if (GarbageCollector::NextGC < 1024 * 1024)
+        // GarbageCollector::NextGC = GarbageCollector::GarbageSize * GC_HEAP_GROW_FACTOR;
 }
 
 PUBLIC STATIC void GarbageCollector::GrayValue(VMValue value) {
