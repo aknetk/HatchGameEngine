@@ -8,6 +8,8 @@
 #include <Engine/Diagnostics/Memory.h>
 #include <functional>
 
+#include <Engine/Diagnostics/MemoryPools.h>
+
 template <typename T> struct HashMapElement {
     Uint32 Key;
     Uint32 PrevKey;
@@ -37,6 +39,7 @@ public:
         CapacityMask = Capacity - 1;
 
         Data = (HashMapElement<T>*)Memory::TrackedCalloc("HashMap::Data", Capacity, sizeof(HashMapElement<T>));
+        // MemoryPools::Alloc(&Data, Capacity * sizeof(HashMapElement<T>), MemoryPools::MEMPOOL_HASHMAP, true);
     	if (!Data) {
             Log::Print(Log::LOG_ERROR, "Could not allocate memory for HashMap data!");
             exit(0);
@@ -119,14 +122,19 @@ public:
         CapacityMask = Capacity - 1;
 
         HashMapElement<T>* oldData = Data;
+        HashMapElement<T>* newData = NULL;
         const char* oldTrack = Memory::GetName(oldData);
 
         Data = (HashMapElement<T>*)Memory::TrackedCalloc(oldTrack, Capacity, sizeof(HashMapElement<T>));
+        // MemoryPools::Alloc(&newData, Capacity * sizeof(HashMapElement<T>), MemoryPools::MEMPOOL_HASHMAP, true);
         if (!Data) {
+        // if (!newData) {
             Memory::Free(oldData);
             Log::Print(Log::LOG_ERROR, "Could not allocate memory for HashMap data!");
             exit(0);
         }
+
+        newData = Data;
 
         Count = 0;
         Uint32 index;
@@ -135,22 +143,24 @@ public:
                 index = TranslateIndex(oldData[i].Key);
 
                 for (int c = 0; c < ChainLength; c++) {
-                    if (!Data[index].Used) {
+                    if (!newData[index].Used) {
                         Count++;
             			break;
                     }
-            		if (Data[index].Used && Data[index].Key == oldData[i].Key)
+            		if (newData[index].Used && newData[index].Key == oldData[i].Key)
             			break;
             		index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
             	}
 
-                Data[index].Key = oldData[i].Key;
-                Data[index].PrevKey = oldData[i].PrevKey;
-                Data[index].NextKey = oldData[i].NextKey;
-                Data[index].Used = true;
-                Data[index].Data = oldData[i].Data;
+                newData[index].Key = oldData[i].Key;
+                newData[index].PrevKey = oldData[i].PrevKey;
+                newData[index].NextKey = oldData[i].NextKey;
+                newData[index].Used = true;
+                newData[index].Data = oldData[i].Data;
             }
         }
+
+        // MemoryPools::PassReference(&Data, &newData, MemoryPools::MEMPOOL_HASHMAP);
 
         Memory::Free(oldData);
 

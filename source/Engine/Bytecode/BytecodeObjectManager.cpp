@@ -120,7 +120,7 @@ PUBLIC STATIC void    BytecodeObjectManager::Init() {
     BytecodeObjectManager::EjectedGlobals.shrink_to_fit();
 
     GarbageCollector::RootObject = NULL;
-    GarbageCollector::NextGC = 0x100000;
+    GarbageCollector::NextGC = 0x100000 / 2;
     memset(VMThread::InstructionIgnoreMap, 0, sizeof(VMThread::InstructionIgnoreMap));
 
     GlobalLock = SDL_CreateMutex();
@@ -485,7 +485,6 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
 
                 // An instance does not own it's values, so it's not allowed
                 // to free them.
-
                 delete instance->Fields;
 
                 assert(GarbageCollector::GarbageSize >= sizeof(ObjInstance));
@@ -523,17 +522,19 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeValue(VMValue value) {
             }
             case OBJ_MAP: {
                 ObjMap* map = AS_MAP(value);
-                // Free keys
+
+                //// Free keys
                 map->Keys->WithAll([](Uint32, char* ptr) -> void {
                     free(ptr);
                 });
                 // Free Keys table
-                map->Keys->Clear();
+                //map->Keys->Clear();
                 delete map->Keys;
                 // Free Values table
-                map->Values->Clear();
+                //map->Values->Clear();
                 delete map->Values;
                 //
+
                 assert(GarbageCollector::GarbageSize >= sizeof(ObjMap));
                 GarbageCollector::GarbageSize -= sizeof(ObjMap);
                 Memory::Free(map);

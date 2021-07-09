@@ -69,8 +69,9 @@ PUBLIC VIRTUAL double SoundFormat::GetDuration() {
 PROTECTED void        SoundFormat::LoadFinish() {
     SampleIndex = 0;
     SampleSize = ((InputFormat.format & 0xFF) >> 3) * InputFormat.channels;
-    SampleBuffer = (Uint8*)Memory::TrackedMalloc("SoundData::SampleBuffer", TotalPossibleSamples * SampleSize);
-    Samples.reserve(TotalPossibleSamples);
+    SampleBuffer = NULL;
+    // SampleBuffer = (Uint8*)Memory::TrackedMalloc("SoundData::SampleBuffer", TotalPossibleSamples * SampleSize);
+    // Samples.reserve(TotalPossibleSamples);
 }
 
 PUBLIC VIRTUAL        SoundFormat::~SoundFormat() {

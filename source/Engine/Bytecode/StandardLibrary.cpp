@@ -188,6 +188,24 @@ namespace LOCAL {
         }
         return value;
     }
+    inline ObjInstance*    GetInstance(VMValue* args, int index, Uint32 threadID) {
+        ObjInstance* value = NULL;
+        if (BytecodeObjectManager::Lock()) {
+            if (!IS_INSTANCE(args[index]))
+                if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Instance", GetTypeString(args[index])) == ERROR_RES_CONTINUE)
+                    BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+
+            value = (ObjInstance*)(AS_OBJECT(args[index]));
+            BytecodeObjectManager::Unlock();
+        }
+        if (!value) {
+            if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Argument %d could not be read as type %s.", index + 1,
+                "Instance"))
+                BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+        }
+        return value;
+    }
 
     inline ISprite*        GetSprite(VMValue* args, int index, Uint32 threadID) {
         int where = GetInteger(args, index, threadID);
@@ -6364,24 +6382,26 @@ VMValue TileCollision_PointExtended(int argCount, VMValue* args, Uint32 threadID
  * \param length (Integer): How many pixels to check.
  * \param collisionField (Integer): Low (0) or high (1) field to check.
  * \param compareAngle (Integer): Only return a collision if the angle is within 0x20 this value, otherwise if angle comparison is not desired, set this value to -1.
- * \return Returns a Map value with the following structure: <br/>\
-<pre class="code">{ <br/>\
-    X: (Number), // X Position where the sensor collided if it did. <br/>\
-    Y: (Number), // Y Position where the sensor collided if it did. <br/>\
-    Collided: (Boolean), // Whether or not the sensor collided. <br/>\
-    Angle: (Integer) // Tile angle at the collision. <br/>\
-}\
+ * \param instance (Instance): Instance to write the values to.
+ * \return Returns <code>false</code> if no tile collision, but if <code>true</code>: <br/>\
+<pre class="code"><br/>\
+    instance.SensorX: (Number), // X Position where the sensor collided if it did. <br/>\
+    instance.SensorY: (Number), // Y Position where the sensor collided if it did. <br/>\
+    instance.SensorCollided: (Boolean), // Whether or not the sensor collided. <br/>\
+    instance.SensorAngle: (Integer) // Tile angle at the collision. <br/>\
+\
 </pre>
  * \ns TileCollision
  */
 VMValue TileCollision_Line(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_ARGCOUNT(6);
+    CHECK_ARGCOUNT(7);
     int x = (int)std::floor(GET_ARG(0, GetDecimal));
     int y = (int)std::floor(GET_ARG(1, GetDecimal));
     int angleMode = GET_ARG(2, GetInteger);
     int length = (int)GET_ARG(3, GetDecimal);
     int collisionField = GET_ARG(4, GetInteger);
     int compareAngle = GET_ARG(5, GetInteger);
+    ObjInstance* entity = GET_ARG(6, GetInstance);
 
     Sensor sensor;
     sensor.X = x;
@@ -6394,17 +6414,24 @@ VMValue TileCollision_Line(int argCount, VMValue* args, Uint32 threadID) {
     Scene::CollisionInLine(x, y, angleMode, length, collisionField, compareAngle > -1, &sensor);
 
     if (BytecodeObjectManager::Lock()) {
-        ObjMap*    mapSensor = NewMap();
+        /*ObjMap*    mapSensor = NewMap();
 
         mapSensor->Values->Put("X", DECIMAL_VAL((float)sensor.X));
         mapSensor->Values->Put("Y", DECIMAL_VAL((float)sensor.Y));
         mapSensor->Values->Put("Collided", INTEGER_VAL(sensor.Collided));
         mapSensor->Values->Put("Angle", INTEGER_VAL(sensor.Angle));
 
-        BytecodeObjectManager::Unlock();
-        return OBJECT_VAL(mapSensor);
+        BytecodeObjectManager::Unlock();*/
+        if (entity->EntityPtr) {
+            auto ent = (Entity*)entity->EntityPtr;
+            ent->SensorX = (float)sensor.X;
+            ent->SensorY = (float)sensor.Y;
+            ent->SensorCollided = sensor.Collided;
+            ent->SensorAngle = sensor.Angle;
+            return INTEGER_VAL(sensor.Collided);
+        }
     }
-    return NULL_VAL;
+    return INTEGER_VAL(false);
 }
 // #endregion
 

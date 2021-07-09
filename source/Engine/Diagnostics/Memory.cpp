@@ -173,7 +173,7 @@ PUBLIC STATIC void   Memory::TrackLast(const char* identifier) {
     }
 }
 PUBLIC STATIC void   Memory::Free(void* pointer) {
-    //if (Memory::IsTracking) {
+    if (Memory::IsTracking) {
         #ifdef DEBUG
         for (Uint32 i = 0; i < TrackedMemory.size(); i++) {
             if (TrackedMemory[i] == pointer) {
@@ -197,7 +197,7 @@ PUBLIC STATIC void   Memory::Free(void* pointer) {
             }
         }
         #endif
-    //}
+    }
     Memory::Remove(pointer);
     if (!pointer) return;
 

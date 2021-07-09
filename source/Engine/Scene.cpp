@@ -85,6 +85,7 @@ public:
 #include <Engine/Diagnostics/Clock.h>
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Memory.h>
+#include <Engine/Diagnostics/MemoryPools.h>
 #include <Engine/Filesystem/File.h>
 #include <Engine/Hashing/CombinedHash.h>
 #include <Engine/Hashing/CRC32.h>
@@ -801,6 +802,7 @@ PUBLIC STATIC void Scene::Render() {
 PUBLIC STATIC void Scene::AfterScene() {
     BytecodeObjectManager::ResetStack();
     BytecodeObjectManager::RequestGarbageCollection();
+
     if (Scene::NextScene[0]) {
         BytecodeObjectManager::ForceGarbageCollection();
 
@@ -810,6 +812,7 @@ PUBLIC STATIC void Scene::AfterScene() {
         Scene::NextScene[0] = '\0';
         Scene::DoRestart = false;
     }
+
     if (Scene::DoRestart) {
         // BytecodeObjectManager::ForceGarbageCollection();
 
@@ -911,6 +914,11 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     // Dispose of resources in SCOPE_SCENE
     Scene::DisposeInScope(SCOPE_SCENE);
 
+    Graphics::SpriteSheetTextureMap->WithAll([](Uint32, Texture* tex) -> void {
+        Graphics::DisposeTexture(tex);
+    });
+    Graphics::SpriteSheetTextureMap->Clear();
+
     // Clear and dispose of objects
     // TODO: Alter this for persistency
     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
@@ -962,6 +970,10 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     BytecodeObjectManager::ResetStack();
     BytecodeObjectManager::ForceGarbageCollection();
     ////
+
+    MemoryPools::RunGC(MemoryPools::MEMPOOL_HASHMAP);
+    MemoryPools::RunGC(MemoryPools::MEMPOOL_STRING);
+    MemoryPools::RunGC(MemoryPools::MEMPOOL_SUBOBJECT);
 
     char pathParent[256];
     strcpy(pathParent, filename);

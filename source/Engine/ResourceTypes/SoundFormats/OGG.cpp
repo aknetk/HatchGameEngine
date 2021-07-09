@@ -156,7 +156,7 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
     return ogg;
 }
 
-PUBLIC        int          OGG::LoadSamples(size_t count) {
+PUBLIC        int          OGG::GetSamples(Uint8* buffer, size_t count) {
 #ifdef USING_LIBOGG
     int read;
     Uint32 total = 0,
@@ -168,16 +168,16 @@ PUBLIC        int          OGG::LoadSamples(size_t count) {
     size_t remainingBytes = count * SampleSize;
     size_t sampleSizeForOneChannel = SampleSize / InputFormat.channels;
 
-    char* buffer = (char*)SampleBuffer + Samples.size() * SampleSize;
-    char* bufferStartSample = buffer;
+    // char* buffer = (char*)SampleBuffer + Samples.size() * SampleSize;
+    // char* bufferStartSample = buffer;
 
     VorbisGroup* vorbis = (VorbisGroup*)this->Vorbis;
 
     while (remainingBytes && (read =
 		#ifdef OGG_USE_TREMOR
-	    ov_read(&vorbis->File, buffer, remainingBytes, &vorbis->Bitstream)
+	    ov_read(&vorbis->File, (char*)buffer, remainingBytes, &vorbis->Bitstream)
 		#else
-		ov_read(&vorbis->File, buffer, remainingBytes, 0, sampleSizeForOneChannel, 1, &vorbis->Bitstream)
+		ov_read(&vorbis->File, (char*)buffer, remainingBytes, 0, sampleSizeForOneChannel, 1, &vorbis->Bitstream)
 		#endif
 		)) {
         #ifdef DEBUG
@@ -189,16 +189,12 @@ PUBLIC        int          OGG::LoadSamples(size_t count) {
                 return 0;
         #endif
 
+            if (read == 0)
+                break;
+
         remainingBytes -= read;
         buffer += read;
         total += read;
-
-        bytesForSample += read;
-        while (bytesForSample >= SampleSize) {
-            Samples.push_back((Uint8*)bufferStartSample);
-            bufferStartSample += SampleSize;
-            bytesForSample -= SampleSize;
-        }
     }
     total /= SampleSize;
     return total;

@@ -26,7 +26,7 @@ private:
 
 public:
     static SoundFormat* Load(const char* filename);
-           int          LoadSamples(size_t count);
+           int          GetSamples(Uint8* buffer, size_t count);
            void         Dispose();
 };
 

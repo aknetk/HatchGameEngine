@@ -33,6 +33,7 @@ public:
 #include <Engine/Diagnostics/Clock.h>
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Memory.h>
+#include <Engine/Diagnostics/MemoryPools.h>
 #include <Engine/Filesystem/Directory.h>
 #include <Engine/ResourceTypes/ResourceManager.h>
 #include <Engine/TextFormats/XML/XMLParser.h>
@@ -96,6 +97,7 @@ void        DEBUG_DrawText(char* text, float x, float y) {
 
 PUBLIC STATIC void Application::Init(int argc, char* args[]) {
     Log::Init();
+    MemoryPools::Init();
 
     SDL_SetHint(SDL_HINT_WINDOWS_DISABLE_THREAD_NAMING, "1");
     SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");

@@ -20,6 +20,8 @@ public:
     static size_t       GarbageSize;
     static double       MaxTimeAlotted;
     static bool         Print;
+    static bool         FilterSweepEnabled;
+    static int          FilterSweepType;
 
     static void Collect();
     static void GrayValue(VMValue value);

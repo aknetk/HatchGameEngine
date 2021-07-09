@@ -59,6 +59,11 @@ public:
     float        HitboxOffY = 0.0f;
     int          FlipFlag = 0;
 
+    float        SensorX = 0.0f;
+    float        SensorY = 0.0f;
+    int          SensorCollided = false;
+    int          SensorAngle = 0;
+
     int          Persistent = false;
     int          Interactable = true;
 
