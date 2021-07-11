@@ -1541,17 +1541,19 @@ VMValue Draw_SetTextLineAscent(int argCount, VMValue* args, Uint32 threadID) {
 }
 /***
  * Draw.MeasureText
- * \desc Measures Extended UTF8 text using a sprite or font.
+ * \desc Measures Extended UTF8 text using a sprite or font and stores max width and max height into the array.
+ * \param outArray (Array): Array to output size values to.
  * \param sprite (Integer): Index of the loaded sprite to be used as text.
  * \param text (String): Text to measure.
- * \return Returns an array containing max width and max height.
+ * \return Returns the array inputted into the function.
  * \ns Draw
  */
 VMValue Draw_MeasureText(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_ARGCOUNT(2);
+    CHECK_ARGCOUNT(3);
 
-    ISprite* sprite = GET_ARG(0, GetSprite);
-    char*    text   = GET_ARG(1, GetString);
+    ObjArray* array = GET_ARG(0, GetArray);
+    ISprite* sprite = GET_ARG(1, GetSprite);
+    char*    text   = GET_ARG(2, GetString);
 
     float x = 0.0, y = 0.0;
     float maxW = 0.0, maxH = 0.0;
@@ -1574,7 +1576,7 @@ VMValue Draw_MeasureText(int argCount, VMValue* args, Uint32 threadID) {
     }
 
     if (BytecodeObjectManager::Lock()) {
-        ObjArray* array = NewArray();
+        array->Values->clear();
         array->Values->push_back(DECIMAL_VAL(maxW));
         array->Values->push_back(DECIMAL_VAL(maxH));
         BytecodeObjectManager::Unlock();
@@ -1584,23 +1586,25 @@ VMValue Draw_MeasureText(int argCount, VMValue* args, Uint32 threadID) {
 }
 /***
  * Draw.MeasureTextWrapped
- * \desc Measures wrapped Extended UTF8 text using a sprite or font.
+ * \desc Measures wrapped Extended UTF8 text using a sprite or font and stores max width and max height into the array.
+ * \param outArray (Array): Array to output size values to.
  * \param sprite (Integer): Index of the loaded sprite to be used as text.
  * \param text (String): Text to measure.
  * \param maxWidth (Number): Max width that a line can be.
  * \paramOpt maxLines (Integer): Max number of lines to measure.
- * \return Returns an array containing max width and max height.
+ * \return Returns the array inputted into the function.
  * \ns Draw
  */
 VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_AT_LEAST_ARGCOUNT(3);
+    CHECK_AT_LEAST_ARGCOUNT(4);
 
-    ISprite* sprite = GET_ARG(0, GetSprite);
-    char*    text   = GET_ARG(1, GetString);
-    float    max_w  = GET_ARG(2, GetDecimal);
+    ObjArray* array = GET_ARG(0, GetArray);
+    ISprite* sprite = GET_ARG(1, GetSprite);
+    char*    text   = GET_ARG(2, GetString);
+    float    max_w  = GET_ARG(3, GetDecimal);
     int      maxLines = 0x7FFFFFFF;
-    if (argCount > 3)
-        maxLines = GET_ARG(3, GetInteger);
+    if (argCount > 4)
+        maxLines = GET_ARG(4, GetInteger);
 
     int word = 0;
     char* linestart = text;
@@ -1655,7 +1659,7 @@ VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
 
     FINISH:
     if (BytecodeObjectManager::Lock()) {
-        ObjArray* array = NewArray();
+        array->Values->clear();
         array->Values->push_back(DECIMAL_VAL(maxW));
         array->Values->push_back(DECIMAL_VAL(maxH));
         BytecodeObjectManager::Unlock();

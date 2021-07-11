@@ -36,7 +36,7 @@ public:
     char*   GetToken(Uint32 hash);
     int     ThrowRuntimeError(bool fatal, const char* errorMessage, ...);
     void    PrintStack();
-    void    ReturnFromNative();
+    void    ReturnFromNative() throw();
     void    Push(VMValue value);
     VMValue Pop();
     VMValue Peek(int offset);
