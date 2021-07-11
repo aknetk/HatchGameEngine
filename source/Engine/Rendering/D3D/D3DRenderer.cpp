@@ -283,7 +283,7 @@ Uint32      D3D_D3DFORMATToPixelFormat(D3DFORMAT format) {
 }
 int         D3D_SetError(const char* error, HRESULT result) {
     Log::Print(Log::LOG_ERROR, "D3D: %s (%s)", error, D3D_GetResultString(result));
-    exit(0);
+    exit(-1);
     return 0;
 }
 
@@ -309,7 +309,7 @@ void        D3D_CreateTexture(Texture* texture) {
     if (FAILED(result)) {
         Log::Print(Log::LOG_ERROR, "CreateTextureD3DPOOL_DEFAULT() %s", D3D_GetResultString(result));
         Log::Print(Log::LOG_INFO, "IDirect3DDevice9_CreateTexture(%p, %u, %u, %u, %u", renderData->Device, texture->Width, texture->Height, 1, usage);
-        exit(0);
+        exit(-1);
     }
 }
 int         D3D_RecreateTexture(Texture* texture) {
@@ -768,7 +768,7 @@ PUBLIC STATIC void     D3DRenderer::Init() {
     if (FAILED(result)) {
         D3DRenderer::Dispose();
         Log::Print(Log::LOG_ERROR, "CreateDevice() %s", D3D_GetResultString(result));
-        exit(0);
+        exit(-1);
     }
 
     /* Get presentation parameters to fill info */

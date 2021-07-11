@@ -41,6 +41,7 @@ struct Chunk {
     Uint8*           Failsafe;
     int*             Lines;
     vector<VMValue>* Constants;
+    bool             OwnsMemory;
 };
 
 struct PrintBuffer {

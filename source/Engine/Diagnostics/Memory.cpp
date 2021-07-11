@@ -120,6 +120,9 @@ PUBLIC STATIC void*  Memory::TrackedMalloc(const char* identifier, size_t size) 
             Log::Print(Log::LOG_ERROR, "Could not allocate memory for TrackedMalloc!");
         }
     }
+    else if (!mem) {
+        Log::Print(Log::LOG_ERROR, "Could not allocate memory for TrackedMalloc!");
+    }
     return mem;
 }
 PUBLIC STATIC void*  Memory::TrackedCalloc(const char* identifier, size_t count, size_t size) {

@@ -14,7 +14,7 @@ public:
 #include <Engine/ResourceTypes/ResourceManager.h>
 
 PUBLIC STATIC ResourceStream* ResourceStream::New(const char* filename) {
-    ResourceStream* stream = new ResourceStream;
+    ResourceStream* stream = new (nothrow) ResourceStream;
     if (!stream) {
         return NULL;
     }
@@ -42,7 +42,7 @@ PUBLIC        void            ResourceStream::Seek(Sint64 offset) {
     pointer = pointer_start + offset;
 }
 PUBLIC        void            ResourceStream::SeekEnd(Sint64 offset) {
-    pointer = pointer_start + size - offset;
+    pointer = pointer_start + size + offset;
 }
 PUBLIC        void            ResourceStream::Skip(Sint64 offset) {
     pointer = pointer + offset;

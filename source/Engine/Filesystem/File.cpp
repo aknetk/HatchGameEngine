@@ -59,6 +59,8 @@ PUBLIC STATIC size_t File::ReadAllBytes(const char* path, char** out) {
     if ((stream = FileStream::New(path, FileStream::READ_ACCESS))) {
         size_t size = stream->Length();
         *out = (char*)Memory::Malloc(size + 1);
+        if (!*out)
+            return 0;
         (*out)[size] = 0;
         stream->ReadBytes(*out, size);
         stream->Close();

@@ -137,16 +137,16 @@ PUBLIC STATIC void     Graphics::Init() {
 
 	Graphics::GfxFunctions->Init();
 
-    Log::Print(Log::LOG_INFO, "CPU Core Count: %d", SDL_GetCPUCount());
+    Log::Print(Log::LOG_VERBOSE, "CPU Core Count: %d", SDL_GetCPUCount());
 	Log::Print(Log::LOG_INFO, "System Memory: %d MB", SDL_GetSystemRAM());
-    Log::Print(Log::LOG_INFO, "Window Size: %d x %d", w, h);
+    Log::Print(Log::LOG_VERBOSE, "Window Size: %d x %d", w, h);
     Log::Print(Log::LOG_INFO, "Window Pixel Format: %s", SDL_GetPixelFormatName(SDL_GetWindowPixelFormat(Application::Window)));
     Log::Print(Log::LOG_INFO, "VSync: %s", Graphics::VsyncEnabled ? "true" : "false");
     if (Graphics::MultisamplingEnabled)
-        Log::Print(Log::LOG_INFO, "Multisample: %d", Graphics::MultisamplingEnabled);
+        Log::Print(Log::LOG_VERBOSE, "Multisample: %d", Graphics::MultisamplingEnabled);
     else
-        Log::Print(Log::LOG_INFO, "Multisample: false");
-    Log::Print(Log::LOG_INFO, "Max Texture Size: %d x %d", Graphics::MaxTextureWidth, Graphics::MaxTextureHeight);
+        Log::Print(Log::LOG_VERBOSE, "Multisample: false");
+    Log::Print(Log::LOG_VERBOSE, "Max Texture Size: %d x %d", Graphics::MaxTextureWidth, Graphics::MaxTextureHeight);
 }
 PUBLIC STATIC void     Graphics::ChooseBackend() {
 	char renderer[64];
@@ -312,6 +312,9 @@ PUBLIC STATIC void     Graphics::DisposeTexture(Texture* texture) {
 		texture->Prev->Next = texture->Next;
 	else
 		Graphics::TextureHead = texture->Next;
+
+	if (texture->Pixels)
+		Memory::Free(texture->Pixels);
 
 	Memory::Free(texture);
 }

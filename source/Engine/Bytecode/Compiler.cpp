@@ -2074,7 +2074,7 @@ PUBLIC void Compiler::GetEventDeclaration() {
 
     EmitByte(OP_EVENT);
     EmitByte(index);
-    
+
     EmitByte(OP_DEFINE_GLOBAL);
     EmitStringHash(constantToken);
 }
@@ -2383,8 +2383,8 @@ int  justin_print(char** buffer, int* buf_start, const char *format, ...) {
         // printf("\x1b[1;93m#%d buffer increased from %d -> %d (pos: %d + %d = %d)\x1b[m\n", i++, buf_start[1] / 2, buf_start[1], buf_start[0], count, buf_start[0] + count);
         *buffer = (char*)realloc(*buffer, buf_start[1]);
         if (!*buffer) {
-            printf("summmmmmmmmmmmmmm wrong chief\n");
-            exit(1);
+            Log::Print(Log::LOG_ERROR, "Could not realloc for justin_print!");
+            exit(-1);
         }
     }
 
@@ -2922,7 +2922,8 @@ PUBLIC bool          Compiler::Compile(const char* filename, const char* source,
             HTML5ConvertChunk(chunk, Compiler::Functions[c]->Name->Chars, Compiler::Functions[c]->Arity);
         //     printf("\n");
         // }
-        exit(0);
+        Log::Print(Log::LOG_ERROR, "Could not make html5output!");
+        exit(-1);
     }
 
     // Add tokens

@@ -698,11 +698,15 @@ inline void PixelNoFiltSetSubtract(Uint32* src, Uint32* dst, int opacity, int* m
     *dst = 0xFF000000U | R | G | B;
 }
 inline void PixelNoFiltSetMatchEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    if (*dst == SoftwareRenderer::CompareColor)
+    // if (*dst == SoftwareRenderer::CompareColor)
+        // *dst = *src;
+    if ((*dst & 0xFCFCFC) == (SoftwareRenderer::CompareColor & 0xFCFCFC))
         *dst = *src;
 }
 inline void PixelNoFiltSetMatchNotEqual(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
-    if (*dst != SoftwareRenderer::CompareColor)
+    // if (*dst != SoftwareRenderer::CompareColor)
+        // *dst = *src;
+    if ((*dst & 0xFCFCFC) != (SoftwareRenderer::CompareColor & 0xFCFCFC))
         *dst = *src;
 }
 inline void PixelNoFiltSetFilter(Uint32* src, Uint32* dst, int opacity, int* multTableAt, int* multSubTableAt) {
@@ -2244,10 +2248,10 @@ PUBLIC STATIC void     SoftwareRenderer::FillCircle(float x, float y, float rad)
         contourPtr++;
     }
 
-    #define SEEK_MIN(our_x, our_y) if (our_y >= dst_y1 && our_y <= dst_y2 && our_x < (cont = &ContourField[our_y])->MinX) \
-        cont->MinX = our_x;
-    #define SEEK_MAX(our_x, our_y) if (our_y >= dst_y1 && our_y <= dst_y2 && our_x > (cont = &ContourField[our_y])->MaxX) \
-        cont->MaxX = our_x;
+    #define SEEK_MIN(our_x, our_y) if (our_y >= dst_y1 && our_y < dst_y2 && our_x < (cont = &ContourField[our_y])->MinX) \
+        cont->MinX = our_x < dst_x1 ? dst_x1 : our_x > (dst_x2 - 1) ? dst_x2 - 1 : our_x;
+    #define SEEK_MAX(our_x, our_y) if (our_y >= dst_y1 && our_y < dst_y2 && our_x > (cont = &ContourField[our_y])->MaxX) \
+        cont->MaxX = our_x < dst_x1 ? dst_x1 : our_x > (dst_x2 - 1) ? dst_x2 - 1 : our_x;
 
     Contour* cont;
     int ccx = x, ccy = y;
@@ -2300,13 +2304,13 @@ PUBLIC STATIC void     SoftwareRenderer::FillCircle(float x, float y, float rad)
                     continue;
                 }
                 int dst_min_x = contour.MinX;
-                if (dst_min_x > dst_x1)
+                if (dst_min_x < dst_x1)
                     dst_min_x = dst_x1;
                 int dst_max_x = contour.MaxX;
-                if (dst_max_x > dst_x2)
-                    dst_max_x = dst_x2;
+                if (dst_max_x > dst_x2 - 1)
+                    dst_max_x = dst_x2 - 1;
 
-                Memory::Memset4(&dstPx[dst_min_x], col, dst_max_x - dst_min_x);
+                Memory::Memset4(&dstPx[dst_min_x + dst_strideY], col, dst_max_x - dst_min_x);
                 dst_strideY += dstStride;
             }
 

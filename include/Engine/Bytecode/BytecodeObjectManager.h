@@ -31,6 +31,7 @@ public:
     static HashMap<Uint8*>*     Sources;
     static HashMap<char*>*      Tokens;
     static vector<char*>        TokensList;
+    static vector<VMValue>      EjectedGlobals;
     static SDL_mutex*           GlobalLock;
 
     static bool    ThrowRuntimeError(bool fatal, const char* errorMessage, ...);
@@ -41,6 +42,7 @@ public:
     static void    Dispose();
     static void    RemoveGlobalableValue(Uint32 hash, VMValue value);
     static void    RemoveNonGlobalableValue(Uint32 hash, VMValue value);
+    static void    FreeNativeValue(Uint32 hash, VMValue value);
     static void    FreeGlobalValue(Uint32 hash, VMValue value);
     static void    PrintHashTableValues(Uint32 hash, VMValue value);
     static VMValue CastValueAsString(VMValue v);

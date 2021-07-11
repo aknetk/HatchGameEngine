@@ -1,0 +1,74 @@
+#include "MediaPlayer.h"
+
+#include <MediaPlayer/MediaPlayer.h>
+
+void eventSkipForward() {
+    printf("%s\n", "iOS_eventSkipForward");
+}
+void eventTogglePlayPause() {
+    printf("%s\n", "iOS_eventTogglePlayPause");
+}
+void eventPause() {
+    printf("%s\n", "iOS_eventPause");
+}
+void eventLike() {
+    printf("%s\n", "iOS_eventLike");
+}
+
+int iOS_InitMediaPlayer() {
+    // Setup Now Playing Info Center
+    @autoreleasepool {
+        MPRemoteCommandCenter *remoteCommandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+        [[remoteCommandCenter skipForwardCommand] addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent* event) {
+            eventSkipForward();
+            return true ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusCommandFailed;
+        }];
+        [[remoteCommandCenter togglePlayPauseCommand] addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent* event) {
+            eventTogglePlayPause();
+            return true ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusCommandFailed;
+        }];
+        [[remoteCommandCenter pauseCommand] addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent* event) {
+            eventPause();
+            return true ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusCommandFailed;
+        }];
+        [[remoteCommandCenter likeCommand] addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent* event) {
+            eventLike();
+            return true ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusCommandFailed;
+        }];
+
+        remoteCommandCenter.playCommand.enabled = YES;
+        remoteCommandCenter.likeCommand.enabled = YES;
+
+        NSMutableDictionary* displayInfo = [[NSMutableDictionary alloc] init];
+        [displayInfo setValue:@"HatchPlayer" forKey:MPMediaItemPropertyTitle];
+        [displayInfo setValue:[NSNumber numberWithDouble:0.0] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
+        [displayInfo setValue:[NSNumber numberWithDouble:230.0] forKey:MPMediaItemPropertyPlaybackDuration];
+        [displayInfo setValue:[NSNumber numberWithDouble:0.0] forKey:MPNowPlayingInfoPropertyPlaybackRate];
+
+        [[MPNowPlayingInfoCenter defaultCenter] setNowPlayingInfo:displayInfo];
+        return 0;
+    }
+}
+int iOS_UpdateMediaPlayer(const char* title, double playbackPosition, double playbackDuration, double playbackRate) {
+    @autoreleasepool {
+        NSDictionary* displayInfo = [[MPNowPlayingInfoCenter defaultCenter] nowPlayingInfo];
+        if (title)
+            [displayInfo setValue:[NSString stringWithUTF8String:title] forKey:MPMediaItemPropertyTitle];
+        [displayInfo setValue:[NSNumber numberWithDouble:playbackPosition] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
+        [displayInfo setValue:[NSNumber numberWithDouble:playbackDuration] forKey:MPMediaItemPropertyPlaybackDuration];
+        [displayInfo setValue:[NSNumber numberWithDouble:playbackRate] forKey:MPNowPlayingInfoPropertyPlaybackRate];
+        [[MPNowPlayingInfoCenter defaultCenter] setNowPlayingInfo:displayInfo];
+        return 0;
+    }
+}
+int iOS_ClearMediaPlayer() {
+    @autoreleasepool {
+        [[MPNowPlayingInfoCenter defaultCenter] setNowPlayingInfo:nil];
+        return 0;
+    }
+}
+int iOS_DisposeMediaPlayer() {
+    @autoreleasepool {
+        return 0;
+    }
+}

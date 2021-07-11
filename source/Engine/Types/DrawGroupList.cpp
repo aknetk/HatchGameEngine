@@ -54,7 +54,6 @@ PUBLIC void    DrawGroupList::Init() {
     EntityCount = 0;
 }
 PUBLIC void    DrawGroupList::Dispose() {
-    printf("Dispose();\n");
     Memory::Free(Entities);
 }
 PUBLIC         DrawGroupList::~DrawGroupList() {

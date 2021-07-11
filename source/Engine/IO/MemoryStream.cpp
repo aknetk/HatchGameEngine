@@ -33,7 +33,7 @@ PUBLIC STATIC MemoryStream* MemoryStream::New(Stream* other) {
     return stream;
 }
 PUBLIC STATIC MemoryStream* MemoryStream::New(void* data, size_t size) {
-    MemoryStream* stream = new MemoryStream;
+    MemoryStream* stream = new (nothrow) MemoryStream;
     if (!stream) {
         return NULL;
     }
@@ -62,7 +62,7 @@ PUBLIC        void          MemoryStream::Seek(Sint64 offset) {
     pointer = pointer_start + offset;
 }
 PUBLIC        void          MemoryStream::SeekEnd(Sint64 offset) {
-    pointer = pointer_start + size - offset;
+    pointer = pointer_start + size + offset;
 }
 PUBLIC        void          MemoryStream::Skip(Sint64 offset) {
     pointer = pointer + offset;

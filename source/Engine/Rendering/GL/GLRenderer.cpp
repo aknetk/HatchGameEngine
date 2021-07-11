@@ -397,7 +397,7 @@ PUBLIC STATIC void     GLRenderer::Init() {
     Context = SDL_GL_CreateContext(Application::Window); CHECK_GL();
     if (!Context) {
         Log::Print(Log::LOG_ERROR, "Could not create OpenGL context: %s", SDL_GetError()); CHECK_GL();
-        exit(0);
+        exit(-1);
     }
 
     #ifdef WIN32
@@ -405,7 +405,7 @@ PUBLIC STATIC void     GLRenderer::Init() {
     GLenum res = glewInit(); CHECK_GL();
     if (res != GLEW_OK) {
         Log::Print(Log::LOG_ERROR, "Could not create GLEW context: %s", glewGetErrorString(res)); CHECK_GL();
-        exit(0);
+        exit(-1);
     }
     #endif
 

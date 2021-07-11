@@ -8,8 +8,12 @@
 #include <Engine/Diagnostics/Memory.h>
 #include <functional>
 
+#include <Engine/Diagnostics/MemoryPools.h>
+
 template <typename T> struct HashMapElement {
     Uint32 Key;
+    Uint32 PrevKey;
+    Uint32 NextKey;
     bool   Used;
     T      Data;
 };
@@ -20,6 +24,8 @@ public:
     int CapacityMask = 0;
     int ChainLength = 16;
     HashMapElement<T>* Data = NULL;
+    Uint32 FirstKey = 0;
+    Uint32 LastKey = 0;
 
     Uint32 (*HashFunction)(const void*, size_t) = NULL;
 
@@ -33,9 +39,10 @@ public:
         CapacityMask = Capacity - 1;
 
         Data = (HashMapElement<T>*)Memory::TrackedCalloc("HashMap::Data", Capacity, sizeof(HashMapElement<T>));
+        // MemoryPools::Alloc(&Data, Capacity * sizeof(HashMapElement<T>), MemoryPools::MEMPOOL_HASHMAP, true);
     	if (!Data) {
             Log::Print(Log::LOG_ERROR, "Could not allocate memory for HashMap data!");
-            exit(0);
+            exit(-1);
         }
     }
 
@@ -62,18 +69,72 @@ public:
         index = index & CapacityMask; // index = index % Capacity;
         return index;
     }
+    Uint32 FindKey(Uint32 key) {
+        Uint32 index = TranslateIndex(key);
+        for (int i = 0; i < ChainLength; i++) {
+            if (Data[index].Used && Data[index].Key == key)
+                return index;
+
+            index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
+        }
+        return 0xFFFFFFFFU;
+    }
+    void   RemoveKey(HashMapElement<T>* data) {
+        Uint32 index;
+        if (data->PrevKey == 0 && data->NextKey != 0) {
+            FirstKey = data->NextKey;
+            index = FindKey(FirstKey);
+            if (index != 0xFFFFFFFFU)
+                Data[index].PrevKey = 0;
+        }
+        else if (data->PrevKey != 0 && data->NextKey == 0) {
+            LastKey = data->PrevKey;
+            index = FindKey(LastKey);
+            if (index != 0xFFFFFFFFU)
+                Data[index].NextKey = 0;
+        }
+        else {
+            index = FindKey(data->PrevKey);
+            if (index != 0xFFFFFFFFU)
+                Data[index].NextKey = data->NextKey;
+
+            index = FindKey(data->NextKey);
+            if (index != 0xFFFFFFFFU)
+                Data[index].PrevKey = data->PrevKey;
+        }
+    }
+    void   AppendKey(HashMapElement<T>* data) {
+        data->PrevKey = LastKey;
+        data->NextKey = 0;
+        if (LastKey != 0) {
+            Uint32 lastIndex = FindKey(LastKey);
+            if (lastIndex != 0xFFFFFFFFU)
+                Data[lastIndex].NextKey = data->Key;
+        }
+        else {
+            FirstKey = data->Key;
+        }
+        LastKey = data->Key;
+    }
+
     int    Resize() {
         Capacity <<= 1;
         CapacityMask = Capacity - 1;
 
         HashMapElement<T>* oldData = Data;
+        HashMapElement<T>* newData = NULL;
         const char* oldTrack = Memory::GetName(oldData);
 
         Data = (HashMapElement<T>*)Memory::TrackedCalloc(oldTrack, Capacity, sizeof(HashMapElement<T>));
+        // MemoryPools::Alloc(&newData, Capacity * sizeof(HashMapElement<T>), MemoryPools::MEMPOOL_HASHMAP, true);
         if (!Data) {
+        // if (!newData) {
             Log::Print(Log::LOG_ERROR, "Could not allocate memory for HashMap data!");
-            exit(0);
+            Memory::Free(oldData);
+            exit(-1);
         }
+
+        newData = Data;
 
         Count = 0;
         Uint32 index;
@@ -82,20 +143,24 @@ public:
                 index = TranslateIndex(oldData[i].Key);
 
                 for (int c = 0; c < ChainLength; c++) {
-                    if (!Data[index].Used) {
+                    if (!newData[index].Used) {
                         Count++;
             			break;
                     }
-            		if (Data[index].Used && Data[index].Key == oldData[i].Key)
+            		if (newData[index].Used && newData[index].Key == oldData[i].Key)
             			break;
             		index = (index + 1) & CapacityMask; // index = (index + 1) % Capacity;
             	}
 
-                Data[index].Key = oldData[i].Key;
-                Data[index].Used = true;
-                Data[index].Data = oldData[i].Data;
+                newData[index].Key = oldData[i].Key;
+                newData[index].PrevKey = oldData[i].PrevKey;
+                newData[index].NextKey = oldData[i].NextKey;
+                newData[index].Used = true;
+                newData[index].Data = oldData[i].Data;
             }
         }
+
+        // MemoryPools::PassReference(&Data, &newData, MemoryPools::MEMPOOL_HASHMAP);
 
         Memory::Free(oldData);
 
@@ -128,6 +193,8 @@ public:
         while (index == 0xFFFFFFFFU);
 
         Data[index].Key = hash;
+        if (!Data[index].Used)
+            AppendKey(&Data[index]);
         Data[index].Used = true;
         Data[index].Data = data;
     }
@@ -193,6 +260,7 @@ public:
         for (int i = 0; i < ChainLength; i++) {
             if (Data[index].Used && Data[index].Key == hash) {
                 Count--;
+                RemoveKey(&Data[index]);
                 Data[index].Used = false;
                 return true;
             }
@@ -227,6 +295,36 @@ public:
                 forFunc(Data[i].Key, Data[i].Data);
             }
         }
+    }
+    void   ForAllOrdered(void (*forFunc)(Uint32, T)) {
+        Uint32 index;
+        if (FirstKey == 0) return;
+
+        Uint32 nextKey = FirstKey;
+        do {
+            index = FindKey(nextKey);
+            nextKey = 0;
+            if (index != 0xFFFFFFFFU) {
+                forFunc(Data[index].Key, Data[index].Data);
+                nextKey = Data[index].NextKey;
+            }
+        }
+        while (nextKey);
+    }
+    void   WithAllOrdered(std::function<void(Uint32, T)> forFunc) {
+        Uint32 index;
+        if (FirstKey == 0) return;
+
+        Uint32 nextKey = FirstKey;
+        do {
+            index = FindKey(nextKey);
+            nextKey = 0;
+            if (index != 0xFFFFFFFFU) {
+                forFunc(Data[index].Key, Data[index].Data);
+                nextKey = Data[index].NextKey;
+            }
+        }
+        while (nextKey);
     }
 
     void   PrintHashes() {

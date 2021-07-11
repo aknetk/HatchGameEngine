@@ -5,11 +5,13 @@
     // SDL2 includes
     #include <SDL2/SDL.h>
 #elif MACOSX
-    // SDL2 includes
-    #include <SDL.h>
-#elif LINUX
-    // SDL2 includes
-    #include <SDL.h>
+    #if USING_FRAMEWORK
+        // SDL2 includes
+        #include <SDL2/SDL.h>
+    #else
+        // SDL2 includes
+        #include <SDL.h>
+    #endif
 #elif SWITCH
     // SDL2 includes
     #include <SDL2/SDL.h>
@@ -22,6 +24,9 @@
     // SDL2 includes
     #include <SDL.h>
     #include <SDL_opengles2.h>
+#elif LINUX
+    // SDL2 includes
+    #include <SDL.h>
 #endif
 
 typedef uint32_t uint;

@@ -482,6 +482,8 @@ PUBLIC int     VMThread::RunInstruction() {
                             dst->Methods->Put(hash, value);
                         });
                         src->Methods->Clear();
+
+                        // BytecodeObjectManager::EjectedGlobals.push_back(value);
                     }
                     // Otherwise,
                     else {
