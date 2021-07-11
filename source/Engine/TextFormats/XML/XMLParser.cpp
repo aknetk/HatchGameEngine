@@ -288,7 +288,7 @@ void     ConsumeToken(int type, const char* message) {
 void     PrintToken(Token token) {
     printf("%.*s", (int)token.Length, token.Start);
     printf("\n");
-    // exit(0);
+    // exit(-1);
 }
 
 void     SynchronizeToken() {

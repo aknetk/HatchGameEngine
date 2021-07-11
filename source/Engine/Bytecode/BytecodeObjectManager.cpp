@@ -251,7 +251,7 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeGlobalValue(Uint32 hash, VMValu
         switch (OBJECT_TYPE(value)) {
             case OBJ_CLASS: {
                 ObjClass* klass = AS_CLASS(value);
-                
+
                 // Subfunctions are already freed as a byproduct of the AllFunctionList,
                 // so just do natives.
                 klass->Methods->ForAll(FreeNativeValue);
@@ -793,7 +793,7 @@ PUBLIC STATIC Entity* BytecodeObjectManager::SpawnFunction() {
             Log::Print(Log::LOG_ERROR, "No class! Can't find: %s\n", Tokens->Get(CurrentObjectHash));
         else
             Log::Print(Log::LOG_ERROR, "No class! Can't find: %X\n", CurrentObjectHash);
-        exit(0);
+        exit(-1);
     }
 
     BytecodeObject* object = new BytecodeObject;

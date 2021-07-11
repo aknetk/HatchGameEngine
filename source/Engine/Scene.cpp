@@ -319,7 +319,7 @@ PUBLIC STATIC void Scene::Add(Entity** first, Entity** last, int* count, Entity*
     // Add to proper list
     if (!obj->List) {
         Log::Print(Log::LOG_IMPORTANT, "obj->List = NULL");
-        exit(0);
+        exit(-1);
     }
     obj->List->Add(obj);
 }
@@ -343,7 +343,7 @@ PUBLIC STATIC void Scene::Remove(Entity** first, Entity** last, int* count, Enti
     // Remove from proper list
     if (!obj->List) {
         Log::Print(Log::LOG_IMPORTANT, "obj->List = NULL");
-        exit(0);
+        exit(-1);
     }
     obj->List->Remove(obj);
 
@@ -914,10 +914,11 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     // Dispose of resources in SCOPE_SCENE
     Scene::DisposeInScope(SCOPE_SCENE);
 
-    Graphics::SpriteSheetTextureMap->WithAll([](Uint32, Texture* tex) -> void {
+    // TODO: Make a way for this to delete ONLY of SCOPE_SCENE, and not any sprites needed by SCOPE_GAME
+    /*Graphics::SpriteSheetTextureMap->WithAll([](Uint32, Texture* tex) -> void {
         Graphics::DisposeTexture(tex);
     });
-    Graphics::SpriteSheetTextureMap->Clear();
+    Graphics::SpriteSheetTextureMap->Clear();*/
 
     // Clear and dispose of objects
     // TODO: Alter this for persistency
@@ -1271,7 +1272,7 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
 
         if (Scene::TileSprites.size() && Scene::TileCount < (int)Scene::TileSprites[0]->Animations[0].Frames.size()) {
             Log::Print(Log::LOG_ERROR, "Less Tile Collisions (%d) than actual Tiles! (%d)", Scene::TileCount, (int)Scene::TileSprites[0]->Animations[0].Frames.size());
-            exit(0);
+            exit(-1);
         }
 
         Uint8 collisionBuffer[16];

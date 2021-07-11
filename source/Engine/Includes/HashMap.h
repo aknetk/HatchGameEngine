@@ -42,7 +42,7 @@ public:
         // MemoryPools::Alloc(&Data, Capacity * sizeof(HashMapElement<T>), MemoryPools::MEMPOOL_HASHMAP, true);
     	if (!Data) {
             Log::Print(Log::LOG_ERROR, "Could not allocate memory for HashMap data!");
-            exit(0);
+            exit(-1);
         }
     }
 
@@ -129,9 +129,9 @@ public:
         // MemoryPools::Alloc(&newData, Capacity * sizeof(HashMapElement<T>), MemoryPools::MEMPOOL_HASHMAP, true);
         if (!Data) {
         // if (!newData) {
-            Memory::Free(oldData);
             Log::Print(Log::LOG_ERROR, "Could not allocate memory for HashMap data!");
-            exit(0);
+            Memory::Free(oldData);
+            exit(-1);
         }
 
         newData = Data;
