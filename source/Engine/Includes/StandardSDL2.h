@@ -24,6 +24,9 @@
     // SDL2 includes
     #include <SDL.h>
     #include <SDL_opengles2.h>
+#elif LINUX
+    // SDL2 includes
+    #include <SDL.h>
 #endif
 
 typedef uint32_t uint;
