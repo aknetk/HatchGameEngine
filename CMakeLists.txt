@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-# set the project name and versIon
+# set the project name and version
 project(HatchGameEngine VERSION 1.0)
 
 # specify the C++ standard
