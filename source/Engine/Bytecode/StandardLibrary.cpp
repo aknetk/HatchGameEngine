@@ -7096,6 +7096,61 @@ VMValue View_SetAngle(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
 /***
+ * View.SetWindowX
+ * \desc Sets the x-axis position of the window for the specified view.
+ * \param viewIndex (Integer): Index of the view.
+ * \param x (Number): Desired X position
+ * \ns View
+ */
+VMValue View_SetWindowX(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    int   view_index = GET_ARG(0, GetInteger);
+    float value = GET_ARG(1, GetDecimal);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    Scene::Views[view_index].WindowX = value;
+    return NULL_VAL;
+}
+/***
+ * View.SetWindowY
+ * \desc Sets the y-axis position of the camera for the specified view.
+ * \param viewIndex (Integer): Index of the view.
+ * \param y (Number): Desired Y position
+ * \ns View
+ */
+VMValue View_SetWindowY(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    int   view_index = GET_ARG(0, GetInteger);
+    float value = GET_ARG(1, GetDecimal);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    Scene::Views[view_index].WindowY = value;
+    return NULL_VAL;
+}
+/***
+ * View.SetWindowPosition
+ * \desc Sets the position of the window for the specified view.
+ * \param viewIndex (Integer): Index of the view.
+ * \param x (Number): Desired X position
+ * \param y (Number): Desired Y position
+ * \ns View
+ */
+VMValue View_SetWindowPosition(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_AT_LEAST_ARGCOUNT(3);
+    int view_index = GET_ARG(0, GetInteger);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    Scene::Views[view_index].WindowX = GET_ARG(1, GetDecimal);
+    Scene::Views[view_index].WindowY = GET_ARG(2, GetDecimal);
+    return NULL_VAL;
+}
+/***
  * View.GetX
  * \desc Gets the x-axis position of the camera for the specified view.
  * \param viewIndex (Integer): Index of the view.
@@ -7176,6 +7231,70 @@ VMValue View_GetHeight(int argCount, VMValue* args, Uint32 threadID) {
     return DECIMAL_VAL(Scene::Views[view_index].Height);
 }
 /***
+ * View.GetWindowX
+ * \desc Gets the x-axis position of the window for the specified view.
+ * \param viewIndex (Integer): Index of the view.
+ * \return Returns a Number value.
+ * \ns View
+ */
+VMValue View_GetWindowX(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int view_index = GET_ARG(0, GetInteger);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    return DECIMAL_VAL(Scene::Views[view_index].WindowX);
+}
+/***
+ * View.GetWindowY
+ * \desc Gets the y-axis position of the window for the specified view.
+ * \param viewIndex (Integer): Index of the view.
+ * \return Returns a Number value.
+ * \ns View
+ */
+VMValue View_GetWindowY(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int view_index = GET_ARG(0, GetInteger);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    return DECIMAL_VAL(Scene::Views[GET_ARG(0, GetInteger)].WindowY);
+}
+/***
+ * View.GetWindowWidth
+ * \desc Gets the width of the window for the specified view.
+ * \param viewIndex (Integer): Index of the view.
+ * \return Returns a Number value.
+ * \ns View
+ */
+VMValue View_GetWindowWidth(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int view_index = GET_ARG(0, GetInteger);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    return DECIMAL_VAL(Scene::Views[view_index].WindowWidth);
+}
+/***
+ * View.GetWindowHeight
+ * \desc Gets the height of the window for the specified view.
+ * \param viewIndex (Integer): Index of the view.
+ * \return Returns a Number value.
+ * \ns View
+ */
+VMValue View_GetWindowHeight(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int view_index = GET_ARG(0, GetInteger);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    return DECIMAL_VAL(Scene::Views[view_index].WindowHeight);
+}
+/***
  * View.SetSize
  * \desc Sets the size of the camera for the specified view.
  * \param viewIndex (Integer): Index of the view.
@@ -7205,6 +7324,28 @@ VMValue View_SetSize(int argCount, VMValue* args, Uint32 threadID) {
     Scene::Views[view_index].Width = view_w;
     Scene::Views[view_index].Height = view_h;
     Scene::Views[view_index].Stride = _CEILPOW_(view_w);
+    return NULL_VAL;
+}
+/***
+ * View.SetWindowSize
+ * \desc Sets the size of the window for the specified view.
+ * \param viewIndex (Integer): Index of the view.
+ * \param width (Number): Desired width.
+ * \param height (Number): Desired height.
+ * \return
+ * \ns View
+ */
+ VMValue View_SetWindowSize(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(3);
+    int view_index = GET_ARG(0, GetInteger);
+    float view_w = GET_ARG(1, GetDecimal);
+    float view_h = GET_ARG(2, GetDecimal);
+    if (view_index < 0 || view_index > 7) {
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "View Index out of range 0 through 8");
+        return NULL_VAL;
+    }
+    Scene::Views[view_index].WindowWidth = view_w;
+    Scene::Views[view_index].WindowHeight = view_h;
     return NULL_VAL;
 }
 /***
@@ -8026,11 +8167,19 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(View, SetPosition);
     DEF_NATIVE(View, SetAngle);
     DEF_NATIVE(View, SetSize);
+    DEF_NATIVE(View, SetWindowX);
+    DEF_NATIVE(View, SetWindowY);
+    DEF_NATIVE(View, SetWindowPosition);
+    DEF_NATIVE(View, SetWindowSize);
     DEF_NATIVE(View, GetX);
     DEF_NATIVE(View, GetY);
     DEF_NATIVE(View, GetZ);
     DEF_NATIVE(View, GetWidth);
     DEF_NATIVE(View, GetHeight);
+    DEF_NATIVE(View, GetWindowX);
+    DEF_NATIVE(View, GetWindowY);
+    DEF_NATIVE(View, GetWindowWidth);
+    DEF_NATIVE(View, GetWindowHeight);
     DEF_NATIVE(View, IsUsingDrawTarget);
     DEF_NATIVE(View, SetUseDrawTarget);
     DEF_NATIVE(View, SetUsePerspective);

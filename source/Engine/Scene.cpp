@@ -68,6 +68,7 @@ public:
 
     static View                  Views[8];
     static int                   ViewCurrent;
+    static int                   ActiveViews;
     static Perf_ViewRender       PERF_ViewRender[8];
 
     static char                  NextScene[256];
@@ -146,6 +147,7 @@ float                 Scene::CameraX = 0.0f;
 float                 Scene::CameraY = 0.0f;
 View                  Scene::Views[8];
 int                   Scene::ViewCurrent = 0;
+int                   Scene::ActiveViews = 1;
 Perf_ViewRender       Scene::PERF_ViewRender[8];
 
 char                  Scene::NextScene[256];
@@ -170,7 +172,7 @@ const char*           DEBUG_lastTileColFilename = NULL;
 
 int SCOPE_SCENE = 0;
 int SCOPE_GAME = 1;
-int TileViewRenderFlag = 0x01;
+int TileViewRenderFlag = 0xFF;
 int TileBatchMaxSize = 8;
 
 void _ObjectList_RemoveNonPersistentDynamicFromLists(Uint32, ObjectList* list) {
@@ -231,12 +233,32 @@ void _UpdateObject(Entity* ent) {
     if (!ent->Active)
         return;
 
-    if ((ent->OnScreenHitboxW == 0.0f || (
-        ent->X + ent->OnScreenHitboxW * 0.5f >= Scene::Views[0].X &&
-        ent->X - ent->OnScreenHitboxW * 0.5f <  Scene::Views[0].X + Scene::Views[0].Width)) &&
-        (ent->OnScreenHitboxH == 0.0f || (
-        ent->Y + ent->OnScreenHitboxH * 0.5f >= Scene::Views[0].Y &&
-        ent->Y - ent->OnScreenHitboxH * 0.5f <  Scene::Views[0].Y + Scene::Views[0].Height))) {
+    bool onScreenX = (ent->OnScreenHitboxW == 0.0f);
+    bool onScreenY = (ent->OnScreenHitboxH == 0.0f);
+
+    if (Scene::ActiveViews < 2) {
+        if (!onScreenX) {
+            onScreenX = (ent->X + ent->OnScreenHitboxW * 0.5f >= Scene::Views[0].X &&
+                         ent->X - ent->OnScreenHitboxW * 0.5f <  Scene::Views[0].X + Scene::Views[0].Width);
+        }
+        if (!onScreenY) {
+            onScreenY = (ent->Y + ent->OnScreenHitboxH * 0.5f >= Scene::Views[0].Y &&
+                         ent->Y - ent->OnScreenHitboxH * 0.5f <  Scene::Views[0].Y + Scene::Views[0].Height);
+        }
+    } else {
+        for (int i = 0; i < Scene::ActiveViews; i++) {
+            if (!onScreenX) {
+                onScreenX = (ent->X + ent->OnScreenHitboxW * 0.5f >= Scene::Views[i].X &&
+                             ent->X - ent->OnScreenHitboxW * 0.5f <  Scene::Views[i].X + Scene::Views[i].Width);
+            }
+            if (!onScreenY) {
+                onScreenY = (ent->Y + ent->OnScreenHitboxH * 0.5f >= Scene::Views[i].Y &&
+                             ent->Y - ent->OnScreenHitboxH * 0.5f <  Scene::Views[i].Y + Scene::Views[i].Height);
+            }
+        }
+    }
+
+    if (onScreenX && onScreenY) {
         double elapsed = Clock::GetTicks();
 
         ent->OnScreen = true;
@@ -414,6 +436,8 @@ PUBLIC STATIC void Scene::Init() {
         Scene::Views[i].Software = false;
         Scene::Views[i].Width = 640;
         Scene::Views[i].Height = 480;
+        Scene::Views[i].WindowWidth = 640;
+        Scene::Views[i].WindowHeight = 480;
         Scene::Views[i].Stride = _CEILPOW(Scene::Views[i].Width);
         Scene::Views[i].FOV = 45.0f;
         Scene::Views[i].UsePerspective = false;
@@ -429,7 +453,16 @@ PUBLIC STATIC void Scene::ResetPerf() {
     if (Scene::ObjectLists)
         Scene::ObjectLists->ForAll(_ObjectList_ResetPerf);
 }
+PUBLIC STATIC void Scene::CountActiveViews() {
+    Scene::ActiveViews = 0;
+    for (int i = 0; i < 8; i++) {
+        if (Scene::Views[i].Active)
+            Scene::ActiveViews++;
+    }
+}
 PUBLIC STATIC void Scene::Update() {
+    Scene::CountActiveViews();
+
     // Call global updates
     if (Scene::ObjectLists)
         Scene::ObjectLists->ForAllOrdered(_ObjectList_CallGlobalUpdates);
@@ -519,8 +552,12 @@ PUBLIC STATIC void Scene::Render() {
     SDL2Renderer::GetMetalSize(&ren_w, &ren_h);
     #endif
 
-    int view_count = 8;
-    for (int i = 0; i < view_count; i++) {
+    Scene::CountActiveViews();
+
+    int viewCount = 8;
+    int activeViews = Scene::ActiveViews;
+
+    for (int i = 0; i < viewCount; i++) {
         View* currentView = &Scene::Views[i];
         if (!currentView->Active)
             continue;
@@ -749,7 +786,8 @@ PUBLIC STATIC void Scene::Render() {
                 float out_w, out_h;
                 float scale = 1.f;
                 // bool needClip = false;
-                switch (1) {
+                int aspectMode = (activeViews > 1) ? 3 : 1;
+                switch (aspectMode) {
                     // Stretch
                     case 0:
                         out_w = win_w;
@@ -781,6 +819,13 @@ PUBLIC STATIC void Scene::Render() {
                         }
                         out_x = (win_w - out_w) * 0.5f;
                         out_y = (win_h - out_h) * 0.5f;
+                        break;
+                    // Splitscreen
+                    case 3:
+                        out_w = win_w * (currentView->WindowWidth / currentView->Width);
+                        out_h = win_h * (currentView->WindowHeight / currentView->Height);
+                        out_x = currentView->WindowX * (win_w / out_w);
+                        out_y = currentView->WindowY * (win_h / out_h);
                         break;
                 }
 

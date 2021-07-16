@@ -64,6 +64,7 @@ public:
     static int                   MainLayer;
     static View                  Views[8];
     static int                   ViewCurrent;
+    static int                   ActiveViews;
     static Perf_ViewRender       PERF_ViewRender[8];
     static char                  NextScene[256];
     static char                  CurrentScene[256];
@@ -77,6 +78,7 @@ public:
     static void OnEvent(Uint32 event);
     static void Init();
     static void ResetPerf();
+    static void CountActiveViews();
     static void Update();
     static void Render();
     static void AfterScene();

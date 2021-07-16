@@ -194,7 +194,7 @@ PUBLIC void BytecodeObject::Create(int flag) {
     OnScreen = true;
     OnScreenHitboxW = 0.0f;
     OnScreenHitboxH = 0.0f;
-    ViewRenderFlag = 1;
+    ViewRenderFlag = 0xFF;
     RenderRegionW = 0.0f;
     RenderRegionH = 0.0f;
 
