@@ -56,7 +56,11 @@ PUBLIC STATIC SoundFormat* WAV::Load(const char* filename) {
         goto WAV_Load_FAIL;
     }
 
-    wav = new WAV;
+    wav = new (nothrow) WAV;
+    if (!wav) {
+        goto WAV_Load_FAIL;
+    }
+
     wav->StreamPtr = stream;
 
     WAVheader header;
@@ -97,9 +101,10 @@ PUBLIC STATIC SoundFormat* WAV::Load(const char* filename) {
     goto WAV_Load_SUCCESS;
 
     WAV_Load_FAIL:
-    if (wav)
+    if (wav) {
         wav->Dispose();
-    delete wav;
+        delete wav;
+    }
     wav = NULL;
 
     WAV_Load_SUCCESS:
@@ -110,6 +115,11 @@ PUBLIC        int          WAV::LoadSamples(size_t count) {
     size_t read,
         bytesForSample = 0,
         total = 0;
+
+    if (SampleBuffer == NULL) {
+        SampleBuffer = (Uint8*)Memory::TrackedMalloc("SoundData::SampleBuffer", TotalPossibleSamples * SampleSize);
+        Samples.reserve(TotalPossibleSamples);
+    }
 
     char* buffer = (char*)SampleBuffer + Samples.size() * SampleSize;
     char* bufferStartSample = buffer;

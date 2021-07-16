@@ -162,8 +162,9 @@ PUBLIC void    VMThread::PrintStack() {
         i--;
     }
 }
-PUBLIC void    VMThread::ReturnFromNative() {
-    std::longjmp(VMThread::JumpBuffer, 1);
+PUBLIC void    VMThread::ReturnFromNative() throw() {
+    // std::longjmp(VMThread::JumpBuffer, 1);
+    throw "should be ignored";
 }
 // #endregion
 
@@ -482,6 +483,8 @@ PUBLIC int     VMThread::RunInstruction() {
                             dst->Methods->Put(hash, value);
                         });
                         src->Methods->Clear();
+
+                        // BytecodeObjectManager::EjectedGlobals.push_back(value);
                     }
                     // Otherwise,
                     else {
@@ -1384,9 +1387,17 @@ PUBLIC bool    VMThread::CallValue(VMValue callee, int argCount) {
                     NativeFn native = AS_NATIVE(callee);
 
                     VMValue result = NULL_VAL;
+                    
+                    /*
                     if (setjmp(VMThread::JumpBuffer) == 0) {
                         result = native(argCount, StackTop - argCount, ID);
+                    }// */
+
+                    try {
+                        result = native(argCount, StackTop - argCount, ID);
                     }
+                    catch (const char* err) { }
+
                     // Pop arguments
                     StackTop -= argCount;
                     // Pop receiver / class

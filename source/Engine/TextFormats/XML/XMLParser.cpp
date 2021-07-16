@@ -288,7 +288,7 @@ void     ConsumeToken(int type, const char* message) {
 void     PrintToken(Token token) {
     printf("%.*s", (int)token.Length, token.Start);
     printf("\n");
-    // exit(0);
+    // exit(-1);
 }
 
 void     SynchronizeToken() {
@@ -330,7 +330,10 @@ void     GetAttributes() {
     }
 }
 void     GetStart() {
-    XMLNode* node = new XMLNode;
+    XMLNode* node = new (nothrow) XMLNode;
+    if (!node)
+        return;
+
     node->parent = XMLCurrent;
     node->base_stream = NULL;
     XMLCurrent->children.push_back(node);
@@ -388,15 +391,22 @@ PUBLIC STATIC bool     XMLParser::MatchToken(Token tok, const char* string) {
 PUBLIC STATIC float    XMLParser::TokenToNumber(Token tok) {
     float value;
     char* sourPls = (char*)malloc(tok.Length + 1);
-    memcpy(sourPls, tok.Start, tok.Length);
-    sourPls[tok.Length] = 0;
-    value = atof(sourPls);
-    free(sourPls);
+    if (sourPls) {
+        memcpy(sourPls, tok.Start, tok.Length);
+        sourPls[tok.Length] = 0;
+        value = atof(sourPls);
+        free(sourPls);
+    }
+    else
+        value = NAN;
     return value;
 }
 
 PUBLIC STATIC XMLNode* XMLParser::Parse() {
-    XMLNode* XMLRoot = new XMLNode;
+    XMLNode* XMLRoot = new (nothrow) XMLNode;
+    if (!XMLRoot)
+        return NULL;
+
     XMLRoot->base_stream = NULL;
     XMLRoot->parent = NULL;
     XMLCurrent = XMLRoot;
@@ -435,7 +445,10 @@ PUBLIC STATIC XMLNode* XMLParser::Parse() {
             data.Length = scanner.Current - data.Start;
             data.Type = TOKEN_CDATA;
 
-            XMLNode* node = new XMLNode;
+            XMLNode* node = new (nothrow) XMLNode;
+            if (!node)
+                return NULL;
+
             node->name = data;
             node->parent = XMLCurrent;
             node->base_stream = NULL;
@@ -502,12 +515,18 @@ PUBLIC STATIC XMLNode* XMLParser::ParseFromResource(const char* filename) {
     res->Close();
     return node;
 }
-PUBLIC STATIC void     XMLParser::Free(XMLNode* root) {
+
+void FreeNode(XMLNode* root) {
     root->attributes.Dispose();
     for (size_t i = 0; i < root->children.size(); i++) {
-        XMLParser::Free(root->children[i]);
+        FreeNode(root->children[i]);
     }
+    delete root;
+}
 
+PUBLIC STATIC void     XMLParser::Free(XMLNode* root) {
     if (root->base_stream)
         root->base_stream->Close();
+
+    FreeNode(root);
 }

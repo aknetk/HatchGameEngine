@@ -26,7 +26,7 @@ extern "C" {
 #endif
 
 PUBLIC STATIC FileStream* FileStream::New(const char* filename, Uint32 access) {
-    FileStream* stream = new FileStream;
+    FileStream* stream = new (nothrow) FileStream;
     if (!stream) {
         return NULL;
     }

@@ -12,6 +12,8 @@ public:
     static double       MaxTimeAlotted;
 
     static bool         Print;
+    static bool         FilterSweepEnabled;
+    static int          FilterSweepType;
 };
 #endif
 
@@ -34,9 +36,13 @@ size_t       GarbageCollector::GarbageSize = 0;
 double       GarbageCollector::MaxTimeAlotted = 1.0; // 1ms
 
 bool         GarbageCollector::Print = false;
+bool         GarbageCollector::FilterSweepEnabled = false;
+int          GarbageCollector::FilterSweepType = 0;
 
 PUBLIC STATIC void GarbageCollector::Collect() {
     GrayList.clear();
+
+    double grayElapsed = Clock::GetTicks();
 
     // Mark threads (should lock here for safety)
     for (Uint32 t = 0; t < BytecodeObjectManager::ThreadCount; t++) {
@@ -53,6 +59,10 @@ PUBLIC STATIC void GarbageCollector::Collect() {
 
     // Mark global roots
     GrayHashMap(BytecodeObjectManager::Globals);
+
+    for (size_t i = 0; i < BytecodeObjectManager::EjectedGlobals.size(); i++) {
+        GrayValue(BytecodeObjectManager::EjectedGlobals[i]);
+    }
 
     // Mark static objects
     for (Entity* ent = Scene::StaticObjectFirst, *next; ent; ent = next) {
@@ -76,15 +86,34 @@ PUBLIC STATIC void GarbageCollector::Collect() {
         GrayObject(BytecodeObjectManager::AllFunctionList[i]);
     }
 
+    grayElapsed = Clock::GetTicks() - grayElapsed;
+
+    double blackenElapsed = Clock::GetTicks();
+
     // Traverse references
     for (size_t i = 0; i < GrayList.size(); i++) {
         BlackenObject(GrayList[i]);
     }
 
+    blackenElapsed = Clock::GetTicks() - blackenElapsed;
+
+    double freeElapsed = Clock::GetTicks();
+
+    int objectTypeFreed[] = {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    };
+    int objectTypeCounts[] = {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    };
+
     // Collect the white objects
     Obj** object = &GarbageCollector::RootObject;
     while (*object != NULL) {
+        objectTypeCounts[(*object)->Type]++;
+
         if (!((*object)->IsDark)) {
+            objectTypeFreed[(*object)->Type]++;
+
             // This object wasn't reached, so remove it from the list and
             // free it.
             Obj* unreached = *object;
@@ -100,7 +129,27 @@ PUBLIC STATIC void GarbageCollector::Collect() {
         }
     }
 
-    GarbageCollector::NextGC = GarbageCollector::GarbageSize * GC_HEAP_GROW_FACTOR;
+    freeElapsed = Clock::GetTicks() - freeElapsed;
+
+    Log::Print(Log::LOG_VERBOSE, "Sweep: Graying took %.1f ms", grayElapsed);
+    Log::Print(Log::LOG_VERBOSE, "Sweep: Blackening took %.1f ms", blackenElapsed);
+    Log::Print(Log::LOG_VERBOSE, "Sweep: Freeing took %.1f ms", freeElapsed);
+
+#define LOG_ME(yo) Log::Print(Log::LOG_VERBOSE, "Freed %d " #yo " objects out of %d.", objectTypeFreed[yo], objectTypeCounts[yo]);
+
+    LOG_ME(OBJ_BOUND_METHOD);
+    LOG_ME(OBJ_CLASS);
+    LOG_ME(OBJ_FUNCTION);
+    LOG_ME(OBJ_INSTANCE);
+    LOG_ME(OBJ_ARRAY);
+    LOG_ME(OBJ_MAP);
+    LOG_ME(OBJ_NATIVE);
+    LOG_ME(OBJ_STRING);
+    LOG_ME(OBJ_UPVALUE);
+
+    // Max GC Size = 1 MiB
+    // if (GarbageCollector::NextGC < 1024 * 1024)
+        // GarbageCollector::NextGC = GarbageCollector::GarbageSize * GC_HEAP_GROW_FACTOR;
 }
 
 PUBLIC STATIC void GarbageCollector::GrayValue(VMValue value) {

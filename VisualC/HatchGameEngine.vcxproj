@@ -134,6 +134,7 @@ CD ..</Command>
     <ClCompile Include="..\source\engine\diagnostics\Clock.cpp" />
     <ClCompile Include="..\source\engine\diagnostics\Log.cpp" />
     <ClCompile Include="..\source\engine\diagnostics\Memory.cpp" />
+    <ClCompile Include="..\source\Engine\Diagnostics\MemoryPools.cpp" />
     <ClCompile Include="..\source\engine\diagnostics\PerformanceMeasure.cpp" />
     <ClCompile Include="..\source\engine\diagnostics\RemoteDebug.cpp" />
     <ClCompile Include="..\source\engine\extensions\Discord.cpp" />

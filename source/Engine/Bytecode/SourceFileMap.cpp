@@ -123,8 +123,11 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
     Directory::GetFiles(&list, scriptFolder, "*.obj", true);
     Directory::GetFiles(&list, scriptFolder, "*.hsl", true);
 
-    if (list.size() == 0)
+    if (list.size() == 0) {
+        list.clear();
+        list.shrink_to_fit();
         return;
+    }
 
     if (!Directory::Exists("Resources/Objects")) {
         Directory::Create("Resources/Objects");
@@ -148,6 +151,7 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
         SourceFileMap::Checksums->Clear();
         SourceFileMap::ClassMap->WithAll([](Uint32, vector<Uint32>* list) -> void {
             list->clear();
+            list->shrink_to_fit();
             delete list;
         });
         SourceFileMap::ClassMap->Clear();
@@ -267,14 +271,24 @@ PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
         }
     }
 
+    list.clear();
+    list.shrink_to_fit();
+
     #endif
 }
 
 PUBLIC STATIC void SourceFileMap::Dispose() {
-    if (SourceFileMap::Checksums)
+    if (SourceFileMap::Checksums) {
         delete SourceFileMap::Checksums;
-    if (SourceFileMap::ClassMap)
+    }
+    if (SourceFileMap::ClassMap) {
+        SourceFileMap::ClassMap->WithAll([](Uint32, vector<Uint32>* list) -> void {
+            list->clear();
+            list->shrink_to_fit();
+            delete list;
+        });
         delete SourceFileMap::ClassMap;
+    }
 
     SourceFileMap::Initialized = false;
     SourceFileMap::Checksums = NULL;

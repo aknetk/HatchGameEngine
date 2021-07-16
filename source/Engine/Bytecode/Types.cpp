@@ -211,7 +211,6 @@ void              ChunkInit(Chunk* chunk) {
     chunk->Code = NULL;
     chunk->Lines = NULL;
     chunk->Constants = new vector<VMValue>();
-    assert(chunk->Constants != NULL);
 }
 void              ChunkAlloc(Chunk* chunk) {
     if (!chunk->Code)
@@ -223,17 +222,27 @@ void              ChunkAlloc(Chunk* chunk) {
         chunk->Lines = (int*)Memory::TrackedMalloc("Chunk::Lines", sizeof(int) * chunk->Capacity);
     else
         chunk->Lines = (int*)Memory::Realloc(chunk->Lines, sizeof(int) * chunk->Capacity);
+
+    chunk->OwnsMemory = true;
 }
 void              ChunkFree(Chunk* chunk) {
-    if (chunk->Code) {
-        Memory::Free(chunk->Code);
-        chunk->Code = NULL;
-        chunk->Count = 0;
-        chunk->Capacity = 0;
+    if (chunk->OwnsMemory) {
+        if (chunk->Code) {
+            Memory::Free(chunk->Code);
+            chunk->Code = NULL;
+            chunk->Count = 0;
+            chunk->Capacity = 0;
+        }
+        if (chunk->Lines) {
+            Memory::Free(chunk->Lines);
+            chunk->Lines = NULL;
+        }
     }
-    if (chunk->Lines) {
-        Memory::Free(chunk->Lines);
-        chunk->Lines = NULL;
+
+    if (chunk->Constants) {
+        chunk->Constants->clear();
+        chunk->Constants->shrink_to_fit();
+        delete chunk->Constants;
     }
 }
 void              ChunkWrite(Chunk* chunk, Uint8 byte, int line) {

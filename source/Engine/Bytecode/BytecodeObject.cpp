@@ -90,6 +90,11 @@ PUBLIC void BytecodeObject::Link(ObjInstance* instance) {
     LINK_DEC(HitboxOffY);
     LINK_INT(FlipFlag);
 
+    LINK_DEC(SensorX);
+    LINK_DEC(SensorY);
+    LINK_INT(SensorCollided);
+    LINK_INT(SensorAngle);
+
     LINK_BOOL(Active);
     LINK_BOOL(Pauseable);
     LINK_BOOL(Interactable);
@@ -273,7 +278,9 @@ PUBLIC void BytecodeObject::OnAnimationFinish() {
 
 PUBLIC void BytecodeObject::Dispose() {
     Entity::Dispose();
-    Properties->Dispose();
+    if (Properties) {
+        delete Properties;
+    }
     if (Instance) {
         // Instance->Fields->ForAll(BytecodeObjectManager::FreeValue);
         // delete Instance->Fields;

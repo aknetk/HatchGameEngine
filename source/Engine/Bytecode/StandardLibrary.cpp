@@ -188,6 +188,24 @@ namespace LOCAL {
         }
         return value;
     }
+    inline ObjInstance*    GetInstance(VMValue* args, int index, Uint32 threadID) {
+        ObjInstance* value = NULL;
+        if (BytecodeObjectManager::Lock()) {
+            if (!IS_INSTANCE(args[index]))
+                if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false,
+                    "Expected argument %d to be of type %s instead of %s.", index + 1, "Instance", GetTypeString(args[index])) == ERROR_RES_CONTINUE)
+                    BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+
+            value = (ObjInstance*)(AS_OBJECT(args[index]));
+            BytecodeObjectManager::Unlock();
+        }
+        if (!value) {
+            if (BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Argument %d could not be read as type %s.", index + 1,
+                "Instance"))
+                BytecodeObjectManager::Threads[threadID].ReturnFromNative();
+        }
+        return value;
+    }
 
     inline ISprite*        GetSprite(VMValue* args, int index, Uint32 threadID) {
         int where = GetInteger(args, index, threadID);
@@ -1523,17 +1541,19 @@ VMValue Draw_SetTextLineAscent(int argCount, VMValue* args, Uint32 threadID) {
 }
 /***
  * Draw.MeasureText
- * \desc Measures Extended UTF8 text using a sprite or font.
+ * \desc Measures Extended UTF8 text using a sprite or font and stores max width and max height into the array.
+ * \param outArray (Array): Array to output size values to.
  * \param sprite (Integer): Index of the loaded sprite to be used as text.
  * \param text (String): Text to measure.
- * \return Returns an array containing max width and max height.
+ * \return Returns the array inputted into the function.
  * \ns Draw
  */
 VMValue Draw_MeasureText(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_ARGCOUNT(2);
+    CHECK_ARGCOUNT(3);
 
-    ISprite* sprite = GET_ARG(0, GetSprite);
-    char*    text   = GET_ARG(1, GetString);
+    ObjArray* array = GET_ARG(0, GetArray);
+    ISprite* sprite = GET_ARG(1, GetSprite);
+    char*    text   = GET_ARG(2, GetString);
 
     float x = 0.0, y = 0.0;
     float maxW = 0.0, maxH = 0.0;
@@ -1556,7 +1576,7 @@ VMValue Draw_MeasureText(int argCount, VMValue* args, Uint32 threadID) {
     }
 
     if (BytecodeObjectManager::Lock()) {
-        ObjArray* array = NewArray();
+        array->Values->clear();
         array->Values->push_back(DECIMAL_VAL(maxW));
         array->Values->push_back(DECIMAL_VAL(maxH));
         BytecodeObjectManager::Unlock();
@@ -1566,23 +1586,25 @@ VMValue Draw_MeasureText(int argCount, VMValue* args, Uint32 threadID) {
 }
 /***
  * Draw.MeasureTextWrapped
- * \desc Measures wrapped Extended UTF8 text using a sprite or font.
+ * \desc Measures wrapped Extended UTF8 text using a sprite or font and stores max width and max height into the array.
+ * \param outArray (Array): Array to output size values to.
  * \param sprite (Integer): Index of the loaded sprite to be used as text.
  * \param text (String): Text to measure.
  * \param maxWidth (Number): Max width that a line can be.
  * \paramOpt maxLines (Integer): Max number of lines to measure.
- * \return Returns an array containing max width and max height.
+ * \return Returns the array inputted into the function.
  * \ns Draw
  */
 VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_AT_LEAST_ARGCOUNT(3);
+    CHECK_AT_LEAST_ARGCOUNT(4);
 
-    ISprite* sprite = GET_ARG(0, GetSprite);
-    char*    text   = GET_ARG(1, GetString);
-    float    max_w  = GET_ARG(2, GetDecimal);
+    ObjArray* array = GET_ARG(0, GetArray);
+    ISprite* sprite = GET_ARG(1, GetSprite);
+    char*    text   = GET_ARG(2, GetString);
+    float    max_w  = GET_ARG(3, GetDecimal);
     int      maxLines = 0x7FFFFFFF;
-    if (argCount > 3)
-        maxLines = GET_ARG(3, GetInteger);
+    if (argCount > 4)
+        maxLines = GET_ARG(4, GetInteger);
 
     int word = 0;
     char* linestart = text;
@@ -1637,7 +1659,7 @@ VMValue Draw_MeasureTextWrapped(int argCount, VMValue* args, Uint32 threadID) {
 
     FINISH:
     if (BytecodeObjectManager::Lock()) {
-        ObjArray* array = NewArray();
+        array->Values->clear();
         array->Values->push_back(DECIMAL_VAL(maxW));
         array->Values->push_back(DECIMAL_VAL(maxH));
         BytecodeObjectManager::Unlock();
@@ -3008,7 +3030,7 @@ VMValue Instance_Create(int argCount, VMValue* args, Uint32 threadID) {
 
     ObjectList* objectList = NULL;
     if (!Scene::ObjectLists->Exists(objectName)) {
-        objectList = new ObjectList();
+        objectList = new (nothrow) ObjectList();
         strcpy(objectList->ObjectName, objectName);
         objectList->SpawnFunction = (Entity* (*)())BytecodeObjectManager::GetSpawnFunction(CombinedHash::EncryptString(objectName), objectName);
         Scene::ObjectLists->Put(objectName, objectList);
@@ -4414,6 +4436,7 @@ bool    GetResourceListSpace(vector<ResourceType*>* list, ResourceType* resource
         }
         if ((*list)[i]->FilenameHash == resource->FilenameHash) {
             *index = i;
+            delete resource;
             return true;
         }
     }
@@ -4431,7 +4454,7 @@ VMValue Resources_LoadSprite(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4446,7 +4469,7 @@ VMValue Resources_LoadSprite(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL((int)index);
     else if (emptySlot) (*list)[index] = resource; else list->push_back(resource);
 
-    resource->AsSprite = new ISprite(filename);
+    resource->AsSprite = new (nothrow) ISprite(filename);
     return INTEGER_VAL((int)index);
 }
 /***
@@ -4461,7 +4484,7 @@ VMValue Resources_LoadImage(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4472,7 +4495,7 @@ VMValue Resources_LoadImage(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL((int)index);
     else if (emptySlot) (*list)[index] = resource; else list->push_back(resource);
 
-    resource->AsImage = new Image(filename);
+    resource->AsImage = new (nothrow) Image(filename);
     if (!resource->AsImage->TexturePtr) {
         delete resource->AsImage;
         delete resource;
@@ -4495,7 +4518,7 @@ VMValue Resources_LoadFont(int argCount, VMValue* args, Uint32 threadID) {
     char*  filename = GET_ARG(0, GetString);
     int    pixel_sz = (int)GET_ARG(1, GetDecimal);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->FilenameHash = CRC32::EncryptData(&pixel_sz, sizeof(int), resource->FilenameHash);
     resource->UnloadPolicy = GET_ARG(2, GetInteger);
@@ -4610,7 +4633,7 @@ VMValue Resources_LoadModel(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4628,7 +4651,7 @@ VMValue Resources_LoadModel(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL(-1);
     }
 
-    resource->AsModel = new IModel();
+    resource->AsModel = new (nothrow) IModel();
     if (!resource->AsModel->Load(stream, filename)) {
         delete resource->AsModel;
         resource->AsModel = NULL;
@@ -4652,7 +4675,7 @@ VMValue Resources_LoadMusic(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4663,7 +4686,7 @@ VMValue Resources_LoadMusic(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL((int)index);
     else if (emptySlot) (*list)[index] = resource; else list->push_back(resource);
 
-    resource->AsMusic = new ISound(filename);
+    resource->AsMusic = new (nothrow) ISound(filename);
     return INTEGER_VAL((int)index);
 }
 /***
@@ -4678,7 +4701,7 @@ VMValue Resources_LoadSound(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4689,7 +4712,7 @@ VMValue Resources_LoadSound(int argCount, VMValue* args, Uint32 threadID) {
         return INTEGER_VAL((int)index);
     else if (emptySlot) (*list)[index] = resource; else list->push_back(resource);
 
-    resource->AsMusic = new ISound(filename);
+    resource->AsSound = new (nothrow) ISound(filename);
     return INTEGER_VAL((int)index);
 }
 /***
@@ -4704,7 +4727,7 @@ VMValue Resources_LoadVideo(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     char*  filename = GET_ARG(0, GetString);
 
-    ResourceType* resource = new ResourceType;
+    ResourceType* resource = new (nothrow) ResourceType();
     resource->FilenameHash = CRC32::EncryptString(filename);
     resource->UnloadPolicy = GET_ARG(1, GetInteger);
 
@@ -4777,7 +4800,7 @@ VMValue Resources_LoadVideo(int argCount, VMValue* args, Uint32 threadID) {
         Log::Print(Log::LOG_INFO, "    Channels:    %d", playerInfo.Audio.Output.Channels);
     }
 
-    MediaBag* newMediaBag = new MediaBag;
+    MediaBag* newMediaBag = new (nothrow) MediaBag;
     newMediaBag->Source = Source;
     newMediaBag->Player = Player;
     newMediaBag->VideoTexture = VideoTexture;
@@ -6363,24 +6386,26 @@ VMValue TileCollision_PointExtended(int argCount, VMValue* args, Uint32 threadID
  * \param length (Integer): How many pixels to check.
  * \param collisionField (Integer): Low (0) or high (1) field to check.
  * \param compareAngle (Integer): Only return a collision if the angle is within 0x20 this value, otherwise if angle comparison is not desired, set this value to -1.
- * \return Returns a Map value with the following structure: <br/>\
-<pre class="code">{ <br/>\
-    X: (Number), // X Position where the sensor collided if it did. <br/>\
-    Y: (Number), // Y Position where the sensor collided if it did. <br/>\
-    Collided: (Boolean), // Whether or not the sensor collided. <br/>\
-    Angle: (Integer) // Tile angle at the collision. <br/>\
-}\
+ * \param instance (Instance): Instance to write the values to.
+ * \return Returns <code>false</code> if no tile collision, but if <code>true</code>: <br/>\
+<pre class="code"><br/>\
+    instance.SensorX: (Number), // X Position where the sensor collided if it did. <br/>\
+    instance.SensorY: (Number), // Y Position where the sensor collided if it did. <br/>\
+    instance.SensorCollided: (Boolean), // Whether or not the sensor collided. <br/>\
+    instance.SensorAngle: (Integer) // Tile angle at the collision. <br/>\
+\
 </pre>
  * \ns TileCollision
  */
 VMValue TileCollision_Line(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_ARGCOUNT(6);
+    CHECK_ARGCOUNT(7);
     int x = (int)std::floor(GET_ARG(0, GetDecimal));
     int y = (int)std::floor(GET_ARG(1, GetDecimal));
     int angleMode = GET_ARG(2, GetInteger);
     int length = (int)GET_ARG(3, GetDecimal);
     int collisionField = GET_ARG(4, GetInteger);
     int compareAngle = GET_ARG(5, GetInteger);
+    ObjInstance* entity = GET_ARG(6, GetInstance);
 
     Sensor sensor;
     sensor.X = x;
@@ -6393,17 +6418,24 @@ VMValue TileCollision_Line(int argCount, VMValue* args, Uint32 threadID) {
     Scene::CollisionInLine(x, y, angleMode, length, collisionField, compareAngle > -1, &sensor);
 
     if (BytecodeObjectManager::Lock()) {
-        ObjMap*    mapSensor = NewMap();
+        /*ObjMap*    mapSensor = NewMap();
 
         mapSensor->Values->Put("X", DECIMAL_VAL((float)sensor.X));
         mapSensor->Values->Put("Y", DECIMAL_VAL((float)sensor.Y));
         mapSensor->Values->Put("Collided", INTEGER_VAL(sensor.Collided));
         mapSensor->Values->Put("Angle", INTEGER_VAL(sensor.Angle));
 
-        BytecodeObjectManager::Unlock();
-        return OBJECT_VAL(mapSensor);
+        BytecodeObjectManager::Unlock();*/
+        if (entity->EntityPtr) {
+            auto ent = (Entity*)entity->EntityPtr;
+            ent->SensorX = (float)sensor.X;
+            ent->SensorY = (float)sensor.Y;
+            ent->SensorCollided = sensor.Collided;
+            ent->SensorAngle = sensor.Angle;
+            return INTEGER_VAL(sensor.Collided);
+        }
     }
-    return NULL_VAL;
+    return INTEGER_VAL(false);
 }
 // #endregion
 
