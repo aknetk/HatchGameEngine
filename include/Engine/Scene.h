@@ -27,6 +27,9 @@ class Entity;
 class Scene {
 public:
     static Uint32                BackgroundColor;
+    static Image*                BackgroundImage;
+    static Texture*              BackgroundImageTexture;
+    static bool                  UseBackgroundImage;
     static int                   ShowTileCollisionFlag;
     static int                   ShowObjectRegions;
     static HashMap<ObjectList*>* ObjectLists;

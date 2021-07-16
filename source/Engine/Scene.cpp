@@ -21,6 +21,9 @@ need_t Entity;
 class Scene {
 public:
     static Uint32                BackgroundColor;
+    static Image*                BackgroundImage;
+    static Texture*              BackgroundImageTexture;
+    static bool                  UseBackgroundImage;
     static int                   ShowTileCollisionFlag;
     static int                   ShowObjectRegions;
 
@@ -116,6 +119,9 @@ DrawGroupList*        Scene::PriorityLists = NULL;
 
 // Rendering variables
 Uint32                Scene::BackgroundColor = 0x000000;
+Image*                Scene::BackgroundImage = NULL;
+Texture*              Scene::BackgroundImageTexture = NULL;
+bool                  Scene::UseBackgroundImage = false;
 int                   Scene::ShowTileCollisionFlag = 0;
 int                   Scene::ShowObjectRegions = 0;
 
@@ -557,6 +563,40 @@ PUBLIC STATIC void Scene::Render() {
     int viewCount = 8;
     int activeViews = Scene::ActiveViews;
 
+    if (Scene::UseBackgroundImage && Scene::BackgroundImage && Scene::BackgroundImage->TexturePtr) {
+        Texture* background = Scene::BackgroundImage->TexturePtr;
+        float back_x = 0.0f;
+        float back_y = 0.0f;
+        float back_w, back_h;
+
+        if (win_w / background->Width < win_h / background->Height) {
+            back_w = win_w;
+            back_h = win_w * background->Height / background->Width;
+        }
+        else {
+            back_w = win_h * background->Width / background->Height;
+            back_h = win_h;
+        }
+        back_x = (win_w - back_w) * 0.5f;
+        back_y = (win_h - back_h) * 0.5f;
+
+        Texture* texture = Scene::BackgroundImageTexture;
+        if (texture == NULL) {
+            texture = Graphics::CreateTextureFromPixels(background->Width, background->Height, background->Pixels, background->Width * sizeof(Uint32));
+            Scene::BackgroundImageTexture = texture;
+        }
+
+        bool texBlend = Graphics::TextureBlend;
+        Graphics::TextureBlend = false;
+        Graphics::SetBlendMode(
+            BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA,
+            BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
+        Graphics::DrawTexture(texture,
+            0.0, 0.0, background->Width, background->Height,
+            back_x, back_y + Graphics::PixelOffset, back_w, back_h + Graphics::PixelOffset);
+        Graphics::TextureBlend = texBlend;
+    }
+
     for (int i = 0; i < viewCount; i++) {
         View* currentView = &Scene::Views[i];
         if (!currentView->Active)
@@ -874,6 +914,10 @@ PUBLIC STATIC void Scene::Restart() {
     currentView->Z = 0.0f;
     Scene::Frame = 0;
     Scene::Paused = false;
+
+    Scene::BackgroundImage = NULL;
+    Scene::BackgroundImageTexture = NULL;
+    Scene::UseBackgroundImage = false;
 
     // Deactivate extra views
     for (int i = 1; i < 8; i++) {

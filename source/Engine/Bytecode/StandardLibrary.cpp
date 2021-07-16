@@ -5514,6 +5514,28 @@ VMValue Scene_SetTileScanline(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
 
+/***
+ * Scene.SetBackgroundImage
+ * \desc Sets the scene's background images.
+ * \param image (Integer): Index of the background image.
+ * \ns Scene
+ */
+VMValue Scene_SetBackgroundImage(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    Scene::BackgroundImage = Scene::ImageList[GET_ARG(0, GetInteger)]->AsImage;
+    return NULL_VAL;
+}
+/***
+ * Scene.SetUseBackgroundImage
+ * \desc Enables or disables the scene's background image
+ * \param image (Integer): Index of the background image.
+ * \ns Scene
+ */
+VMValue Scene_SetUseBackgroundImage(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    Scene::UseBackgroundImage = !!GET_ARG(0, GetInteger);
+    return NULL_VAL;
+}
 
 /***
  * Scene.IsPaused
@@ -8016,6 +8038,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Scene, SetLayerTileDeformOffsets);
     DEF_NATIVE(Scene, SetLayerCustomScanlineFunction);
     DEF_NATIVE(Scene, SetTileScanline);
+    DEF_NATIVE(Scene, SetBackgroundImage);
+    DEF_NATIVE(Scene, SetUseBackgroundImage);
     DEF_NATIVE(Scene, IsPaused);
 
     BytecodeObjectManager::GlobalConstInteger(NULL, "DrawBehavior_HorizontalParallax", DrawBehavior_HorizontalParallax);
