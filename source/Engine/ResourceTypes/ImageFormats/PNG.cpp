@@ -31,7 +31,13 @@ void png_read_fn(png_structp ctx, png_bytep area, png_size_t size) {
     Stream* stream = (Stream*)png_get_io_ptr(ctx);
     stream->ReadBytes(area, size);
 }
+#else
+#define STB_IMAGE_IMPLEMENTATION
+#include <Libraries/stb_image.h>
 #endif
+
+
+
 PUBLIC STATIC  PNG*   PNG::Load(const char* filename) {
 #ifdef USING_LIBPNG
     PNG* png = new PNG;
@@ -174,6 +180,108 @@ PUBLIC STATIC  PNG*   PNG::Load(const char* filename) {
         if (stream)
             stream->Close();
         return png;
+#else
+    PNG* png = new PNG;
+    Stream* stream = NULL;
+    Uint32* pixelData = NULL;
+    int num_channels;
+    int width, height;
+    Uint32 Rmask, Gmask, Bmask, Amask;
+    bool doConvert;
+    Uint8* buffer = NULL;
+    size_t buffer_len = 0;
+
+    if (strncmp(filename, "file://", 7) == 0)
+        stream = FileStream::New(filename + 7, FileStream::READ_ACCESS);
+    else
+        stream = ResourceStream::New(filename);
+    if (!stream) {
+        Log::Print(Log::LOG_ERROR, "Could not open file '%s'!", filename);
+        goto PNG_Load_FAIL;
+    }
+
+    buffer_len = stream->Length();
+    buffer = (Uint8*)malloc(buffer_len);
+    stream->ReadBytes(buffer, buffer_len);
+
+    pixelData = (Uint32*)stbi_load_from_memory(buffer, buffer_len, &width, &height, &num_channels, STBI_rgb_alpha);
+    if (!pixelData) {
+        Log::Print(Log::LOG_ERROR, "stbi_load failed: %s", stbi_failure_reason());
+        goto PNG_Load_FAIL;
+    }
+
+    png->Width = width;
+    png->Height = height;
+    png->Data = (Uint32*)Memory::TrackedMalloc("PNG::Data", png->Width * png->Height * sizeof(Uint32));
+    if (Graphics::UsePalettes) {
+        png->Colors = (Uint32*)Memory::TrackedMalloc("PNG::Colors", 0x100 * sizeof(Uint32));
+    }
+    png->TransparentColorIndex = -1;
+
+    doConvert = false;
+    if (Graphics::PreferredPixelFormat == SDL_PIXELFORMAT_ABGR8888) {
+        Amask = (num_channels == 4) ? 0xFF000000 : 0;
+        Bmask = 0x00FF0000;
+        Gmask = 0x0000FF00;
+        Rmask = 0x000000FF;
+        if (num_channels != 4)
+            doConvert = true;
+    }
+    else if (Graphics::PreferredPixelFormat == SDL_PIXELFORMAT_ARGB8888) {
+        Amask = (num_channels == 4) ? 0xFF000000 : 0;
+        Rmask = 0x00FF0000;
+        Gmask = 0x0000FF00;
+        Bmask = 0x000000FF;
+        doConvert = true;
+    }
+
+    if (doConvert) {
+        Uint8* px;
+        Uint32 a, b, g, r;
+        int pc = 0, size = png->Width * png->Height;
+        if (Amask) {
+            for (Uint32* i = pixelData; pc < size; i++, pc++) {
+                px = (Uint8*)i;
+                r = px[0] | px[0] << 8 | px[0] << 16 | px[0] << 24;
+                g = px[1] | px[1] << 8 | px[1] << 16 | px[1] << 24;
+                b = px[2] | px[2] << 8 | px[2] << 16 | px[2] << 24;
+                a = px[3] | px[3] << 8 | px[3] << 16 | px[3] << 24;
+                png->Data[pc] = (r & Rmask) | (g & Gmask) | (b & Bmask) | (a & Amask);
+            }
+        }
+        else {
+            for (Uint8* i = (Uint8*)pixelData; pc < size; i += 3, pc++) {
+                px = (Uint8*)i;
+                r = px[0] | px[0] << 8 | px[0] << 16 | px[0] << 24;
+                g = px[1] | px[1] << 8 | px[1] << 16 | px[1] << 24;
+                b = px[2] | px[2] << 8 | px[2] << 16 | px[2] << 24;
+                png->Data[pc] = (r & Rmask) | (g & Gmask) | (b & Bmask) | 0xFF000000;
+            }
+        }
+    }
+    else {
+        memcpy(png->Data, pixelData, png->Width * png->Height * sizeof(Uint32));
+    }
+
+    png->Paletted = false;
+
+
+
+
+    goto PNG_Load_Success;
+
+PNG_Load_FAIL:
+    delete png;
+    png = NULL;
+
+PNG_Load_Success:
+    if (buffer)
+        free(buffer);
+    if (pixelData)
+        stbi_image_free(pixelData);
+    if (stream)
+        stream->Close();
+    return png;
 #endif
 	return NULL;
 }

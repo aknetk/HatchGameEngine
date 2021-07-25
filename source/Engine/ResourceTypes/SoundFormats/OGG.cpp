@@ -18,6 +18,7 @@ private:
 #include <Engine/IO/ResourceStream.h>
 #include <Engine/ResourceTypes/SoundFormats/OGG.h>
 
+#ifdef USING_LIBOGG
 #define OV_EXCLUDE_STATIC_CALLBACKS
 #if defined(OGG_HEADER)
     #include OGG_HEADER
@@ -26,6 +27,9 @@ private:
 #else
     #include <vorbis/vorbisfile.h>
 #endif
+#else
+#include <Libraries/stb_vorbis.h>
+#endif
 
 
 #ifdef USING_LIBOGG
@@ -33,6 +37,11 @@ struct VorbisGroup {
 	OggVorbis_File File;
 	vorbis_info*   Info = NULL;
 	int            Bitstream;
+};
+#else
+struct VorbisGroup {
+    stb_vorbis* VorbisSTB;
+    void* FileBlock;
 };
 #endif
 
@@ -70,9 +79,8 @@ PRIVATE STATIC long        OGG::StaticTell(void* ptr) {
 }
 
 PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
-#ifdef USING_LIBOGG
     VorbisGroup* vorbis;
-#endif
+
     OGG* ogg = NULL;
     class Stream* stream = ResourceStream::New(filename);
     if (!stream) {
@@ -143,6 +151,107 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
     ogg->LoadFinish();
 
     goto OGG_Load_SUCCESS;
+#else
+    ogg = new (nothrow) OGG;
+    if (!ogg) {
+        goto OGG_Load_FAIL;
+    }
+
+    // ogg->StreamPtr = stream;
+
+    vorbis = (VorbisGroup*)ogg->Vorbis;
+
+    size_t fileLength = stream->Length();
+    void* fileData = malloc(fileLength);
+    stream->ReadBytes(fileData, fileLength);
+
+    vorbis->FileBlock = fileData;
+
+    int error;
+    vorbis->VorbisSTB = stb_vorbis_open_memory((Uint8*)vorbis->FileBlock, fileLength, &error, NULL);
+    if (!vorbis->VorbisSTB) {
+        Log::Print(Log::LOG_ERROR, "Could not open Vorbis stream for %s!", filename);
+
+        switch (error) {
+        case VORBIS_need_more_data:
+            Log::Print(Log::LOG_ERROR, "VORBIS_need_more_data");
+            break;
+        case VORBIS_invalid_api_mixing:
+            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_api_mixing");
+            break;
+        case VORBIS_outofmem:
+            Log::Print(Log::LOG_ERROR, "VORBIS_outofmem");
+            break;
+        case VORBIS_feature_not_supported:
+            Log::Print(Log::LOG_ERROR, "VORBIS_feature_not_supported");
+            break;
+        case VORBIS_too_many_channels:
+            Log::Print(Log::LOG_ERROR, "VORBIS_too_many_channels");
+            break;
+        case VORBIS_file_open_failure:
+            Log::Print(Log::LOG_ERROR, "VORBIS_file_open_failure");
+            break;
+        case VORBIS_seek_without_length:
+            Log::Print(Log::LOG_ERROR, "VORBIS_seek_without_length");
+            break;
+        case VORBIS_unexpected_eof:
+            Log::Print(Log::LOG_ERROR, "VORBIS_unexpected_eof");
+            break;
+        case VORBIS_seek_invalid:
+            Log::Print(Log::LOG_ERROR, "VORBIS_seek_invalid");
+            break;
+        case VORBIS_invalid_setup:
+            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_setup");
+            break;
+        case VORBIS_invalid_stream:
+            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_stream");
+            break;
+        case VORBIS_missing_capture_pattern:
+            Log::Print(Log::LOG_ERROR, "VORBIS_missing_capture_pattern");
+            break;
+        case VORBIS_invalid_stream_structure_version:
+            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_stream_structure_version");
+            break;
+        case VORBIS_continued_packet_flag_invalid:
+            Log::Print(Log::LOG_ERROR, "VORBIS_continued_packet_flag_invalid");
+            break;
+        case VORBIS_incorrect_stream_serial_number:
+            Log::Print(Log::LOG_ERROR, "VORBIS_incorrect_stream_serial_number");
+            break;
+        case VORBIS_invalid_first_page:
+            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_first_page");
+            break;
+        case VORBIS_bad_packet_type:
+            Log::Print(Log::LOG_ERROR, "VORBIS_bad_packet_type");
+            break;
+        case VORBIS_cant_find_last_page:
+            Log::Print(Log::LOG_ERROR, "VORBIS_cant_find_last_page");
+            break;
+        case VORBIS_seek_failed:
+            Log::Print(Log::LOG_ERROR, "VORBIS_seek_failed");
+            break;
+        case VORBIS_ogg_skeleton_not_supported:
+            Log::Print(Log::LOG_ERROR, "VORBIS_ogg_skeleton_not_supported");
+            break;
+        }
+        
+        goto OGG_Load_FAIL;
+    }
+
+    auto info = stb_vorbis_get_info(vorbis->VorbisSTB);
+
+    memset(&ogg->InputFormat, 0, sizeof(SDL_AudioSpec));
+    ogg->InputFormat.format = AUDIO_S16;
+    ogg->InputFormat.channels = info.channels;
+    ogg->InputFormat.freq = (int)info.sample_rate;
+    ogg->InputFormat.samples = 4096;
+
+    ogg->TotalPossibleSamples = (int)stb_vorbis_stream_length_in_samples(vorbis->VorbisSTB);
+
+    // Common
+    ogg->LoadFinish();
+
+    goto OGG_Load_SUCCESS;
 #endif
 
     OGG_Load_FAIL:
@@ -152,10 +261,22 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
     }
     ogg = NULL;
 
-    OGG_Load_SUCCESS:
+OGG_Load_SUCCESS:
+    stream->Close();
     return ogg;
 }
 
+PUBLIC        size_t       OGG::SeekSample(int index) {
+    VorbisGroup* vorbis = (VorbisGroup*)this->Vorbis;
+#ifdef USING_LIBOGG
+    ov_pcm_seek(&vorbis->File, index);
+#else
+    stb_vorbis_seek(vorbis->VorbisSTB, index);
+#endif
+
+    SampleIndex = (size_t)index;
+    return SampleIndex;
+}
 PUBLIC        int          OGG::GetSamples(Uint8* buffer, size_t count) {
 #ifdef USING_LIBOGG
     int read;
@@ -199,8 +320,37 @@ PUBLIC        int          OGG::GetSamples(Uint8* buffer, size_t count) {
     total /= SampleSize;
     return total;
 #else
-    return 0;
+    int read;
+    Uint32 total = 0,
+        bytesForSample = 0;
+
+    if (count > TotalPossibleSamples - Samples.size())
+        count = TotalPossibleSamples - Samples.size();
+
+    size_t remainingBytes = count * SampleSize;
+    size_t sampleSizeForOneChannel = SampleSize / InputFormat.channels;
+
+    // char* buffer = (char*)SampleBuffer + Samples.size() * SampleSize;
+    // char* bufferStartSample = buffer;
+
+    VorbisGroup* vorbis = (VorbisGroup*)this->Vorbis;
+
+    while (remainingBytes && (read =
+        stb_vorbis_get_samples_short_interleaved(vorbis->VorbisSTB, 2, (short*)buffer, remainingBytes / sizeof(short)) * sizeof(short) * 2
+        )) {
+        if (read < 0)
+            return 0;
+        if (read == 0)
+            break;
+
+        remainingBytes -= read;
+        buffer += read;
+        total += read;
+    }
+    total /= SampleSize;
+    return total;
 #endif
+    return 0;
 }
 
 PUBLIC        void         OGG::Dispose() {
@@ -208,6 +358,12 @@ PUBLIC        void         OGG::Dispose() {
 	// OGG specific clean up functions
 	VorbisGroup* vorbis = (VorbisGroup*)this->Vorbis;
 	ov_clear(&vorbis->File);
+#else
+    VorbisGroup* vorbis = (VorbisGroup*)this->Vorbis;
+    if (vorbis->FileBlock) {
+        free(vorbis->FileBlock);
+    }
+    stb_vorbis_close(vorbis->VorbisSTB);
 #endif
     // Common cleanup
     SoundFormat::Dispose();
