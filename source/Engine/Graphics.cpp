@@ -830,7 +830,7 @@ PUBLIC STATIC void     Graphics::MakeFrameBufferID(ISprite* sprite, AnimFrame* f
 }
 
 PUBLIC STATIC bool     Graphics::SpriteRangeCheck(ISprite* sprite, int animation, int frame) {
-	#ifdef DEBUG
+	//#ifdef DEBUG
 	if (!sprite) return true;
 	if (animation < 0 || animation >= (int)sprite->Animations.size()) {
 		BytecodeObjectManager::Threads[0].ThrowRuntimeError(false, "Animation %d does not exist in sprite %s!", animation, sprite->Filename);
@@ -840,6 +840,6 @@ PUBLIC STATIC bool     Graphics::SpriteRangeCheck(ISprite* sprite, int animation
 		BytecodeObjectManager::Threads[0].ThrowRuntimeError(false, "Frame %d in animation \"%s\" does not exist in sprite %s!", frame, sprite->Animations[animation].Name, sprite->Filename);
 		return true;
 	}
-	#endif
+	//#endif
 	return false;
 }

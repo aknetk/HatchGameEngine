@@ -2854,9 +2854,9 @@ PUBLIC bool          Compiler::Compile(const char* filename, const char* source,
     if (!stream) return false;
 
     bool doLineNumbers = false;
-    #ifdef DEBUG
+    // #ifdef DEBUG
     doLineNumbers = true;
-    #endif
+    // #endif
 
     stream->WriteBytes((char*)Compiler::Magic, 4);
     stream->WriteByte(0x00);

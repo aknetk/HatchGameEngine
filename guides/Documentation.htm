@@ -239,7 +239,6 @@
                     <li><a href="#Reference_File_Exists">File.Exists</a></li>
                     <li><a href="#Reference_File_ReadAllText">File.ReadAllText</a></li>
                     <li><a href="#Reference_File_WriteAllText">File.WriteAllText</a></li>
-                    <li><a href="#Reference_Resources_ReadAllText">Resources.ReadAllText</a></li>
                 </ul>
             </p>
             <p id="Reference_HTTP">
@@ -381,6 +380,7 @@
                     <li><a href="#Reference_Resources_LoadSound">Resources.LoadSound</a></li>
                     <li><a href="#Reference_Resources_LoadVideo">Resources.LoadVideo</a></li>
                     <li><a href="#Reference_Resources_FileExists">Resources.FileExists</a></li>
+                    <li><a href="#Reference_Resources_ReadAllText">Resources.ReadAllText</a></li>
                     <li><a href="#Reference_Resources_UnloadImage">Resources.UnloadImage</a></li>
                 </ul>
             </p>
@@ -1137,30 +1137,32 @@
         <hr/>
         <p id="Reference_Draw_MeasureText">
         <h2 style="margin-bottom: 8px;">Draw.MeasureText</h2>
-        <code>Draw.MeasureText(sprite, text)</code>
-        <div style="margin-top: 8px; font-size: 14px;">Measures Extended UTF8 text using a sprite or font.</div>
+        <code>Draw.MeasureText(outArray, sprite, text)</code>
+        <div style="margin-top: 8px; font-size: 14px;">Measures Extended UTF8 text using a sprite or font and stores max width and max height into the array.</div>
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
+        <li>outArray (Array): Array to output size values to.</li>
         <li>sprite (Integer): Index of the loaded sprite to be used as text.</li>
         <li>text (String): Text to measure.</li>
         </ul>
         <div style="font-weight: bold; margin-top: 8px;">Returns:</div>
-        <div style="font-size: 14px;">Returns an array containing max width and max height.</div>
+        <div style="font-size: 14px;">Returns the array inputted into the function.</div>
         </p>
         <hr/>
         <p id="Reference_Draw_MeasureTextWrapped">
         <h2 style="margin-bottom: 8px;">Draw.MeasureTextWrapped</h2>
-        <code>Draw.MeasureTextWrapped(sprite, text, maxWidth[, maxLines])</code>
-        <div style="margin-top: 8px; font-size: 14px;">Measures wrapped Extended UTF8 text using a sprite or font.</div>
+        <code>Draw.MeasureTextWrapped(outArray, sprite, text, maxWidth[, maxLines])</code>
+        <div style="margin-top: 8px; font-size: 14px;">Measures wrapped Extended UTF8 text using a sprite or font and stores max width and max height into the array.</div>
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
+        <li>outArray (Array): Array to output size values to.</li>
         <li>sprite (Integer): Index of the loaded sprite to be used as text.</li>
         <li>text (String): Text to measure.</li>
         <li>maxWidth (Number): Max width that a line can be.</li>
         <li>maxLines (Integer): Max number of lines to measure.</li>
         </ul>
         <div style="font-weight: bold; margin-top: 8px;">Returns:</div>
-        <div style="font-size: 14px;">Returns an array containing max width and max height.</div>
+        <div style="font-size: 14px;">Returns the array inputted into the function.</div>
         </p>
         <hr/>
         <p id="Reference_Draw_Text">
@@ -3726,7 +3728,7 @@
         <hr/>
         <p id="Reference_TileCollision_Line">
         <h2 style="margin-bottom: 8px;">TileCollision.Line</h2>
-        <code>TileCollision.Line(x, y, directionType, length, collisionField, compareAngle)</code>
+        <code>TileCollision.Line(x, y, directionType, length, collisionField, compareAngle, instance)</code>
         <div style="margin-top: 8px; font-size: 14px;">Checks for a tile collision in a straight line, returning the angle value if successful, <code>-1</code> if otherwise.</div>
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
@@ -3736,9 +3738,10 @@
         <li>length (Integer): How many pixels to check.</li>
         <li>collisionField (Integer): Low (0) or high (1) field to check.</li>
         <li>compareAngle (Integer): Only return a collision if the angle is within 0x20 this value, otherwise if angle comparison is not desired, set this value to -1.</li>
+        <li>instance (Instance): Instance to write the values to.</li>
         </ul>
         <div style="font-weight: bold; margin-top: 8px;">Returns:</div>
-        <div style="font-size: 14px;">Returns a Map value with the following structure: <br/><pre class="code">{ <br/>    X: (Number), // X Position where the sensor collided if it did. <br/>    Y: (Number), // Y Position where the sensor collided if it did. <br/>    Collided: (Boolean), // Whether or not the sensor collided. <br/>    Angle: (Integer) // Tile angle at the collision. <br/>}</pre></div>
+        <div style="font-size: 14px;">Returns <code>false</code> if no tile collision, but if <code>true</code>: <br/><pre class="code"><br/>    instance.SensorX: (Number), // X Position where the sensor collided if it did. <br/>    instance.SensorY: (Number), // Y Position where the sensor collided if it did. <br/>    instance.SensorCollided: (Boolean), // Whether or not the sensor collided. <br/>    instance.SensorAngle: (Integer) // Tile angle at the collision. <br/></pre></div>
         </p>
         <hr/>
         <p id="Reference_TileInfo_SetSpriteInfo">

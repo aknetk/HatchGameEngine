@@ -89,7 +89,7 @@ PUBLIC STATIC void SourceFileMap::CheckInit() {
         Log::Print(Log::LOG_ERROR, "Could not find ClassMap!");
     }
 
-    #ifdef DEBUG
+    #ifndef DEBUGA
 
     if (File::Exists("SourceFileMap.bin")) {
         char*  bytes;
@@ -106,7 +106,7 @@ PUBLIC STATIC void SourceFileMap::CheckInit() {
 PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
     SourceFileMap::CheckInit();
 
-    #ifdef DEBUG
+    #ifndef DEBUGA
     bool anyChanges = false;
 
     anyChanges |= PreventObjectSaving;

@@ -4832,7 +4832,7 @@ VMValue Resources_FileExists(int argCount, VMValue* args, Uint32 threadID) {
  * \desc Reads all text from the given filename.
  * \param path (String): The path of the resource to read.
  * \return Returns all the text in the resource as a String value if it can be read, otherwise it returns a <code>null</code> value if it cannot be read.
- * \ns File
+ * \ns Resources
  */
 VMValue Resources_ReadAllText(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
@@ -7836,7 +7836,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Resources, LoadSound);
     DEF_NATIVE(Resources, LoadVideo);
     DEF_NATIVE(Resources, FileExists);
-
+    DEF_NATIVE(Resources, ReadAllText);
     DEF_NATIVE(Resources, UnloadImage);
 
     BytecodeObjectManager::GlobalConstInteger(NULL, "SCOPE_SCENE", 0);
