@@ -16,6 +16,8 @@ public:
 
     static SDL_Window* Window;
     static char        WindowTitle[256];
+    static int         WindowWidth;
+    static int         WindowHeight;
     static Platforms   Platform;
 
     static int         UpdatesPerFrame;
@@ -79,7 +81,8 @@ bool        Application::GameStart = false;
 
 SDL_Window* Application::Window = NULL;
 char        Application::WindowTitle[256];
-
+int         Application::WindowWidth = 640;
+int         Application::WindowHeight = 480;
 
 int         Application::UpdatesPerFrame = 1;
 bool        Application::Stepper = false;
@@ -140,7 +143,7 @@ PUBLIC STATIC void Application::Init(int argc, char* args[]) {
 
     Application::Window = SDL_CreateWindow(NULL,
         SDL_WINDOWPOS_CENTERED_DISPLAY(defaultMonitor), SDL_WINDOWPOS_CENTERED_DISPLAY(defaultMonitor),
-        640, 480, window_flags);
+        Application::WindowWidth, Application::WindowHeight, window_flags);
 
     if (Application::Platform == Platforms::iOS) {
         // SDL_SetWindowFullscreen(Application::Window, SDL_WINDOW_FULLSCREEN_DESKTOP);
@@ -268,7 +271,7 @@ PUBLIC STATIC void Application::GetPerformanceSnapshot() {
         // View Rendering Performance Snapshot
         char layerText[2048];
         Log::Print(Log::LOG_IMPORTANT, "View Rendering Performance Snapshot:");
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < MAX_SCENE_VIEWS; i++) {
             View* currentView = &Scene::Views[i];
             if (currentView->Active) {
                 layerText[0] = 0;

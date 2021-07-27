@@ -15,7 +15,7 @@
 class PerformanceMeasure {
 public:
     static bool            Initialized;
-    static Perf_ViewRender PERF_ViewRender[8];
+    static Perf_ViewRender PERF_ViewRender[MAX_SCENE_VIEWS];
 
     static void Init();
 };
