@@ -5,14 +5,14 @@
 class PerformanceMeasure {
 public:
     static bool            Initialized;
-    static Perf_ViewRender PERF_ViewRender[8];
+    static Perf_ViewRender PERF_ViewRender[MAX_SCENE_VIEWS];
 };
 #endif
 
 #include <Engine/Diagnostics/PerformanceMeasure.h>
 
 bool            PerformanceMeasure::Initialized = false;
-Perf_ViewRender PerformanceMeasure::PERF_ViewRender[8];
+Perf_ViewRender PerformanceMeasure::PERF_ViewRender[MAX_SCENE_VIEWS];
 
 PUBLIC STATIC void PerformanceMeasure::Init() {
     if (PerformanceMeasure::Initialized)

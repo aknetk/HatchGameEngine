@@ -24,6 +24,8 @@ public:
     static bool        GameStart;
     static SDL_Window* Window;
     static char        WindowTitle[256];
+    static int         WindowWidth;
+    static int         WindowHeight;
     static Platforms   Platform;
     static int         UpdatesPerFrame;
     static bool        Stepper;

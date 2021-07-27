@@ -66,9 +66,14 @@ public:
     static bool                  Paused;
     static int                   MainLayer;
 
-    static View                  Views[8];
+    static View                  Views[MAX_SCENE_VIEWS];
+    static int                   ViewRenderList[MAX_SCENE_VIEWS];
+    static bool                  UseViewPriority;
     static int                   ViewCurrent;
-    static Perf_ViewRender       PERF_ViewRender[8];
+    static int                   ViewsActive;
+    static int                   ObjectViewRenderFlag;
+    static int                   TileViewRenderFlag;
+    static Perf_ViewRender       PERF_ViewRender[MAX_SCENE_VIEWS];
 
     static char                  NextScene[256];
     static char                  CurrentScene[256];
@@ -106,6 +111,8 @@ public:
 #include <Engine/Types/ObjectList.h>
 #include <Engine/Utilities/StringUtils.h>
 
+#define VIEW_RENDER_FLAG 1
+
 // Layering variables
 vector<SceneLayer>    Scene::Layers;
 bool                  Scene::AnyLayerTileChange = false;
@@ -139,14 +146,18 @@ TileConfig*           Scene::TileCfgB = NULL;
 Uint16                Scene::EmptyTile = 0x000;
 Uint32*               Scene::ExtraPalettes = NULL;
 
-// ??? variables
+// View variables
 int                   Scene::Frame = 0;
 bool                  Scene::Paused = false;
 float                 Scene::CameraX = 0.0f;
 float                 Scene::CameraY = 0.0f;
-View                  Scene::Views[8];
+View                  Scene::Views[MAX_SCENE_VIEWS];
+int                   Scene::ViewRenderList[MAX_SCENE_VIEWS];
 int                   Scene::ViewCurrent = 0;
-Perf_ViewRender       Scene::PERF_ViewRender[8];
+int                   Scene::ViewsActive = 1;
+int                   Scene::ObjectViewRenderFlag = VIEW_RENDER_FLAG;
+int                   Scene::TileViewRenderFlag = VIEW_RENDER_FLAG;
+Perf_ViewRender       Scene::PERF_ViewRender[MAX_SCENE_VIEWS];
 
 char                  Scene::NextScene[256];
 char                  Scene::CurrentScene[256];
@@ -170,7 +181,6 @@ const char*           DEBUG_lastTileColFilename = NULL;
 
 int SCOPE_SCENE = 0;
 int SCOPE_GAME = 1;
-int TileViewRenderFlag = 0x01;
 int TileBatchMaxSize = 8;
 
 void _ObjectList_RemoveNonPersistentDynamicFromLists(Uint32, ObjectList* list) {
@@ -231,12 +241,32 @@ void _UpdateObject(Entity* ent) {
     if (!ent->Active)
         return;
 
-    if ((ent->OnScreenHitboxW == 0.0f || (
-        ent->X + ent->OnScreenHitboxW * 0.5f >= Scene::Views[0].X &&
-        ent->X - ent->OnScreenHitboxW * 0.5f <  Scene::Views[0].X + Scene::Views[0].Width)) &&
-        (ent->OnScreenHitboxH == 0.0f || (
-        ent->Y + ent->OnScreenHitboxH * 0.5f >= Scene::Views[0].Y &&
-        ent->Y - ent->OnScreenHitboxH * 0.5f <  Scene::Views[0].Y + Scene::Views[0].Height))) {
+    bool onScreenX = (ent->OnScreenHitboxW == 0.0f);
+    bool onScreenY = (ent->OnScreenHitboxH == 0.0f);
+
+    if (Scene::ViewsActive < 2) {
+        if (!onScreenX) {
+            onScreenX = (ent->X + ent->OnScreenHitboxW * 0.5f >= Scene::Views[0].X &&
+                         ent->X - ent->OnScreenHitboxW * 0.5f <  Scene::Views[0].X + Scene::Views[0].Width);
+        }
+        if (!onScreenY) {
+            onScreenY = (ent->Y + ent->OnScreenHitboxH * 0.5f >= Scene::Views[0].Y &&
+                         ent->Y - ent->OnScreenHitboxH * 0.5f <  Scene::Views[0].Y + Scene::Views[0].Height);
+        }
+    } else {
+        for (int i = 0; i < Scene::ViewsActive; i++) {
+            if (!onScreenX) {
+                onScreenX = (ent->X + ent->OnScreenHitboxW * 0.5f >= Scene::Views[i].X &&
+                             ent->X - ent->OnScreenHitboxW * 0.5f <  Scene::Views[i].X + Scene::Views[i].Width);
+            }
+            if (!onScreenY) {
+                onScreenY = (ent->Y + ent->OnScreenHitboxH * 0.5f >= Scene::Views[i].Y &&
+                             ent->Y - ent->OnScreenHitboxH * 0.5f <  Scene::Views[i].Y + Scene::Views[i].Height);
+            }
+        }
+    }
+
+    if (onScreenX && onScreenY) {
         double elapsed = Clock::GetTicks();
 
         ent->OnScreen = true;
@@ -409,11 +439,14 @@ PUBLIC STATIC void Scene::Init() {
     Graphics::SetTextureInterpolation(false);
 
     Scene::ViewCurrent = 0;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < MAX_SCENE_VIEWS; i++) {
         Scene::Views[i].Active = false;
         Scene::Views[i].Software = false;
+        Scene::Views[i].Priority = 0;
         Scene::Views[i].Width = 640;
         Scene::Views[i].Height = 480;
+        Scene::Views[i].OutputWidth = 640;
+        Scene::Views[i].OutputHeight = 480;
         Scene::Views[i].Stride = _CEILPOW(Scene::Views[i].Width);
         Scene::Views[i].FOV = 45.0f;
         Scene::Views[i].UsePerspective = false;
@@ -423,6 +456,10 @@ PUBLIC STATIC void Scene::Init() {
         Scene::Views[i].BaseProjectionMatrix = Matrix4x4::Create();
     }
     Scene::Views[0].Active = true;
+    Scene::ViewsActive = 1;
+
+    Scene::ObjectViewRenderFlag = VIEW_RENDER_FLAG;
+    Scene::TileViewRenderFlag = VIEW_RENDER_FLAG;
 }
 
 PUBLIC STATIC void Scene::ResetPerf() {
@@ -498,6 +535,25 @@ PUBLIC STATIC void Scene::Update() {
         Scene::Frame++;
 }
 
+static int _SortViews(const void *a, const void *b) {
+    View* viewA = &Scene::Views[*(const int *)a];
+    View* viewB = &Scene::Views[*(const int *)b];
+    return (viewA->Priority - viewB->Priority);
+}
+
+PUBLIC STATIC void Scene::SortViews() {
+    int viewCount = 0;
+
+    for (int i = 0; i < MAX_SCENE_VIEWS; i++) {
+        if (!Scene::Views[i].Active)
+            continue;
+        Scene::ViewRenderList[viewCount++] = i;
+    }
+
+    if (viewCount >= 2)
+        qsort(Scene::ViewRenderList, viewCount, sizeof(int), _SortViews);
+}
+
 #define PERF_START(n) n = Clock::GetTicks()
 #define PERF_END(n) n = Clock::GetTicks() - n
 
@@ -519,25 +575,25 @@ PUBLIC STATIC void Scene::Render() {
     SDL2Renderer::GetMetalSize(&ren_w, &ren_h);
     #endif
 
-    int view_count = 8;
-    for (int i = 0; i < view_count; i++) {
-        View* currentView = &Scene::Views[i];
-        if (!currentView->Active)
-            continue;
+    int viewCount = Scene::ViewsActive;
+    for (int i = 0; i < viewCount; i++) {
+        int viewIndex = Scene::ViewRenderList[i];
+        View* currentView = &Scene::Views[viewIndex];
+        Perf_ViewRender* viewPerf = &Scene::PERF_ViewRender[viewIndex];
 
-        PERF_START(Scene::PERF_ViewRender[i].RenderTime);
-        PERF_START(Scene::PERF_ViewRender[i].RenderSetupTime);
+        PERF_START(viewPerf->RenderTime);
+        PERF_START(viewPerf->RenderSetupTime);
 
         cx = std::floor(currentView->X);
         cy = std::floor(currentView->Y);
         cz = std::floor(currentView->Z);
 
-        Scene::ViewCurrent = i;
+        Scene::ViewCurrent = viewIndex;
 
-        int viewRenderFlag = 1 << i;
+        int viewRenderFlag = 1 << viewIndex;
 
         // NOTE: We should always be using the draw target.
-        Scene::PERF_ViewRender[i].RecreatedDrawTarget = false;
+        viewPerf->RecreatedDrawTarget = false;
         if (currentView->UseDrawTarget && currentView->DrawTarget) {
             float view_w = currentView->Width;
             float view_h = currentView->Height;
@@ -546,7 +602,7 @@ PUBLIC STATIC void Scene::Render() {
                 Graphics::DisposeTexture(tar);
                 Graphics::SetTextureInterpolation(false);
                 currentView->DrawTarget = Graphics::CreateTexture(SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, _CEILPOW(view_w), view_h);
-                Scene::PERF_ViewRender[i].RecreatedDrawTarget = true;
+                viewPerf->RecreatedDrawTarget = true;
             }
 
             Graphics::SetRenderTarget(currentView->DrawTarget);
@@ -557,13 +613,13 @@ PUBLIC STATIC void Scene::Render() {
                 Graphics::Clear();
         }
         else if (!currentView->Visible) {
-            PERF_END(Scene::PERF_ViewRender[i].RenderSetupTime);
+            PERF_END(viewPerf->RenderSetupTime);
             continue;
         }
-        PERF_END(Scene::PERF_ViewRender[i].RenderSetupTime);
+        PERF_END(viewPerf->RenderSetupTime);
 
         // Adjust projection
-        PERF_START(Scene::PERF_ViewRender[i].ProjectionSetupTime);
+        PERF_START(viewPerf->ProjectionSetupTime);
         if (currentView->UsePerspective) {
             Graphics::UpdatePerspective(currentView->FOV, currentView->Width / currentView->Height, currentView->NearPlane, currentView->FarPlane);
             Matrix4x4::Rotate(currentView->ProjectionMatrix, currentView->ProjectionMatrix, currentView->RotateX, 1.0, 0.0, 0.0);
@@ -583,13 +639,13 @@ PUBLIC STATIC void Scene::Render() {
             Matrix4x4::Translate(currentView->ProjectionMatrix, currentView->BaseProjectionMatrix, -cx, -cy, -cz);
         }
         Graphics::UpdateProjectionMatrix();
-        PERF_END(Scene::PERF_ViewRender[i].ProjectionSetupTime);
+        PERF_END(viewPerf->ProjectionSetupTime);
 
         // Graphics::SetBlendColor(0.5, 0.5, 0.5, 1.0);
         // Graphics::FillRectangle(currentView->X, currentView->Y, currentView->Width, currentView->Height);
 
         // RenderEarly
-        PERF_START(Scene::PERF_ViewRender[i].ObjectRenderEarlyTime);
+        PERF_START(viewPerf->ObjectRenderEarlyTime);
         for (int l = 0; l < Scene::PriorityPerLayer; l++) {
             if (DEV_NoObjectRender)
                 break;
@@ -600,7 +656,7 @@ PUBLIC STATIC void Scene::Render() {
                     drawGroupList->Entities[o]->RenderEarly();
             }
         }
-        PERF_END(Scene::PERF_ViewRender[i].ObjectRenderEarlyTime);
+        PERF_END(viewPerf->ObjectRenderEarlyTime);
 
         // Render Objects and Layer Tiles
         float _vx = currentView->X;
@@ -700,7 +756,7 @@ PUBLIC STATIC void Scene::Render() {
 
                 // Draw Tiles
                 if (layer->Visible) {
-                    PERF_START(Scene::PERF_ViewRender[i].LayerTileRenderTime[li]);
+                    PERF_START(viewPerf->LayerTileRenderTime[li]);
 
                     Graphics::Save();
                     Graphics::Translate(cx, cy, cz);
@@ -711,15 +767,15 @@ PUBLIC STATIC void Scene::Render() {
 
                     Graphics::Restore();
 
-                    PERF_END(Scene::PERF_ViewRender[i].LayerTileRenderTime[li]);
+                    PERF_END(viewPerf->LayerTileRenderTime[li]);
                 }
             }
             Graphics::TextureBlend = texBlend;
         }
-        Scene::PERF_ViewRender[i].ObjectRenderTime = objectTimeTotal;
+        viewPerf->ObjectRenderTime = objectTimeTotal;
 
         // RenderLate
-        PERF_START(Scene::PERF_ViewRender[i].ObjectRenderLateTime);
+        PERF_START(viewPerf->ObjectRenderLateTime);
         for (int l = 0; l < Scene::PriorityPerLayer; l++) {
             if (DEV_NoObjectRender)
                 break;
@@ -731,10 +787,10 @@ PUBLIC STATIC void Scene::Render() {
                     drawGroupList->Entities[o]->RenderLate();
             }
         }
-        PERF_END(Scene::PERF_ViewRender[i].ObjectRenderLateTime);
+        PERF_END(viewPerf->ObjectRenderLateTime);
 
 
-        PERF_START(Scene::PERF_ViewRender[i].RenderFinishTime);
+        PERF_START(viewPerf->RenderFinishTime);
         if (currentView->UseDrawTarget && currentView->DrawTarget) {
             if (currentView->Software)
                 Graphics::SoftwareEnd();
@@ -749,7 +805,8 @@ PUBLIC STATIC void Scene::Render() {
                 float out_w, out_h;
                 float scale = 1.f;
                 // bool needClip = false;
-                switch (1) {
+                int aspectMode = (viewCount > 1) ? 3 : 1;
+                switch (aspectMode) {
                     // Stretch
                     case 0:
                         out_w = win_w;
@@ -782,6 +839,13 @@ PUBLIC STATIC void Scene::Render() {
                         out_x = (win_w - out_w) * 0.5f;
                         out_y = (win_h - out_h) * 0.5f;
                         break;
+                    // Splitscreen
+                    case 3:
+                        out_x = (currentView->OutputX / (float)Application::WindowWidth) * win_w;
+                        out_y = (currentView->OutputY / (float)Application::WindowHeight) * win_h;
+                        out_w = (currentView->OutputWidth / (float)Application::WindowWidth) * win_w;
+                        out_h = (currentView->OutputHeight / (float)Application::WindowHeight) * win_h;
+                        break;
                 }
 
                 Graphics::TextureBlend = false;
@@ -793,9 +857,9 @@ PUBLIC STATIC void Scene::Render() {
                     out_x, out_y + Graphics::PixelOffset, out_w, out_h + Graphics::PixelOffset);
             }
         }
-        PERF_END(Scene::PERF_ViewRender[i].RenderFinishTime);
+        PERF_END(viewPerf->RenderFinishTime);
 
-        PERF_END(Scene::PERF_ViewRender[i].RenderTime);
+        PERF_END(viewPerf->RenderTime);
     }
 }
 
@@ -831,9 +895,13 @@ PUBLIC STATIC void Scene::Restart() {
     Scene::Paused = false;
 
     // Deactivate extra views
-    for (int i = 1; i < 8; i++) {
+    for (int i = 1; i < MAX_SCENE_VIEWS; i++) {
         Scene::Views[i].Active = false;
     }
+    Scene::ViewsActive = 1;
+
+    Scene::ObjectViewRenderFlag = VIEW_RENDER_FLAG;
+    Scene::TileViewRenderFlag = VIEW_RENDER_FLAG;
 
     if (Scene::AnyLayerTileChange) {
         // Copy backup tiles into main tiles
@@ -1554,7 +1622,7 @@ PUBLIC STATIC void Scene::DisposeInScope(Uint32 scope) {
     AudioManager::Unlock();
 }
 PUBLIC STATIC void Scene::Dispose() {
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < MAX_SCENE_VIEWS; i++) {
         if (Scene::Views[i].DrawTarget) {
             Graphics::DisposeTexture(Scene::Views[i].DrawTarget);
             Scene::Views[i].DrawTarget = NULL;

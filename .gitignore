@@ -10,6 +10,10 @@
 *.userosscache
 *.sln.docstates
 
+HatchGameEngine.exe
+*-Debug.exe
+*-Release.exe
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

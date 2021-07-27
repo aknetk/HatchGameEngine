@@ -7,6 +7,7 @@ public:
     bool       Active = false;
     bool       Visible = true;
     bool       Software = false;
+    int        Priority = 0;
     float      X = 0.0f;
     float      Y = 0.0f;
     float      Z = 0.0f;
@@ -15,6 +16,10 @@ public:
     float      RotateZ = 0.0f;
     float      Width = 1.0f;
     float      Height = 1.0f;
+    float      OutputX = 0.0f;
+    float      OutputY = 0.0f;
+    float      OutputWidth = 1.0f;
+    float      OutputHeight = 1.0f;
     int        Stride = 1;
     float      FOV = 45.0f;
     float      NearPlane = 0.1f;

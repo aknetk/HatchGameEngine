@@ -62,9 +62,14 @@ public:
     static int                   Frame;
     static bool                  Paused;
     static int                   MainLayer;
-    static View                  Views[8];
+    static View                  Views[MAX_SCENE_VIEWS];
+    static int                   ViewRenderList[MAX_SCENE_VIEWS];
+    static bool                  UseViewPriority;
     static int                   ViewCurrent;
-    static Perf_ViewRender       PERF_ViewRender[8];
+    static int                   ViewsActive;
+    static int                   ObjectViewRenderFlag;
+    static int                   TileViewRenderFlag;
+    static Perf_ViewRender       PERF_ViewRender[MAX_SCENE_VIEWS];
     static char                  NextScene[256];
     static char                  CurrentScene[256];
     static bool                  DoRestart;
@@ -78,6 +83,7 @@ public:
     static void Init();
     static void ResetPerf();
     static void Update();
+    static void SortViews();
     static void Render();
     static void AfterScene();
     static void Restart();
