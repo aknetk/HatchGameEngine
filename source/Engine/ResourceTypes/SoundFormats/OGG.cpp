@@ -152,6 +152,9 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
 
     goto OGG_Load_SUCCESS;
 #else
+    size_t fileLength;
+    void* fileData;
+
     ogg = new (nothrow) OGG;
     if (!ogg) {
         goto OGG_Load_FAIL;
@@ -161,13 +164,14 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
 
     vorbis = (VorbisGroup*)ogg->Vorbis;
 
-    size_t fileLength = stream->Length();
-    void* fileData = malloc(fileLength);
+    fileLength = stream->Length();
+    fileData = malloc(fileLength);
     stream->ReadBytes(fileData, fileLength);
 
     vorbis->FileBlock = fileData;
 
     int error;
+    stb_vorbis_info info;
     vorbis->VorbisSTB = stb_vorbis_open_memory((Uint8*)vorbis->FileBlock, fileLength, &error, NULL);
     if (!vorbis->VorbisSTB) {
         Log::Print(Log::LOG_ERROR, "Could not open Vorbis stream for %s!", filename);
@@ -238,7 +242,7 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
         goto OGG_Load_FAIL;
     }
 
-    auto info = stb_vorbis_get_info(vorbis->VorbisSTB);
+    info = stb_vorbis_get_info(vorbis->VorbisSTB);
 
     memset(&ogg->InputFormat, 0, sizeof(SDL_AudioSpec));
     ogg->InputFormat.format = AUDIO_S16;

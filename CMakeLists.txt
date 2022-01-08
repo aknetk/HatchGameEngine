@@ -17,18 +17,21 @@ set(HATCH_SOURCES ${C_SOURCES} ${CPP_SOURCES})
 
 add_definitions(-DLINUX -DTARGET_NAME=\"${PROJECT_NAME}\" -DUSING_LIBPNG -DUSING_LIBPNG_HEADER=\<libpng16/png.h\>
  -DUSING_LIBJPEG
- -DUSING_LIBOGG
  -DUSING_FREETYPE
  -DNO_LIBAV
 )
 
+add_custom_target(makeheaders ALL
+  COMMAND ${CMAKE_SOURCE_DIR}/tools/lmakeheaders source/
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  BYPRODUCTS "${CMAKE_SOURCE_DIR}/makeheaders.bin" "${CMAKE_SOURCE_DIR}/include/Engine"
+  COMMENT "Generating header files")
+
 add_executable(${PROJECT_NAME} ${HATCH_SOURCES})
+add_dependencies(${PROJECT_NAME} makeheaders)
 
 # Find the libraries
 find_package(SDL2 REQUIRED)
-find_package(Ogg REQUIRED)
-find_package(Vorbis REQUIRED)
-find_package(VorbisFile REQUIRED)
 find_package(PNG REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(Freetype REQUIRED)
@@ -37,9 +40,6 @@ include_directories(
   include
   source
   ${SDL2_INCLUDE_DIRS}
-  ${OGG_INCLUDE_DIRS}
-  ${VORBIS_INCLUDE_DIR}
-  ${VORBISFILE_INCLUDE_DIR}
   ${PNG_INCLUDE_DIRS}
   ${JPEG_INCLUDE_DIRS}
   ${FREETYPE_INCLUDE_DIRS}
@@ -51,7 +51,4 @@ target_link_libraries(${PROJECT_NAME}
   ${PNG_LIBRARIES}
   ${JPEG_LIBRARIES}
   ${FREETYPE_LIBRARIES}
-  ${OGG_LIBRARIES}
-  ${VORBIS_LIBRARIES}
-  ${VORBISFILE_LIBRARIES}
 )
