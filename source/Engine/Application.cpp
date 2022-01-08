@@ -939,19 +939,20 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
 
     Scene::Init();
     if (argc > 1 && !!StringUtils::StrCaseStr(args[1], ".tmx")) {
-        char cwd[512];
-        if (Directory::GetCurrentWorkingDirectory(cwd, sizeof(cwd))) {
-            if (!!StringUtils::StrCaseStr(args[1], "/Resources/") || !!StringUtils::StrCaseStr(args[1], "\\Resources\\")) {
-                char* tmxPath = args[1] + strlen(cwd) + strlen("/Resources/");
-                for (char* i = tmxPath; *i; i++) {
-                    if (*i == '\\')
-                        *i = '/';
-                }
-                Scene::LoadScene(tmxPath);
+        char* pathStart = StringUtils::StrCaseStr(args[1], "/Resources/");
+        if (pathStart == NULL)
+            pathStart = StringUtils::StrCaseStr(args[1], "\\Resources\\");
+
+        if (pathStart) {
+            char* tmxPath = pathStart + strlen("/Resources/");
+            for (char* i = tmxPath; *i; i++) {
+                if (*i == '\\')
+                    *i = '/';
             }
-            else {
-                Log::Print(Log::LOG_WARN, "Map file \"%s\" not inside Resources folder!", args[1]);
-            }
+            Scene::LoadScene(tmxPath);
+        }
+        else {
+            Log::Print(Log::LOG_WARN, "Map file \"%s\" not inside Resources folder!", args[1]);
         }
     }
     else if (*StartingScene) {
