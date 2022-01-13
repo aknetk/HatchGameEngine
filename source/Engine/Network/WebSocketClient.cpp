@@ -338,8 +338,10 @@ PUBLIC STATIC WebSocketClient* WebSocketClient::New(const char* url) {
 
     setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag)); // Disable Nagle's algorithm
     #ifdef _WIN32
-        u_long on = 1;
-        ioctlsocket(sockfd, FIONBIO, &on);
+        {
+            u_long on = 1;
+            ioctlsocket(sockfd, FIONBIO, &on);
+        }
     #else
         fcntl(sockfd, F_SETFL, O_NONBLOCK);
     #endif
