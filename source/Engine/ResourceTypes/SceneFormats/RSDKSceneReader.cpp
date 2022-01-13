@@ -2,6 +2,7 @@
 #include <Engine/IO/Stream.h>
 class RSDKSceneReader {
 public:
+    static Uint32           Magic;
     static bool             Initialized;
 };
 #endif
@@ -37,11 +38,13 @@ public:
 #define TILE_COLLC_MASK 0x03000000U
 #define TILE_IDENT_MASK 0x00FFFFFFU
 
+Uint32          RSDKSceneReader::Magic = 0x474643;
 bool            RSDKSceneReader::Initialized = false;
-char*           ObjectNames = NULL;
-char*           PropertyNames = NULL;
-HashMap<const char*>* ObjectHashes = NULL;
-HashMap<const char*>* PropertyHashes = NULL;
+
+static char*           ObjectNames = NULL;
+static char*           PropertyNames = NULL;
+static HashMap<const char*>* ObjectHashes = NULL;
+static HashMap<const char*>* PropertyHashes = NULL;
 
 PUBLIC STATIC void RSDKSceneReader::StageConfig_GetColors(const char* filename) {
     MemoryStream* memoryReader;
@@ -50,7 +53,7 @@ PUBLIC STATIC void RSDKSceneReader::StageConfig_GetColors(const char* filename) 
         if ((memoryReader = MemoryStream::New(stageConfigReader))) {
             do {
                 Uint32 magic = memoryReader->ReadUInt32();
-                if (magic != 0x474643)
+                if (magic != RSDKSceneReader::Magic)
                     break;
 
                 memoryReader->ReadByte(); // useGameObjects
@@ -146,7 +149,15 @@ PUBLIC STATIC void RSDKSceneReader::GameConfig_GetColors(const char* filename) {
     }
 }
 PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* parentFolder) {
-    Stream* r;
+    Stream* r = ResourceStream::New(filename);
+    if (!r) {
+        Log::Print(Log::LOG_ERROR, "Couldn't open file '%s'!", filename);
+        return false;
+    }
+
+    return RSDKSceneReader::Read(r, parentFolder);
+}
+PUBLIC STATIC bool RSDKSceneReader::Read(Stream* r, const char* parentFolder) {
     double ticks;
     // char* objectName;
     ObjectList* objectList;
@@ -249,13 +260,9 @@ PUBLIC STATIC bool RSDKSceneReader::Read(const char* filename, const char* paren
         RSDKSceneReader::Initialized = true;
     }
 
-    if (!ObjectNames) //  || !PropertyNames
+    if (!ObjectNames) {
+        r->Close();
         return false;
-
-    r = ResourceStream::New(filename);
-    if (!r) {
-        Log::Print(Log::LOG_ERROR, "Couldn't open file '%s'!", filename);
-		goto FREE;
     }
 
     // Clear scene to defaults
