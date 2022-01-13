@@ -418,6 +418,8 @@ PRIVATE STATIC void HatchSceneReader::LoadTileset(const char* parentFolder) {
             Scene::TileSize, Scene::TileSize, -Scene::TileSize / 2, -Scene::TileSize / 2);
     }
 
+    Scene::EmptyTile = Scene::TileSpriteInfos.size();
+
     // Add empty tile
     info.Sprite = tileSprite;
     info.AnimationIndex = 0;
@@ -425,8 +427,6 @@ PRIVATE STATIC void HatchSceneReader::LoadTileset(const char* parentFolder) {
     Scene::TileSpriteInfos.push_back(info);
 
     tileSprite->AddFrame(0, 0, 0, 1, 1, 0, 0);
-
-    Scene::EmptyTile = Scene::TileSpriteInfos.size();
 }
 
 PRIVATE STATIC void HatchSceneReader::LoadTileCollisions(const char* parentFolder) {
