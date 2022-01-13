@@ -430,7 +430,7 @@ PRIVATE STATIC void HatchSceneReader::LoadTileset(const char* parentFolder) {
 }
 
 PRIVATE STATIC void HatchSceneReader::LoadTileCollisions(const char* parentFolder) {
-    char tileColFile[4096 + 256];
+    char tileColFile[4096];
     snprintf(tileColFile, sizeof(tileColFile), "%s/TileCol.bin", parentFolder);
 
     Scene::LoadTileCollisions(tileColFile);
