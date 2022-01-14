@@ -2,10 +2,7 @@
 #define HATCH_SCENE_TYPES_H
 
 struct SceneHash {
-    union {
-        Uint32 A, B, C, D;
-        Uint8 ABCD[16];
-    };
+    Uint32 A, B, C, D;
 
     bool operator==(const SceneHash& b) { return A == b.A && B == b.B && C == b.C && D == b.D; }
     bool operator!=(const SceneHash& b) { return A != b.A || B != b.B || C != b.C || D != b.D; }

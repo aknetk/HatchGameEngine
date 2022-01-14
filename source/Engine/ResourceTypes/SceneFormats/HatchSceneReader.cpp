@@ -106,12 +106,16 @@ PUBLIC STATIC bool HatchSceneReader::Read(Stream* r, const char* parentFolder) {
     Scene::Layers.resize(numLayers);
     for (Uint32 i = 0; i < numLayers; i++) {
         SceneLayer layer = HatchSceneReader::ReadLayer(r);
+
+#ifdef HSCN_READER_DEBUG
+        Log::Print(Log::LOG_VERBOSE, "Layer %d (%s): %dx%d", i, layer.Name, layer.Width, layer.Height);
+#endif
+
         Scene::Layers[i] = layer;
-        // Log::Print(Log::LOG_VERBOSE, "Layer %d (%s): %dx%d", i, layer.Name, layer.Width, layer.Height);
     }
 
     // Spawn script managers
-    HatchSceneReader::AddManagers();
+    Scene::AddManagers();
 
     // Read classes and entities
     HatchSceneReader::ReadClasses(r);
@@ -313,11 +317,11 @@ PRIVATE STATIC void HatchSceneReader::ReadClasses(Stream *r) {
 
         HatchSceneReader::HashString(className, &scnClass.Hash); // Create hash
 
-#if 0
+#ifdef HSCN_READER_DEBUG
         Log::Print(Log::LOG_VERBOSE, "Class: %s", className);
-        Log::Print(Log::LOG_VERBOSE, "Hash: %08x%08x%08x%08x",
+        Log::Print(Log::LOG_VERBOSE, "  Hash: %08x%08x%08x%08x",
             scnClass.Hash.A, scnClass.Hash.B, scnClass.Hash.C, scnClass.Hash.D);
-        Log::Print(Log::LOG_VERBOSE, "Properties: %d", numProps);
+        Log::Print(Log::LOG_VERBOSE, "  Properties: %u", numProps);
 #endif
 
         for (Uint8 j = 0; j < numProps; j++) {
@@ -330,9 +334,17 @@ PRIVATE STATIC void HatchSceneReader::ReadClasses(Stream *r) {
 
             HatchSceneReader::HashString(propName, &prop.Hash); // Create hash
 
-#if 0
-            Log::Print(Log::LOG_VERBOSE, "Property: %s", propName);
-            Log::Print(Log::LOG_VERBOSE, "Hash: %08x%08x%08x%08x",
+#ifdef HSCN_READER_DEBUG
+            static const char* propTypeNames[] = {
+                "uint8", "uint16", "uint32",
+                "int8", "int16", "int32",
+                "enum", "bool", "string",
+                "vector2", "unknown", "color"
+            };
+
+            Log::Print(Log::LOG_VERBOSE, "    Name: %s", propName);
+            Log::Print(Log::LOG_VERBOSE, "    Type: %s", propTypeNames[prop.Type]);
+            Log::Print(Log::LOG_VERBOSE, "    Hash: %08x%08x%08x%08x",
                 prop.Hash.A, prop.Hash.B, prop.Hash.C, prop.Hash.D);
 #endif
 
@@ -354,39 +366,6 @@ PRIVATE STATIC void HatchSceneReader::FreeClasses() {
     SceneClasses.clear();
 }
 
-PRIVATE STATIC void HatchSceneReader::AddManagers() {
-    ObjectList* objectList;
-    Uint32 objectNameHash;
-
-#define ADD_OBJECT_CLASS(objectName) \
-    objectNameHash = CombinedHash::EncryptString(objectName); \
-    if (Scene::ObjectLists->Exists(objectNameHash)) \
-        objectList = Scene::ObjectLists->Get(objectNameHash); \
-    else { \
-        objectList = new ObjectList(); \
-        strcpy(objectList->ObjectName, objectName); \
-        objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName); \
-        Scene::ObjectLists->Put(objectNameHash, objectList); \
-    } \
- \
-    if (objectList->SpawnFunction) { \
-        Entity* obj = objectList->SpawnFunction(); \
-        obj->X = 0.0f; \
-        obj->Y = 0.0f; \
-        obj->InitialX = obj->X; \
-        obj->InitialY = obj->Y; \
-        obj->List = objectList; \
-        Scene::AddStatic(objectList, obj); \
-    }
-
-    ADD_OBJECT_CLASS("WindowManager");
-    ADD_OBJECT_CLASS("InputManager");
-    ADD_OBJECT_CLASS("PauseManager");
-    ADD_OBJECT_CLASS("FadeManager");
-
-#undef ADD_OBJECT_CLASS
-}
-
 PRIVATE STATIC void HatchSceneReader::LoadTileset(const char* parentFolder) {
     ISprite* tileSprite = new ISprite();
     Scene::TileSprites.push_back(tileSprite);
@@ -394,7 +373,7 @@ PRIVATE STATIC void HatchSceneReader::LoadTileset(const char* parentFolder) {
     TileSpriteInfo info;
     Scene::TileSpriteInfos.clear();
 
-    char tilesetFile[4096 + 256];
+    char tilesetFile[4096];
     snprintf(tilesetFile, sizeof(tilesetFile), "%s/Tileset.png", parentFolder);
 
     int cols, rows;
@@ -451,19 +430,31 @@ PRIVATE STATIC void HatchSceneReader::ReadEntities(Stream *r) {
         Uint8 filter = r->ReadByte();
         Uint8 numProps = r->ReadByte();
 
-        // Find the class from its hash
-        SceneClass* scnClass = HatchSceneReader::FindClass(classHash);
-        if (!scnClass) {
-            Log::Print(Log::LOG_WARN,
-                "Could not find any class with hash %08x%08x%08x%08x",
-                classHash.A, classHash.B, classHash.C, classHash.D);
-
+        if (classHash.A == 0x19191919
+         && classHash.B == 0x29292929
+         && classHash.C == 0x39393939
+         && classHash.D == 0x49494949) {
+#ifdef HSCN_READER_DEBUG
+            Log::Print(Log::LOG_WARN, "Ignoring entity with an unknown class");
+#endif
             HatchSceneReader::SkipEntityProperties(r, numProps);
             continue;
         }
 
-        // Get object list
-        Uint32 objectHash = CRC32::EncryptData(classHash.ABCD, 16);
+        // Find the class from its hash
+        SceneClass* scnClass = HatchSceneReader::FindClass(classHash);
+        if (!scnClass) {
+#ifdef HSCN_READER_DEBUG
+            Log::Print(Log::LOG_WARN,
+                "Could not find any class with hash %08x%08x%08x%08x",
+                classHash.A, classHash.B, classHash.C, classHash.D);
+#endif
+            HatchSceneReader::SkipEntityProperties(r, numProps);
+            continue;
+        }
+
+        // Get the correct object list from the class name
+        Uint32 objectHash = CRC32::EncryptData(&classHash.A, 16);
         char* objectName = scnClass->Name;
         ObjectList* objectList;
 
@@ -481,7 +472,7 @@ PRIVATE STATIC void HatchSceneReader::ReadEntities(Stream *r) {
             BytecodeObjectManager::CallFunction(objLoadFunc);
         }
 
-        // Spawn the object :)
+        // Spawn the object, if the class exists
         if (objectList->SpawnFunction) {
             BytecodeObject* obj = (BytecodeObject*)objectList->SpawnFunction();
             obj->X = posX;
@@ -507,7 +498,7 @@ PRIVATE STATIC void HatchSceneReader::ReadEntities(Stream *r) {
                 // Find the class property from the hash
                 SceneClassProperty* classProp = HatchSceneReader::FindProperty(scnClass, propHash);
                 if (!classProp) {
-#if 0
+#ifdef HSCN_READER_DEBUG
                     Log::Print(Log::LOG_WARN,
                         "Could not find any property with hash %08x%08x%08x%08x",
                         propHash.A, propHash.B, propHash.C, propHash.D);

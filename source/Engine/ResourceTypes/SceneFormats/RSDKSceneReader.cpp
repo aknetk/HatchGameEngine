@@ -395,77 +395,10 @@ PUBLIC STATIC bool RSDKSceneReader::Read(Stream* r, const char* parentFolder) {
 
     //*
 
-    // Hack in WindowManager, InputManager, and PauseManager
-    {
-        Entity* obj;
-        const char* objectName;
+    // Hack in WindowManager, InputManager, PauseManager, and FadeManager
+    Scene::AddManagers();
 
-        objectName = "WindowManager";
-        objectNameHash = CombinedHash::EncryptString(objectName);
-        if (Scene::ObjectLists->Exists(objectNameHash))
-            objectList = Scene::ObjectLists->Get(objectNameHash);
-        else {
-            objectList = new ObjectList();
-            strcpy(objectList->ObjectName, objectName);
-            objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName);
-            Scene::ObjectLists->Put(objectNameHash, objectList);
-        }
-
-        if (objectList->SpawnFunction) {
-            obj = objectList->SpawnFunction();
-            obj->X = 0.0f;
-            obj->Y = 0.0f;
-            obj->InitialX = obj->X;
-            obj->InitialY = obj->Y;
-            obj->List = objectList;
-            Scene::AddStatic(objectList, obj);
-        }
-
-        //*
-        objectName = "InputManager";
-        objectNameHash = CombinedHash::EncryptString(objectName);
-        if (Scene::ObjectLists->Exists(objectNameHash))
-            objectList = Scene::ObjectLists->Get(objectNameHash);
-        else {
-            objectList = new ObjectList();
-            strcpy(objectList->ObjectName, objectName);
-            objectList->SpawnFunction = (Entity * (*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName);
-            Scene::ObjectLists->Put(objectNameHash, objectList);
-        }
-
-        if (objectList->SpawnFunction) {
-            obj = objectList->SpawnFunction();
-            obj->X = 0.0f;
-            obj->Y = 0.0f;
-            obj->InitialX = obj->X;
-            obj->InitialY = obj->Y;
-            obj->List = objectList;
-            Scene::AddStatic(objectList, obj);
-        }
-
-        objectName = "PauseManager";
-        objectNameHash = CombinedHash::EncryptString(objectName);
-        if (Scene::ObjectLists->Exists(objectNameHash))
-            objectList = Scene::ObjectLists->Get(objectNameHash);
-        else {
-            objectList = new ObjectList();
-            strcpy(objectList->ObjectName, objectName);
-            objectList->SpawnFunction = (Entity * (*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName);
-            Scene::ObjectLists->Put(objectNameHash, objectList);
-        }
-
-        if (objectList->SpawnFunction) {
-            obj = objectList->SpawnFunction();
-            obj->X = 0.0f;
-            obj->Y = 0.0f;
-            obj->InitialX = obj->X;
-            obj->InitialY = obj->Y;
-            obj->List = objectList;
-            Scene::AddStatic(objectList, obj);
-        }
-        //*/
-    }
-    Log::Print(Log::LOG_VERBOSE, "Hacked in WindowManager, InputManager, and PauseManager...");
+    Log::Print(Log::LOG_VERBOSE, "Hacked in WindowManager, InputManager, PauseManager, and FadeManager...");
 
     //*/
 

@@ -24,7 +24,6 @@ private:
     static void HashString(char* string, SceneHash* hash);
     static void ReadClasses(Stream *r);
     static void FreeClasses();
-    static void AddManagers();
     static void LoadTileset(const char* parentFolder);
     static void LoadTileCollisions(const char* parentFolder);
     static void ReadEntities(Stream *r);

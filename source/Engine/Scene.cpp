@@ -1096,6 +1096,9 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     else
         Log::Print(Log::LOG_ERROR, "Couldn't open file '%s'!", filename);
 
+    Scene::AddStaticClass();
+}
+PUBLIC STATIC void Scene::AddStaticClass() {
     // Add "Static" class
     if (Application::GameStart) {
         Entity* obj = NULL;
@@ -1137,6 +1140,38 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
 
         StaticObject = obj;
     }
+}
+PUBLIC STATIC void Scene::AddManagers() {
+    ObjectList* objectList;
+    Uint32 objectNameHash;
+
+#define ADD_OBJECT_CLASS(objectName) \
+    objectNameHash = CombinedHash::EncryptString(objectName); \
+    if (Scene::ObjectLists->Exists(objectNameHash)) \
+        objectList = Scene::ObjectLists->Get(objectNameHash); \
+    else { \
+        objectList = new ObjectList(); \
+        strcpy(objectList->ObjectName, objectName); \
+        objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName); \
+        Scene::ObjectLists->Put(objectNameHash, objectList); \
+    } \
+ \
+    if (objectList->SpawnFunction) { \
+        Entity* obj = objectList->SpawnFunction(); \
+        obj->X = 0.0f; \
+        obj->Y = 0.0f; \
+        obj->InitialX = obj->X; \
+        obj->InitialY = obj->Y; \
+        obj->List = objectList; \
+        Scene::AddStatic(objectList, obj); \
+    }
+
+    ADD_OBJECT_CLASS("WindowManager");
+    ADD_OBJECT_CLASS("InputManager");
+    ADD_OBJECT_CLASS("PauseManager");
+    ADD_OBJECT_CLASS("FadeManager");
+
+#undef ADD_OBJECT_CLASS
 }
 PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
     Stream* tileColReader;
