@@ -48,7 +48,7 @@ PUBLIC STATIC void   ResourceManager::PrefixResourcePath(char* out, const char* 
     #if 0
         sprintf(out, "%s", path);
     // #elif defined(MACOSX_APP_BUNDLE)
-    //     sprintf(out, "%s", path);
+    //     sprintf(out, "%s", path); 
     #elif defined(SWITCH_ROMFS)
         sprintf(out, "romfs:/%s", path);
     #elif defined(ANDROID)

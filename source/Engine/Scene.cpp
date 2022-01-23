@@ -1773,7 +1773,9 @@ PUBLIC STATIC int  Scene::CollisionAt(int x, int y, int collisionField, int coll
     if (angle)
         sensor.Angle = *angle;
 
-    Scene::CollisionInLine(x, y, angleMode, 1, collisionField, false, &sensor);
+    if (Scene::CollisionInLine(x, y, (angleMode + 2) & 3, 0, collisionField, false, &sensor) >= 0)
+        Scene::CollisionInLine(x, y, angleMode, 0, collisionField, false, &sensor);
+
     if (angle)
         *angle = sensor.Angle;
     if (!sensor.Collided)
@@ -2025,7 +2027,7 @@ PUBLIC STATIC int  Scene::CollisionInLine(int x, int y, int angleMode, int check
 
                         collision += tileY << 4;
                         sensedLength = collision - y;
-                        if ((Uint32)sensedLength <= (Uint32)checkLen) {
+                        if (sensedLength <= checkLen) {
                             if (!compareAngle || abs((int)tileCfg->AngleTop - sensor->Angle) <= 0x20) {
                                 if (minLength > sensedLength) {
                                     minLength = sensedLength;
@@ -2047,7 +2049,7 @@ PUBLIC STATIC int  Scene::CollisionInLine(int x, int y, int angleMode, int check
 
                         collision += tileX << 4;
                         sensedLength = collision - x;
-                        if ((Uint32)sensedLength <= (Uint32)checkLen) {
+                        if (sensedLength <= checkLen) {
                             if (!compareAngle || abs((int)tileCfg->AngleLeft - sensor->Angle) <= 0x20) {
                                 if (minLength > sensedLength) {
                                     minLength = sensedLength;
@@ -2068,7 +2070,7 @@ PUBLIC STATIC int  Scene::CollisionInLine(int x, int y, int angleMode, int check
 
                         collision += tileY << 4;
                         sensedLength = y - collision;
-                        if ((Uint32)sensedLength <= (Uint32)checkLen) {
+                        if (sensedLength <= checkLen) {
                             if (!compareAngle || abs((int)tileCfg->AngleBottom - sensor->Angle) <= 0x20) {
                                 if (minLength > sensedLength) {
                                     minLength = sensedLength;
@@ -2089,7 +2091,7 @@ PUBLIC STATIC int  Scene::CollisionInLine(int x, int y, int angleMode, int check
 
                         collision += tileX << 4;
                         sensedLength = x - collision;
-                        if ((Uint32)sensedLength <= (Uint32)checkLen) {
+                        if (sensedLength <= checkLen) {
                             if (!compareAngle || abs((int)tileCfg->AngleRight - sensor->Angle) <= 0x20) {
                                 if (minLength > sensedLength) {
                                     minLength = sensedLength;

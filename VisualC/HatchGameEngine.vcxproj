@@ -218,6 +218,7 @@ CD ..</Command>
     <ClCompile Include="..\source\engine\resourcetypes\ISprite.cpp" />
     <ClCompile Include="..\source\engine\resourcetypes\modelformats\COLLADAReader.cpp" />
     <ClCompile Include="..\source\engine\resourcetypes\ResourceManager.cpp" />
+    <ClCompile Include="..\source\Engine\ResourceTypes\SceneFormats\HatchSceneReader.cpp" />
     <ClCompile Include="..\source\engine\resourcetypes\sceneformats\RSDKSceneReader.cpp" />
     <ClCompile Include="..\source\engine\resourcetypes\sceneformats\TiledMapReader.cpp" />
     <ClCompile Include="..\source\engine\resourcetypes\soundformats\OGG.cpp" />

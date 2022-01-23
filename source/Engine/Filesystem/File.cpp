@@ -46,10 +46,16 @@ PUBLIC STATIC bool File::Exists(const char* path) {
     #elif SWITCH_ROMFS
         char romfsPath[256];
         sprintf(romfsPath, "romfs:/%s", path);
-        if (access(romfsPath, F_OK) != -1)
+        if (access(romfsPath, F_OK) != -1) {
+            Log::Print(Log::LOG_WARN, "YES access \"%s\".", romfsPath);
             return true;
+        }
+
+        Log::Print(Log::LOG_WARN, "NO access \"%s\".", romfsPath);
+
         return false;
     #else
+        Log::Print(Log::LOG_WARN, "FALLBACK access \"%s\".", path);
         return access(path, F_OK) != -1;
     #endif
 }

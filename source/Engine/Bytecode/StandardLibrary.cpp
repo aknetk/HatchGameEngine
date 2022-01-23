@@ -4910,7 +4910,7 @@ VMValue Scene_LoadTileCollisions(int argCount, VMValue* args, Uint32 threadID) {
 /***
  * Scene.AreTileCollisionsLoaded
  * \desc Returns or whether tile collisions are loaded.
- * \return Returns <code>true<code> if tile collisions are loaded, or <code>false<code> if not.
+ * \return Returns <code>true</code> if tile collisions are loaded, or <code>false</code> if not.
  * \ns Scene
  */
 VMValue Scene_AreTileCollisionsLoaded(int argCount, VMValue* args, Uint32 threadID) {

@@ -291,6 +291,9 @@
     <ClCompile Include="..\source\Libraries\stb_vorbis.c">
       <Filter>Source Files\External Libs</Filter>
     </ClCompile>
+    <ClCompile Include="..\source\Engine\ResourceTypes\SceneFormats\HatchSceneReader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\engine\audio\StackNode.h">

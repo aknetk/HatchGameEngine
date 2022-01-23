@@ -10,7 +10,7 @@ int main(int argc, char* args[]) {
         #if defined(SWITCH_ROMFS)
         romfsInit();
         #endif
-        // pcvInitialize();
+        // pcvInitialize(); 
         // pcvSetClockRate(PcvModule_CpuBus, 1581000000); // normal: 1020000000, overclock: 1581000000, strong overclock: 1785000000
     #endif
 
