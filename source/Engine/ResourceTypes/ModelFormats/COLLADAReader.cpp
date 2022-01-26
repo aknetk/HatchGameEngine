@@ -333,11 +333,12 @@ PRIVATE STATIC void COLLADAReader::ParseImage(ColladaModel* model, XMLNode* pare
         if (!filename || filename[0] == '\0')
             return;
 
-        char* texpath = "Models\\Textures\\";
+        #define TEXPATH "Models\\Textures\\"
         free(daeimage->Path);
-        daeimage->Path = (char*)calloc(strlen(texpath) + strlen(filename) + 1, 1);
-        strcpy(daeimage->Path, texpath);
+        daeimage->Path = (char*)calloc(sizeof(TEXPATH) + strlen(filename), 1);
+        strcpy(daeimage->Path, TEXPATH);
         strcat(daeimage->Path, filename);
+        #undef TEXPATH
     }
 
     model->Images.push_back(daeimage);

@@ -467,7 +467,6 @@ PUBLIC STATIC void Application::PollEvents() {
                             Scene::Init();
                             if (*StartingScene)
                                 Scene::LoadScene(StartingScene);
-                            // Scene::LoadTileCollisions("Scenes/TileCol.bin");
                             Scene::Restart();
                             Application::UpdateWindowTitle();
                         }
@@ -530,7 +529,6 @@ PUBLIC STATIC void Application::PollEvents() {
                             memcpy(Scene::CurrentScene, temp, 256);
                             Scene::LoadScene(Scene::CurrentScene);
 
-                            // Scene::LoadTileCollisions("Scenes/TileCol.bin");
                             Scene::Restart();
                             Application::UpdateWindowTitle();
                         }
@@ -938,26 +936,27 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
     Application::Settings->GetInteger("dev", "fastforward", &UpdatesPerFastForward);
 
     Scene::Init();
-    if (argc > 1 && !!StringUtils::StrCaseStr(args[1], ".tmx")) {
-        char cwd[512];
-        if (Directory::GetCurrentWorkingDirectory(cwd, sizeof(cwd))) {
-            if (!!StringUtils::StrCaseStr(args[1], "/Resources/") || !!StringUtils::StrCaseStr(args[1], "\\Resources\\")) {
-                char* tmxPath = args[1] + strlen(cwd) + strlen("/Resources/");
-                for (char* i = tmxPath; *i; i++) {
-                    if (*i == '\\')
-                        *i = '/';
-                }
-                Scene::LoadScene(tmxPath);
+
+    if (argc > 1) {
+        char* pathStart = StringUtils::StrCaseStr(args[1], "/Resources/");
+        if (pathStart == NULL)
+            pathStart = StringUtils::StrCaseStr(args[1], "\\Resources\\");
+
+        if (pathStart) {
+            char* tmxPath = pathStart + strlen("/Resources/");
+            for (char* i = tmxPath; *i; i++) {
+                if (*i == '\\')
+                    *i = '/';
             }
-            else {
-                Log::Print(Log::LOG_WARN, "Map file \"%s\" not inside Resources folder!", args[1]);
-            }
+            Scene::LoadScene(tmxPath);
+        }
+        else {
+            Log::Print(Log::LOG_WARN, "Map file \"%s\" not inside Resources folder!", args[1]);
         }
     }
     else if (*StartingScene) {
         Scene::LoadScene(StartingScene);
     }
-    // Scene::LoadTileCollisions("Scenes/TileCol.bin");
 
     Scene::Restart();
     Application::UpdateWindowTitle();

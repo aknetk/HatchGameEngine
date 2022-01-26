@@ -9,8 +9,8 @@
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <fcntl.h>
-    #include <WinSock2.h>
-    #include <WS2tcpip.h>
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
@@ -27,17 +27,7 @@
     #ifndef snprintf
         #define snprintf _snprintf_s
     #endif
-    #if _MSC_VER >=1600
-        // vs2010 or later
-        #include <stdint.h>
-    #else
-        typedef __int8 int8_t;
-        typedef unsigned __int8 uint8_t;
-        typedef __int32 int32_t;
-        typedef unsigned __int32 uint32_t;
-        typedef __int64 int64_t;
-        typedef unsigned __int64 uint64_t;
-    #endif
+    #include <stdint.h>
     #define socketerrno WSAGetLastError()
     #define SOCKET_EAGAIN_EINPROGRESS WSAEINPROGRESS
     #define SOCKET_EWOULDBLOCK WSAEWOULDBLOCK

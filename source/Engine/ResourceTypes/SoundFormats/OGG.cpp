@@ -152,6 +152,9 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
 
     goto OGG_Load_SUCCESS;
 #else
+    size_t fileLength;
+    void* fileData;
+
     ogg = new (nothrow) OGG;
     if (!ogg) {
         goto OGG_Load_FAIL;

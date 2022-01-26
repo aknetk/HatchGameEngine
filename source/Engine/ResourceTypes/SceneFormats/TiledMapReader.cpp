@@ -138,8 +138,6 @@ PUBLIC STATIC void TiledMapReader::Read(const char* sourceF, const char* parentF
         Scene::ObjectRegistries = new HashMap<ObjectList*>(CombinedHash::EncryptData, 16);
     }
 
-    // Scene::Layers.resize(1);
-
     for (size_t i = 0; i < Scene::Layers.size(); i++) {
         Scene::Layers[i].Dispose();
     }

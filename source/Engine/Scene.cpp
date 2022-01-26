@@ -101,6 +101,7 @@ public:
 #include <Engine/IO/MemoryStream.h>
 #include <Engine/IO/ResourceStream.h>
 #include <Engine/IO/Compression/ZLibStream.h>
+#include <Engine/ResourceTypes/SceneFormats/HatchSceneReader.h>
 #include <Engine/ResourceTypes/SceneFormats/RSDKSceneReader.h>
 #include <Engine/ResourceTypes/ISound.h>
 #include <Engine/ResourceTypes/ResourceManager.h>
@@ -1044,8 +1045,8 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     MemoryPools::RunGC(MemoryPools::MEMPOOL_STRING);
     MemoryPools::RunGC(MemoryPools::MEMPOOL_SUBOBJECT);
 
-    char pathParent[256];
-    strcpy(pathParent, filename);
+    char pathParent[4096];
+    StringUtils::Copy(pathParent, filename, sizeof(pathParent));
     for (char* i = pathParent + strlen(pathParent); i >= pathParent; i--) {
         if (*i == '/') {
             *++i = 0;
@@ -1063,14 +1064,41 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     Scene::TileSprites.clear();
     Scene::TileSpriteInfos.clear();
 
-
     Log::Print(Log::LOG_INFO, "Starting scene \"%s\"...", filename);
-    if (StringUtils::StrCaseStr(filename, ".bin")) {
-        RSDKSceneReader::Read(filename, pathParent);
+
+    // Try to read it
+    Stream* r = ResourceStream::New(filename);
+
+    if (r) {
+        // Guess from the header first
+        Uint32 magic = r->ReadUInt32();
+
+        if (magic == HatchSceneReader::Magic) {
+            r->Seek(0);
+            HatchSceneReader::Read(r, pathParent);
+        }
+        else if (magic == RSDKSceneReader::Magic) {
+            r->Seek(0);
+            RSDKSceneReader::Read(r, pathParent);
+        }
+        else {
+            r->Close();
+
+            // Guess from the filename
+            if (StringUtils::StrCaseStr(filename, ".bin"))
+                RSDKSceneReader::Read(filename, pathParent);
+            else if (StringUtils::StrCaseStr(filename, ".hcsn"))
+                HatchSceneReader::Read(filename, pathParent);
+            else
+                TiledMapReader::Read(filename, pathParent);
+        }
     }
     else
-        TiledMapReader::Read(filename, pathParent);
+        Log::Print(Log::LOG_ERROR, "Couldn't open file '%s'!", filename);
 
+    Scene::AddStaticClass();
+}
+PUBLIC STATIC void Scene::AddStaticClass() {
     // Add "Static" class
     if (Application::GameStart) {
         Entity* obj = NULL;
@@ -1112,6 +1140,38 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
 
         StaticObject = obj;
     }
+}
+PUBLIC STATIC void Scene::AddManagers() {
+    ObjectList* objectList;
+    Uint32 objectNameHash;
+
+#define ADD_OBJECT_CLASS(objectName) \
+    objectNameHash = CombinedHash::EncryptString(objectName); \
+    if (Scene::ObjectLists->Exists(objectNameHash)) \
+        objectList = Scene::ObjectLists->Get(objectNameHash); \
+    else { \
+        objectList = new ObjectList(); \
+        strcpy(objectList->ObjectName, objectName); \
+        objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName); \
+        Scene::ObjectLists->Put(objectNameHash, objectList); \
+    } \
+ \
+    if (objectList->SpawnFunction) { \
+        Entity* obj = objectList->SpawnFunction(); \
+        obj->X = 0.0f; \
+        obj->Y = 0.0f; \
+        obj->InitialX = obj->X; \
+        obj->InitialY = obj->Y; \
+        obj->List = objectList; \
+        Scene::AddStatic(objectList, obj); \
+    }
+
+    ADD_OBJECT_CLASS("WindowManager");
+    ADD_OBJECT_CLASS("InputManager");
+    ADD_OBJECT_CLASS("PauseManager");
+    ADD_OBJECT_CLASS("FadeManager");
+
+#undef ADD_OBJECT_CLASS
 }
 PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
     Stream* tileColReader;
@@ -1323,6 +1383,15 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
         tileSize = 16;
 
         Scene::TileCount = tileCount;
+
+        if (Scene::TileSprites.size()) {
+            int numTiles = (int)Scene::TileSprites[0]->Animations[0].Frames.size();
+            if (Scene::TileCount < numTiles) {
+                Log::Print(Log::LOG_WARN, "Less Tile Collisions (%d) than actual Tiles! (%d)", Scene::TileCount, (int)Scene::TileSprites[0]->Animations[0].Frames.size());
+                Scene::TileCount = numTiles;
+            }
+        }
+
         if (Scene::TileCfgA == NULL) {
             int totalTileVariantCount = Scene::TileCount;
             // multiplied by 4: For all combinations of tile flipping
@@ -1336,11 +1405,6 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
         }
         else if (Scene::TileSize != tileSize) {
             Scene::TileSize = tileSize;
-        }
-
-        if (Scene::TileSprites.size() && Scene::TileCount < (int)Scene::TileSprites[0]->Animations[0].Frames.size()) {
-            Log::Print(Log::LOG_ERROR, "Less Tile Collisions (%d) than actual Tiles! (%d)", Scene::TileCount, (int)Scene::TileSprites[0]->Animations[0].Frames.size());
-            exit(-1);
         }
 
         Uint8 collisionBuffer[16];
