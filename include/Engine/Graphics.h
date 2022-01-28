@@ -91,6 +91,7 @@ public:
     static void     Scale(float x, float y, float z);
     static void     Restore();
     static void     SetBlendColor(float r, float g, float b, float a);
+    static void     SetBlendMode(int blendMode);
     static void     SetBlendMode(int srcC, int dstC, int srcA, int dstA);
     static void     SetLineWidth(float n);
     static void     StrokeLine(float x1, float y1, float x2, float y2);

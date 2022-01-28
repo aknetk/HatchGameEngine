@@ -45,6 +45,9 @@ public:
     int            Flags = 0x0000;
     int            DrawGroup = 0;
     Uint8          DrawBehavior = 0;
+    bool           Blending = false;
+    Uint8          BlendMode = 0; // BlendMode_NORMAL
+    float          Opacity = 1.0f;
     bool           UsingCustomScanlineFunction = false;
     ObjFunction    CustomScanlineFunction;
     int            ScrollInfoCount = 0;

@@ -1950,32 +1950,7 @@ VMValue Draw_SetTextureBlend(int argCount, VMValue* args, Uint32 threadID) {
  */
 VMValue Draw_SetBlendMode(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
-    switch (Graphics::BlendMode = GET_ARG(0, GetInteger)) {
-        case BlendMode_NORMAL:
-            Graphics::SetBlendMode(
-                BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA,
-                BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
-            break;
-        case BlendMode_ADD:
-            Graphics::SetBlendMode(
-                BlendFactor_SRC_ALPHA, BlendFactor_ONE,
-                BlendFactor_SRC_ALPHA, BlendFactor_ONE);
-            break;
-        case BlendMode_MAX:
-            Graphics::SetBlendMode(
-                BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_COLOR,
-                BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_COLOR);
-            break;
-        case BlendMode_SUBTRACT:
-            Graphics::SetBlendMode(
-                BlendFactor_ZERO, BlendFactor_INV_SRC_COLOR,
-                BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
-            break;
-        default:
-            Graphics::SetBlendMode(
-                BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA,
-                BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
-    }
+    Graphics::SetBlendMode(GET_ARG(0, GetInteger));
     return NULL_VAL;
 }
 /***
@@ -5246,7 +5221,12 @@ VMValue Scene_SetLayerDrawGroup(int argCount, VMValue* args, Uint32 threadID) {
  * Scene.SetLayerDrawBehavior
  * \desc Sets the parallax direction of the layer.
  * \param layerIndex (Integer): Index of layer.
- * \param isVertical (Boolean): Number from 0 to 15. (0 = Back, 15 = Front)
+ * \param drawBehavior (Integer): Draw behavior. <br/>\
+</br>Behaviors:<ul>\
+<li><code>DrawBehavior_HorizontalParallax</code>: Horizontal parallax.</li>\
+<li><code>DrawBehavior_VerticalParallax</code>: Do not use.</li>\
+<li><code>DrawBehavior_CustomTileScanLines</code>: Custom scanline behavior.</li>\
+</ul>
  * \ns Scene
  */
 VMValue Scene_SetLayerDrawBehavior(int argCount, VMValue* args, Uint32 threadID) {
@@ -5254,6 +5234,47 @@ VMValue Scene_SetLayerDrawBehavior(int argCount, VMValue* args, Uint32 threadID)
     int index = GET_ARG(0, GetInteger);
     int drawBehavior = GET_ARG(1, GetInteger);
     Scene::Layers[index].DrawBehavior = drawBehavior;
+    return NULL_VAL;
+}
+/***
+ * Scene.SetLayerBlend
+ * \desc Sets whether or not to use color and alpha blending on this layer.
+ * \param layerIndex (Integer): Index of layer.
+ * \param doBlend (Boolean): Whether or not to use blending.
+ * \paramOpt blendMode (Integer): The desired blend mode. <br/>\
+</br>Blend Modes:<ul>\
+<li><code>BlendMode_NORMAL</code>: Normal pixel blending.</li>\
+<li><code>BlendMode_ADD</code>: Additive pixel blending.</li>\
+<li><code>BlendMode_MAX</code>: Maximum pixel blending.</li>\
+<li><code>BlendMode_SUBTRACT</code>: Subtractive pixel blending.</li>\
+<li><code>BlendMode_MATCH_EQUAL</code>: (software-renderer only) Draw pixels only where it matches the Comparison Color.</li>\
+<li><code>BlendMode_MATCH_NOT_EQUAL</code>: (software-renderer only) Draw pixels only where it does not match the Comparison Color.</li>\
+</ul>
+ * \ns Scene
+ */
+VMValue Scene_SetLayerBlend(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_AT_LEAST_ARGCOUNT(2);
+    int index = GET_ARG(0, GetInteger);
+    Scene::Layers[index].Blending = !!GET_ARG(1, GetInteger);
+    Scene::Layers[index].BlendMode = argCount >= 3 ? GET_ARG(2, GetInteger) : BlendMode_NORMAL;
+    return NULL_VAL;
+}
+/***
+ * Scene.SetLayerOpacity
+ * \desc Sets the opacity of the layer.
+ * \param layerIndex (Integer): Index of layer.
+ * \param opacity (Decimal): Opacity from 0.0 to 1.0.
+ * \ns Scene
+ */
+VMValue Scene_SetLayerOpacity(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    int index = GET_ARG(0, GetInteger);
+    float opacity = GET_ARG(1, GetDecimal);
+    if (opacity < 0.0)
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Opacity cannot be lower than 0.0.");
+    else if (opacity > 1.0)
+        BytecodeObjectManager::Threads[threadID].ThrowRuntimeError(false, "Opacity cannot be higher than 1.0.");
+    Scene::Layers[index].Opacity = opacity;
     return NULL_VAL;
 }
 /***
@@ -5510,10 +5531,13 @@ VMValue Scene_SetLayerCustomScanlineFunction(int argCount, VMValue* args, Uint32
  * \param srcY (Number):
  * \param deltaX (Number):
  * \param deltaY (Number):
+ * \paramOpt opacity (Decimal):
+ * \paramOpt maxHorzCells (Number):
+ * \paramOpt maxVertCells (Number):
  * \ns Scene
  */
 VMValue Scene_SetTileScanline(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_ARGCOUNT(5);
+    CHECK_AT_LEAST_ARGCOUNT(5);
     int scanlineIndex = GET_ARG(0, GetInteger);
 
     TileScanLine* scanLine = &SoftwareRenderer::TileScanLineBuffer[scanlineIndex];
@@ -5521,6 +5545,20 @@ VMValue Scene_SetTileScanline(int argCount, VMValue* args, Uint32 threadID) {
     scanLine->SrcY = (int)(GET_ARG(2, GetDecimal) * 0x10000);
     scanLine->DeltaX = (int)(GET_ARG(3, GetDecimal) * 0x10000);
     scanLine->DeltaY = (int)(GET_ARG(4, GetDecimal) * 0x10000);
+
+    int opacity = 0xFF;
+    if (argCount >= 6) {
+        opacity = (int)(GET_ARG(5, GetDecimal) * 0xFF);
+        if (opacity < 0)
+            opacity = 0;
+        else if (opacity > 0xFF)
+            opacity = 0xFF;
+    }
+    scanLine->Opacity = opacity;
+
+    scanLine->MaxHorzCells = argCount >= 7 ? GET_ARG(6, GetInteger) : 0;
+    scanLine->MaxVertCells = argCount >= 8 ? GET_ARG(7, GetInteger) : 0;
+
     return NULL_VAL;
 }
 
@@ -8090,6 +8128,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Scene, SetLayerOffsetPosition);
     DEF_NATIVE(Scene, SetLayerDrawGroup);
     DEF_NATIVE(Scene, SetLayerDrawBehavior);
+    DEF_NATIVE(Scene, SetLayerBlend);
+    DEF_NATIVE(Scene, SetLayerOpacity);
     DEF_NATIVE(Scene, SetLayerScroll);
     DEF_NATIVE(Scene, SetLayerSetParallaxLinesBegin);
     DEF_NATIVE(Scene, SetLayerSetParallaxLines);

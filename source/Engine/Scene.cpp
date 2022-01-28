@@ -746,8 +746,6 @@ PUBLIC STATIC void Scene::Render() {
                 continue;
 
             bool texBlend = Graphics::TextureBlend;
-
-            Graphics::TextureBlend = false;
             for (size_t li = 0; li < Layers.size(); li++) {
                 SceneLayer* layer = &Layers[li];
                 // Skip layer tile render if already rendered
@@ -761,7 +759,14 @@ PUBLIC STATIC void Scene::Render() {
                     Graphics::Save();
                     Graphics::Translate(cx, cy, cz);
 
-                    Graphics::SetBlendColor(1.0, 1.0, 1.0, 1.0);
+                    Graphics::TextureBlend = layer->Blending;
+                    if (Graphics::TextureBlend) {
+                        Graphics::SetBlendColor(1.0, 1.0, 1.0, layer->Opacity);
+                        Graphics::SetBlendMode(layer->BlendMode);
+                    }
+                    else
+                        Graphics::SetBlendColor(1.0, 1.0, 1.0, 1.0);
+
                     Graphics::DrawSceneLayer(layer, currentView);
                     Graphics::ClearClip();
 
@@ -849,9 +854,7 @@ PUBLIC STATIC void Scene::Render() {
                 }
 
                 Graphics::TextureBlend = false;
-                Graphics::SetBlendMode(
-                    BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA,
-                    BlendFactor_SRC_ALPHA, BlendFactor_INV_SRC_ALPHA);
+                Graphics::SetBlendMode(BlendMode_NORMAL);
                 Graphics::DrawTexture(currentView->DrawTarget,
                     0.0, 0.0, currentView->Width, currentView->Height,
                     out_x, out_y + Graphics::PixelOffset, out_w, out_h + Graphics::PixelOffset);

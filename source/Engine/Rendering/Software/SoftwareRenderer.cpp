@@ -38,7 +38,6 @@ TileScanLine      SoftwareRenderer::TileScanLineBuffer[MAX_FRAMEBUFFER_HEIGHT];
 
 int Alpha = 0xFF;
 int BlendFlag = 0;
-int DivideBy3Table[0x100];
 
 struct SWTextureData {
 	Uint32*           Palette = NULL;
@@ -298,32 +297,6 @@ int* FilterTable = NULL;
 // Initialization and disposal functions
 PUBLIC STATIC void     SoftwareRenderer::Init() {
     SoftwareRenderer::BackendFunctions.Init();
-    // PixelFunction = SetPixelNormal;
-	// FilterFunction[0] = FilterNone;
-	// FilterFunction[1] = FilterNone;
-	// FilterFunction[2] = FilterNone;
-	// FilterFunction[3] = FilterNone;
-    //
-	// Deform = (Sint8*)Memory::TrackedCalloc("SoftwareRenderer::DeformMap", Application::HEIGHT, 1);
-    //
-	// Clip[0] = 0;
-	// Clip[1] = 0;
-	// Clip[2] = Application::WIDTH;
-	// Clip[3] = Application::HEIGHT;
-    // ClipSet = false;
-    //
-	// for (int i = 0; i < 0x100; i++)
-	// 	DivideBy3Table[i] = i / 3;
-    //
-	// FrameBufferSize = Application::WIDTH * Application::HEIGHT;
-	// FrameBuffer = (Uint32*)Memory::TrackedCalloc("SoftwareRenderer::FrameBuffer", FrameBufferSize, sizeof(Uint32));
-	// FrameBufferStride = Application::WIDTH;
-    //
-	// ResourceStream* res;
-    // if ((res = ResourceStream::New("Sprites/UI/DevFont.bin"))) {
-    // 	res->ReadBytes(BitmapFont, 0x400);
-    //     res->Close();
-    // }
 }
 PUBLIC STATIC Uint32   SoftwareRenderer::GetWindowFlags() {
     return Graphics::Internal.GetWindowFlags();
@@ -530,6 +503,16 @@ PUBLIC STATIC void     SoftwareRenderer::Present() {
 
 }
 
+enum BlendFlags {
+    BlendFlag_OPAQUE = 0,
+    BlendFlag_TRANSPARENT,
+    BlendFlag_ADDITIVE,
+    BlendFlag_SUBTRACT,
+    BlendFlag_MATCH_EQUAL,
+    BlendFlag_MATCH_NOT_EQUAL,
+    BlendFlag_FILTER,
+};
+
 // Draw mode setting functions
 PUBLIC STATIC void     SoftwareRenderer::SetBlendColor(float r, float g, float b, float a) {
     ColR = (int)(r * 0xFF);
@@ -541,28 +524,28 @@ PUBLIC STATIC void     SoftwareRenderer::SetBlendColor(float r, float g, float b
 
     if (a >= 1.0) {
         Alpha = 0xFF;
-        // BlendFlag = 0;
+        // BlendFlag = BlendFlag_OPAQUE;
         return;
     }
     Alpha = (int)(a * 0xFF);
-    // BlendFlag = 1;
+    // BlendFlag = BlendFlag_TRANSPARENT;
 }
 PUBLIC STATIC void     SoftwareRenderer::SetBlendMode(int srcC, int dstC, int srcA, int dstA) {
     switch (Graphics::BlendMode) {
         case BlendMode_NORMAL:
-            BlendFlag = 1;
+            BlendFlag = BlendFlag_TRANSPARENT;
             break;
         case BlendMode_ADD:
-            BlendFlag = 2;
+            BlendFlag = BlendFlag_ADDITIVE;
             break;
         case BlendMode_SUBTRACT:
-            BlendFlag = 3;
+            BlendFlag = BlendFlag_SUBTRACT;
             break;
         case BlendMode_MATCH_EQUAL:
-            BlendFlag = 4;
+            BlendFlag = BlendFlag_MATCH_EQUAL;
             break;
         case BlendMode_MATCH_NOT_EQUAL:
-            BlendFlag = 5;
+            BlendFlag = BlendFlag_MATCH_NOT_EQUAL;
             break;
     }
 }
@@ -627,16 +610,6 @@ PUBLIC STATIC void     SoftwareRenderer::Restore() {
 
 }
 
-enum BlendFlags {
-    BlendFlag_OPAQUE = 0,
-    BlendFlag_TRANSPARENT,
-    BlendFlag_ADDITIVE,
-    BlendFlag_SUBTRACT,
-    BlendFlag_MATCH_EQUAL,
-    BlendFlag_MATCH_NOT_EQUAL,
-    BlendFlag_FILTER,
-};
-
 #define SRC_CHECK false
 #define GET_CLIP_BOUNDS(x1, y1, x2, y2) \
     if (Graphics::CurrentClip.Enabled) { \
@@ -654,12 +627,12 @@ enum BlendFlags {
 #define ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity) \
     if (FilterTable != &FilterColor[0]) \
         blendFlag = BlendFlag_FILTER; \
-    if (opacity == 0 && blendFlag != BlendFlag_OPAQUE) \
+    if (opacity == 0 && (blendFlag != BlendFlag_OPAQUE && blendFlag != BlendFlag_FILTER)) \
         return; \
     if (opacity != 0 && blendFlag == BlendFlag_OPAQUE) \
         blendFlag = BlendFlag_TRANSPARENT; \
     if (opacity == 0xFF && blendFlag == BlendFlag_TRANSPARENT) \
-        blendFlag = 0;
+        blendFlag = BlendFlag_OPAQUE;
 
 // Filterless versions
 #define GET_R(color) ((color >> 16) & 0xFF)
@@ -1442,14 +1415,8 @@ PUBLIC STATIC void     SoftwareRenderer::ArrayBuffer_DrawFinish(Uint32 arrayBuff
 
     int blendFlag = BlendFlag;
     int opacity = Alpha;
-    if (FilterTable != &FilterColor[0])
-        blendFlag = 6;
-    if (Alpha == 0 && blendFlag != 0)
-        return;
-    if (Alpha != 0 && blendFlag == 0)
-        blendFlag = 1;
-    if (Alpha == 0xFF && blendFlag == 1)
-        blendFlag = 0;
+
+    ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity);
 
     arrayBuffer = &ArrayBuffers[arrayBufferIndex];
     if (!arrayBuffer->Initialized)
@@ -2509,10 +2476,10 @@ void DrawSpriteImage(Texture* texture, int x, int y, int w, int h, int sx, int s
     int dst_x2 = x + w;
     int dst_y2 = y + h;
 
-    if (Alpha != 0 && blendFlag == 0)
-        blendFlag = 1;
+    if (Alpha != 0 && blendFlag == BlendFlag_OPAQUE)
+        blendFlag = BlendFlag_TRANSPARENT;
     if (!Graphics::TextureBlend)
-        blendFlag = 0;
+        blendFlag = BlendFlag_OPAQUE;
 
     if (Graphics::CurrentClip.Enabled) {
         int
@@ -2733,10 +2700,10 @@ void DrawSpriteImageTransformed(Texture* texture, int x, int y, int offx, int of
     int dst_x2 = _x2;
     int dst_y2 = _y2;
 
-    if (Alpha != 0 && blendFlag == 0)
-        blendFlag = 1;
+    if (Alpha != 0 && blendFlag == BlendFlag_OPAQUE)
+        blendFlag = BlendFlag_TRANSPARENT;
     if (!Graphics::TextureBlend)
-        blendFlag = 0;
+        blendFlag = BlendFlag_OPAQUE;
 
     #define SET_MIN(a, b) if (a > b) a = b;
     #define SET_MAX(a, b) if (a < b) a = b;
@@ -3293,27 +3260,6 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_InitTileScanLines(SceneL
                 scanLine++;
             }
 
-            // int distX, distY, projectedX, projectedY;
-            // int sinVal = 0x000;
-            // int cosVal = 0x100;
-            // int viewHalfW = currentView->Width / 2;
-            // int tileSrcY = 0x1000000; // 0x100 0000
-            // int scrollPosition = (Scene::Frame * 0x8000) & 0x7FFFFFFF;
-            // TileScanLine* scanLine = &TileScanLineBuffer[0];
-            // for (int i = 160; i >= 32; i--) {
-            //     distX = tileSrcY / (8 * i);
-            //     distY = distX;
-            //     projectedX = cosVal * distX;
-            //     projectedY = sinVal * distY;
-            //     scanLine->DeltaX = -projectedX >> 7;
-            //     scanLine->DeltaY = projectedY >> 7;
-            //     scanLine->SrcX = projectedY - viewHalfW * scanLine->DeltaX;
-            //     scanLine->SrcY = scrollPosition + 2 * projectedX - viewHalfW * scanLine->DeltaY;
-            //     tileSrcY -= 0x4000;
-            //     scanLine++;
-            // }
-            //
-            // Graphics::SetClip(0, 0, currentView->Width, 120);
 			break;
         }
 	}
@@ -3354,8 +3300,17 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
     AnimFrame frameStr;
     Texture* texture;
 
-    // int blendFlag = 0;
-    // int opacity = 0x100;
+    int blendFlag = BlendFlag;
+    int opacity = Alpha;
+    if (!Graphics::TextureBlend) {
+        blendFlag = BlendFlag_OPAQUE;
+        opacity = 0;
+    }
+
+    ALTER_BLENDFLAG_AND_OPACITY(blendFlag, opacity);
+
+    int* multTableAt = &MultTable[opacity << 8];
+    int* multSubTableAt = &MultSubTable[opacity << 8];
 
     Uint32* tile;
     Uint32* color;
@@ -3382,6 +3337,31 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
     Uint32 DRAW_COLLISION = 0;
     int c_pixelsOfTileRemaining, tileFlipOffset;
 	TileConfig* baseTileCfg = Scene::ShowTileCollisionFlag == 2 ? Scene::TileCfgB : Scene::TileCfgA;
+
+    void (*pixelFunction)(Uint32*, Uint32*, int, int*, int*) = NULL;
+    switch (blendFlag) {
+        case BlendFlag_OPAQUE:
+            pixelFunction = PixelNoFiltSetOpaque;
+            break;
+        case BlendFlag_TRANSPARENT:
+            pixelFunction = PixelNoFiltSetTransparent;
+            break;
+        case BlendFlag_ADDITIVE:
+            pixelFunction = PixelNoFiltSetAdditive;
+            break;
+        case BlendFlag_SUBTRACT:
+            pixelFunction = PixelNoFiltSetSubtract;
+            break;
+        case BlendFlag_MATCH_EQUAL:
+            pixelFunction = PixelNoFiltSetMatchEqual;
+            break;
+        case BlendFlag_MATCH_NOT_EQUAL:
+            pixelFunction = PixelNoFiltSetMatchNotEqual;
+            break;
+        case BlendFlag_FILTER:
+            pixelFunction = PixelNoFiltSetFilter;
+            break;
+    }
 
     int j;
     TileScanLine* tScanLine = &TileScanLineBuffer[dst_y1];
@@ -3435,7 +3415,7 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                 if (isPalettedSources[tileID]) {
                     while (pixelsOfTileRemaining) {
                         if (*color)
-                            PixelNoFiltSetOpaque(&index[*color], &dstPxLine[dst_x], 0, NULL, NULL);
+                            pixelFunction(&index[*color], &dstPxLine[dst_x], opacity, multTableAt, multSubTableAt);
                         pixelsOfTileRemaining--;
                         dst_x++;
                         color--;
@@ -3444,7 +3424,7 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                 else {
                     while (pixelsOfTileRemaining) {
                         if (*color & 0xFF000000U)
-                            PixelNoFiltSetOpaque(color, &dstPxLine[dst_x], 0, NULL, NULL);
+                            pixelFunction(color, &dstPxLine[dst_x], opacity, multTableAt, multSubTableAt);
                         pixelsOfTileRemaining--;
                         dst_x++;
                         color--;
@@ -3457,7 +3437,7 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                 if (isPalettedSources[tileID]) {
                     while (pixelsOfTileRemaining) {
                         if (*color)
-                            PixelNoFiltSetOpaque(&index[*color], &dstPxLine[dst_x], 0, NULL, NULL);
+                            pixelFunction(&index[*color], &dstPxLine[dst_x], opacity, multTableAt, multSubTableAt);
                         pixelsOfTileRemaining--;
                         dst_x++;
                         color++;
@@ -3466,7 +3446,7 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                 else {
                     while (pixelsOfTileRemaining) {
                         if (*color & 0xFF000000U)
-                            PixelNoFiltSetOpaque(color, &dstPxLine[dst_x], 0, NULL, NULL);
+                            pixelFunction(color, &dstPxLine[dst_x], opacity, multTableAt, multSubTableAt);
                         pixelsOfTileRemaining--;
                         dst_x++;
                         color++;
@@ -3529,7 +3509,7 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                 if ((*tile & TILE_FLIPX_MASK)) {
                     color = &tileSources[tileID][srcTYb * srcStrides[tileID]];
                     if (isPalettedSources[tileID]) {
-                        #define UNLOOPED(n, k) if (color[n]) { PixelNoFiltSetOpaque(&index[color[n]], &dstPxLine[dst_x + k], 0, NULL, NULL); }
+                        #define UNLOOPED(n, k) if (color[n]) { pixelFunction(&index[color[n]], &dstPxLine[dst_x + k], opacity, multTableAt, multSubTableAt); }
                         UNLOOPED(0, 15);
                         UNLOOPED(1, 14);
                         UNLOOPED(2, 13);
@@ -3549,7 +3529,7 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                         #undef UNLOOPED
                     }
                     else {
-                        #define UNLOOPED(n, k) if (color[n] & 0xFF000000U) { PixelNoFiltSetOpaque(&color[n], &dstPxLine[dst_x + k], 0, NULL, NULL); }
+                        #define UNLOOPED(n, k) if (color[n] & 0xFF000000U) { pixelFunction(&color[n], &dstPxLine[dst_x + k], opacity, multTableAt, multSubTableAt); }
                         UNLOOPED(0, 15);
                         UNLOOPED(1, 14);
                         UNLOOPED(2, 13);
@@ -3573,7 +3553,7 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                 else {
                     color = &tileSources[tileID][srcTYb * srcStrides[tileID]];
                     if (isPalettedSources[tileID]) {
-                        #define UNLOOPED(n, k) if (color[n]) { PixelNoFiltSetOpaque(&index[color[n]], &dstPxLine[dst_x + k], 0, NULL, NULL); }
+                        #define UNLOOPED(n, k) if (color[n]) { pixelFunction(&index[color[n]], &dstPxLine[dst_x + k], opacity, multTableAt, multSubTableAt); }
                         UNLOOPED(0, 0);
                         UNLOOPED(1, 1);
                         UNLOOPED(2, 2);
@@ -3593,7 +3573,7 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
                         #undef UNLOOPED
                     }
                     else {
-                        #define UNLOOPED(n, k) if (color[n] & 0xFF000000U) { PixelNoFiltSetOpaque(&color[n], &dstPxLine[dst_x + k], 0, NULL, NULL); }
+                        #define UNLOOPED(n, k) if (color[n] & 0xFF000000U) { pixelFunction(&color[n], &dstPxLine[dst_x + k], opacity, multTableAt, multSubTableAt); }
                         UNLOOPED(0, 0);
                         UNLOOPED(1, 1);
                         UNLOOPED(2, 2);
@@ -3634,95 +3614,6 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
         }
         srcX += maxTileDraw * 16;
 
-        /*
-        // Draw rightmost
-        sourceTileCellX++;
-        tile++;
-        if (sourceTileCellX == layerWidth) {
-            sourceTileCellX = 0;
-            tile -= layerWidth;
-        }
-
-        srcTX = dst_x;
-        srcTY = srcY & 15;
-        pixelsOfTileRemaining = 16 - srcTX;
-
-        if ((*tile & TILE_IDENT_MASK) != Scene::EmptyTile) {
-            int tileID = *tile & TILE_IDENT_MASK;
-            // If y-flipped
-            if ((*tile & TILE_FLIPY_MASK))
-                srcTY ^= 15;
-            // If x-flipped
-            if ((*tile & TILE_FLIPX_MASK)) {
-                srcTX ^= 15;
-                color = &tileSources[tileID][srcTX + srcTY * srcStrides[tileID]];
-                if (isPalettedSources[tileID]) {
-                    while (pixelsOfTileRemaining) {
-                        if (*color)
-                            PixelNoFiltSetOpaque(&index[*color], &dstPxLine[dst_x], 0, NULL, NULL);
-                        pixelsOfTileRemaining--;
-                        dst_x++;
-                        color--;
-                    }
-                }
-                else {
-                    while (pixelsOfTileRemaining) {
-                        if (*color & 0xFF000000U)
-                            PixelNoFiltSetOpaque(color, &dstPxLine[dst_x], 0, NULL, NULL);
-                        pixelsOfTileRemaining--;
-                        dst_x++;
-                        color--;
-                    }
-                }
-            }
-            // Otherwise
-            else {
-                color = &tileSources[tileID][srcTX + srcTY * srcStrides[tileID]];
-                if (isPalettedSources[tileID]) {
-                    while (pixelsOfTileRemaining) {
-                        if (*color)
-                            PixelNoFiltSetOpaque(&index[*color], &dstPxLine[dst_x], 0, NULL, NULL);
-                        pixelsOfTileRemaining--;
-                        dst_x++;
-                        color++;
-                    }
-                }
-                else {
-                    while (pixelsOfTileRemaining) {
-                        if (*color & 0xFF000000U)
-                            PixelNoFiltSetOpaque(color, &dstPxLine[dst_x], 0, NULL, NULL);
-                        pixelsOfTileRemaining--;
-                        dst_x++;
-                        color++;
-                    }
-                }
-            }
-        }
-        else {
-            dst_x += pixelsOfTileRemaining;
-        }
-        // */
-
-
-
-        // for (int dst_x = dst_x1; dst_x < dst_x2; dst_x++) {
-        //     srcTX = srcX >> 16;
-        //     srcTY = srcY >> 16;
-        //     sourceTileCellX = (srcX >> 20) & layerWidthTileMask;
-        //     sourceTileCellY = (srcY >> 20) & layerHeightTileMask;
-        //     tile = layer->Tiles[sourceTileCellX + (sourceTileCellY << layerWidthInBits)] & TILE_IDENT_MASK;
-        //     color = tileSources[tile][(srcTX & 15) + (srcTY & 15) * srcStride];
-        //     if (isPalettedSources[tile]) {
-        //         if (color)
-        //             PixelNoFiltSetOpaque(&index[color], &dstPxLine[dst_x], 0, NULL, NULL);
-        //     }
-        //     else {
-        //         if (color & 0xFF000000U)
-        //             PixelNoFiltSetOpaque(&color, &dstPxLine[dst_x], 0, NULL, NULL);
-        //     }
-        //     srcX += srcDX;
-        //     srcY += srcDY;
-        // }
         tScanLine++;
         dst_strideY += dstStride;
     }
@@ -3762,14 +3653,15 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_CustomTileScanLines(Scen
     AnimFrame frameStr;
     Texture* texture;
 
-    // int blendFlag = 0;
-    // int opacity = 0x100;
+    int blendFlag = BlendFlag;
+    if (!Graphics::TextureBlend)
+        blendFlag = BlendFlag_OPAQUE;
+    if (FilterTable != &FilterColor[0])
+        blendFlag = BlendFlag_FILTER;
 
     Uint32 color;
     Uint32* index;
     int dst_strideY = dst_y1 * dstStride;
-    // int* multTableAt = &MultTable[0x100 << 8];
-    // int* multSubTableAt = &MultSubTable[0x100 << 8];
 
     vector<Uint32> srcStrides;
     vector<Uint32*> tileSources;
@@ -3786,36 +3678,99 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_CustomTileScanLines(Scen
         isPalettedSources[i] = Graphics::UsePalettes && texture->Paletted;
     }
 
+    void (*pixelFunction)(Uint32*, Uint32*, int, int*, int*) = NULL;
+    switch (blendFlag) {
+        case BlendFlag_OPAQUE:
+            pixelFunction = PixelNoFiltSetOpaque;
+            break;
+        case BlendFlag_TRANSPARENT:
+            pixelFunction = PixelNoFiltSetTransparent;
+            break;
+        case BlendFlag_ADDITIVE:
+            pixelFunction = PixelNoFiltSetAdditive;
+            break;
+        case BlendFlag_SUBTRACT:
+            pixelFunction = PixelNoFiltSetSubtract;
+            break;
+        case BlendFlag_MATCH_EQUAL:
+            pixelFunction = PixelNoFiltSetMatchEqual;
+            break;
+        case BlendFlag_MATCH_NOT_EQUAL:
+            pixelFunction = PixelNoFiltSetMatchNotEqual;
+            break;
+        case BlendFlag_FILTER:
+            pixelFunction = PixelNoFiltSetFilter;
+            break;
+    }
+
     TileScanLine* scanLine = &TileScanLineBuffer[dst_y1];
     for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) {
         dstPxLine = dstPx + dst_strideY;
+
         int srcX = scanLine->SrcX,
             srcY = scanLine->SrcY,
             srcDX = scanLine->DeltaX,
             srcDY = scanLine->DeltaY,
             srcTX, srcTY;
+
+        Uint32 maxHorzCells = scanLine->MaxHorzCells;
+        Uint32 maxVertCells = scanLine->MaxVertCells;
+
+        void (*linePixelFunction)(Uint32*, Uint32*, int, int*, int*);
+
+        int opacity = 0;
+        if (Graphics::TextureBlend) {
+            opacity = Alpha - (0xFF - scanLine->Opacity);
+            if (opacity < 0)
+                opacity = 0;
+        }
+
+        int* multTableAt = &MultTable[opacity << 8];
+        int* multSubTableAt = &MultSubTable[opacity << 8];
+
+        if (opacity == 0 && (blendFlag != BlendFlag_OPAQUE && blendFlag != BlendFlag_FILTER))
+            goto scanlineDone;
+
+        linePixelFunction = pixelFunction;
+
+        if (opacity != 0 && blendFlag == BlendFlag_OPAQUE)
+            linePixelFunction = PixelNoFiltSetTransparent;
+        if (opacity == 0xFF && blendFlag == BlendFlag_TRANSPARENT)
+            linePixelFunction = PixelNoFiltSetOpaque;
+
         index = &SoftwareRenderer::PaletteColors[SoftwareRenderer::PaletteIndexLines[dst_y]][0];
+
         for (int dst_x = dst_x1; dst_x < dst_x2; dst_x++) {
             srcTX = srcX >> 16;
             srcTY = srcY >> 16;
+
+            // Should probably divide by Scene::TileSize instead
             sourceTileCellX = (srcX >> 20) & layerWidthTileMask;
             sourceTileCellY = (srcY >> 20) & layerHeightTileMask;
+
+            if (maxHorzCells != 0)
+                sourceTileCellX %= maxHorzCells;
+            if (maxVertCells != 0)
+                sourceTileCellY %= maxVertCells;
+
             tile = layer->Tiles[sourceTileCellX + (sourceTileCellY << layerWidthInBits)] & TILE_IDENT_MASK;
 			// printf("tile: %X (%s), sourceTileCellX: %d, sourceTileCellY: %d\n", tile, layer->Name, sourceTileCellX, sourceTileCellY);
             if (tile != Scene::EmptyTile) {
                 color = tileSources[tile][(srcTX & 15) + (srcTY & 15) * srcStrides[tile]];
                 if (isPalettedSources[tile]) {
                     if (color)
-                        PixelNoFiltSetOpaque(&index[color], &dstPxLine[dst_x], 0, NULL, NULL);
+                        linePixelFunction(&index[color], &dstPxLine[dst_x], opacity, multTableAt, multSubTableAt);
                 }
                 else {
                     if (color & 0xFF000000U)
-                        PixelNoFiltSetOpaque(&color, &dstPxLine[dst_x], 0, NULL, NULL);
+                        linePixelFunction(&color, &dstPxLine[dst_x], opacity, multTableAt, multSubTableAt);
                 }
             }
             srcX += srcDX;
             srcY += srcDY;
         }
+
+scanlineDone:
         scanLine++;
         dst_strideY += dstStride;
     }
