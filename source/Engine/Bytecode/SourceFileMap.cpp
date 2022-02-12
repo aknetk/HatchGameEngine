@@ -44,20 +44,6 @@ PUBLIC STATIC void SourceFileMap::CheckInit() {
         return;
     }
 
-    // const SDL_MessageBoxButtonData buttonsError[] = {
-    //     { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Continue" },
-    // };
-    // const SDL_MessageBoxData messageBoxData = {
-    //     SDL_MESSAGEBOX_ERROR, NULL,
-    //     "hey",
-    //     getcwd(),
-    //     SDL_arraysize(buttonsError),
-    //     buttonsError,
-    //     NULL,
-    // };
-    // int buttonClicked;
-    // SDL_ShowMessageBox(&messageBoxData, &buttonClicked);
-
     if (ResourceManager::ResourceExists("Objects/Objects.hcm")) {
         ResourceStream* stream = ResourceStream::New("Objects/Objects.hcm");
         if (stream) {
@@ -89,7 +75,7 @@ PUBLIC STATIC void SourceFileMap::CheckInit() {
         Log::Print(Log::LOG_ERROR, "Could not find ClassMap!");
     }
 
-    #ifndef DEBUGA
+    #ifndef NO_SCRIPT_COMPILING
 
     if (File::Exists("SourceFileMap.bin")) {
         char*  bytes;
@@ -106,7 +92,7 @@ PUBLIC STATIC void SourceFileMap::CheckInit() {
 PUBLIC STATIC void SourceFileMap::CheckForUpdate() {
     SourceFileMap::CheckInit();
 
-    #ifndef DEBUGA
+    #ifndef NO_SCRIPT_COMPILING
     bool anyChanges = false;
 
     anyChanges |= PreventObjectSaving;

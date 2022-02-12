@@ -15,18 +15,34 @@ file(GLOB_RECURSE CPP_SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "source/*.cpp")
 
 set(HATCH_SOURCES ${C_SOURCES} ${CPP_SOURCES})
 
+set(HATCH_TARGET_NAME ${PROJECT_NAME})
+IF(TARGET_NAME)
+  set(HATCH_TARGET_NAME ${TARGET_NAME})
+endif()
+
 IF(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  add_definitions(-DLINUX -DTARGET_NAME=\"${PROJECT_NAME}\"
+  add_definitions(-DLINUX -DTARGET_NAME=\"${HATCH_TARGET_NAME}\"
    -DUSING_FREETYPE
    -DNO_LIBAV
   )
 else()
   # Cross compiling a Windows executable
-  add_definitions(-DWIN32 -DTARGET_NAME=\"${PROJECT_NAME}\"
+  add_definitions(-DWIN32 -DTARGET_NAME=\"${HATCH_TARGET_NAME}\"
    -DNO_LIBAV
    -DGLEW_STATIC
    -D_WINDOWS
   )
+endif()
+
+# Build options
+option(ENABLE_SCRIPT_COMPILING "Enable script compiling" ON)
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+  option(WINDOWS_USE_RESOURCE_FILE "Use resource file (Windows)" ON)
+endif()
+
+if(NOT ENABLE_SCRIPT_COMPILING)
+  add_definitions(-DNO_SCRIPT_COMPILING)
 endif()
 
 add_custom_target(makeheaders ALL
@@ -37,6 +53,22 @@ add_custom_target(makeheaders ALL
 
 add_executable(${PROJECT_NAME} ${HATCH_SOURCES})
 add_dependencies(${PROJECT_NAME} makeheaders)
+
+set(OUT_EXEC_NAME ${PROJECT_NAME})
+
+# Change executable name
+IF(EXECUTABLE_NAME)
+  set(OUT_EXEC_NAME ${EXECUTABLE_NAME})
+endif()
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${OUT_EXEC_NAME}-${CMAKE_BUILD_TYPE}")
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+  set(WIN_RES_FILE meta/win/icon.rc)
+
+  if(RESOURCE_FILE)
+    set(WIN_RES_FILE ${RESOURCE_FILE})
+  endif()
+endif()
 
 # Find the libraries
 IF(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
@@ -61,6 +93,9 @@ IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   include_directories(
     meta/win/include
   )
+  if(WINDOWS_USE_RESOURCE_FILE)
+    target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/${WIN_RES_FILE})
+  endif()
 else()
   include_directories(
     ${FREETYPE_INCLUDE_DIRS}

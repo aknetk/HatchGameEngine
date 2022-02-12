@@ -31,6 +31,7 @@ public:
 
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Bytecode/Compiler.h>
+#include <Engine/Bytecode/GarbageCollector.h>
 #include <Engine/IO/FileStream.h>
 
 #include <Engine/Application.h>
@@ -2961,6 +2962,8 @@ PUBLIC STATIC void   Compiler::Dispose(bool freeTokens) {
         Memory::Free(Compiler::Functions[c]->Name->Chars);
         Memory::Free(Compiler::Functions[c]->Name);
         Memory::Free(Compiler::Functions[c]);
+        if (GarbageCollector::GarbageSize >= sizeof(ObjFunction))
+            GarbageCollector::GarbageSize -= sizeof(ObjFunction);
     }
     Memory::Free(Rules);
 
