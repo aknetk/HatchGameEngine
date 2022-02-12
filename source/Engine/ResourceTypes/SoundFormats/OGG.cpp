@@ -162,93 +162,95 @@ PUBLIC STATIC SoundFormat* OGG::Load(const char* filename) {
 
     // ogg->StreamPtr = stream;
 
-    vorbis = (VorbisGroup*)ogg->Vorbis;
+    {
+        vorbis = (VorbisGroup*)ogg->Vorbis;
 
-    fileLength = stream->Length();
-    fileData = malloc(fileLength);
-    stream->ReadBytes(fileData, fileLength);
 
-    vorbis->FileBlock = fileData;
+        size_t fileLength = stream->Length();
+        void* fileData = malloc(fileLength);
+        stream->ReadBytes(fileData, fileLength);
 
-    int error;
-    stb_vorbis_info info;
-    vorbis->VorbisSTB = stb_vorbis_open_memory((Uint8*)vorbis->FileBlock, fileLength, &error, NULL);
-    if (!vorbis->VorbisSTB) {
-        Log::Print(Log::LOG_ERROR, "Could not open Vorbis stream for %s!", filename);
+        vorbis->FileBlock = fileData;
 
-        switch (error) {
-        case VORBIS_need_more_data:
-            Log::Print(Log::LOG_ERROR, "VORBIS_need_more_data");
-            break;
-        case VORBIS_invalid_api_mixing:
-            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_api_mixing");
-            break;
-        case VORBIS_outofmem:
-            Log::Print(Log::LOG_ERROR, "VORBIS_outofmem");
-            break;
-        case VORBIS_feature_not_supported:
-            Log::Print(Log::LOG_ERROR, "VORBIS_feature_not_supported");
-            break;
-        case VORBIS_too_many_channels:
-            Log::Print(Log::LOG_ERROR, "VORBIS_too_many_channels");
-            break;
-        case VORBIS_file_open_failure:
-            Log::Print(Log::LOG_ERROR, "VORBIS_file_open_failure");
-            break;
-        case VORBIS_seek_without_length:
-            Log::Print(Log::LOG_ERROR, "VORBIS_seek_without_length");
-            break;
-        case VORBIS_unexpected_eof:
-            Log::Print(Log::LOG_ERROR, "VORBIS_unexpected_eof");
-            break;
-        case VORBIS_seek_invalid:
-            Log::Print(Log::LOG_ERROR, "VORBIS_seek_invalid");
-            break;
-        case VORBIS_invalid_setup:
-            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_setup");
-            break;
-        case VORBIS_invalid_stream:
-            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_stream");
-            break;
-        case VORBIS_missing_capture_pattern:
-            Log::Print(Log::LOG_ERROR, "VORBIS_missing_capture_pattern");
-            break;
-        case VORBIS_invalid_stream_structure_version:
-            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_stream_structure_version");
-            break;
-        case VORBIS_continued_packet_flag_invalid:
-            Log::Print(Log::LOG_ERROR, "VORBIS_continued_packet_flag_invalid");
-            break;
-        case VORBIS_incorrect_stream_serial_number:
-            Log::Print(Log::LOG_ERROR, "VORBIS_incorrect_stream_serial_number");
-            break;
-        case VORBIS_invalid_first_page:
-            Log::Print(Log::LOG_ERROR, "VORBIS_invalid_first_page");
-            break;
-        case VORBIS_bad_packet_type:
-            Log::Print(Log::LOG_ERROR, "VORBIS_bad_packet_type");
-            break;
-        case VORBIS_cant_find_last_page:
-            Log::Print(Log::LOG_ERROR, "VORBIS_cant_find_last_page");
-            break;
-        case VORBIS_seek_failed:
-            Log::Print(Log::LOG_ERROR, "VORBIS_seek_failed");
-            break;
-        case VORBIS_ogg_skeleton_not_supported:
-            Log::Print(Log::LOG_ERROR, "VORBIS_ogg_skeleton_not_supported");
-            break;
+        int error;
+        vorbis->VorbisSTB = stb_vorbis_open_memory((Uint8*)vorbis->FileBlock, fileLength, &error, NULL);
+        if (!vorbis->VorbisSTB) {
+            Log::Print(Log::LOG_ERROR, "Could not open Vorbis stream for %s!", filename);
+
+            switch (error) {
+            case VORBIS_need_more_data:
+                Log::Print(Log::LOG_ERROR, "VORBIS_need_more_data");
+                break;
+            case VORBIS_invalid_api_mixing:
+                Log::Print(Log::LOG_ERROR, "VORBIS_invalid_api_mixing");
+                break;
+            case VORBIS_outofmem:
+                Log::Print(Log::LOG_ERROR, "VORBIS_outofmem");
+                break;
+            case VORBIS_feature_not_supported:
+                Log::Print(Log::LOG_ERROR, "VORBIS_feature_not_supported");
+                break;
+            case VORBIS_too_many_channels:
+                Log::Print(Log::LOG_ERROR, "VORBIS_too_many_channels");
+                break;
+            case VORBIS_file_open_failure:
+                Log::Print(Log::LOG_ERROR, "VORBIS_file_open_failure");
+                break;
+            case VORBIS_seek_without_length:
+                Log::Print(Log::LOG_ERROR, "VORBIS_seek_without_length");
+                break;
+            case VORBIS_unexpected_eof:
+                Log::Print(Log::LOG_ERROR, "VORBIS_unexpected_eof");
+                break;
+            case VORBIS_seek_invalid:
+                Log::Print(Log::LOG_ERROR, "VORBIS_seek_invalid");
+                break;
+            case VORBIS_invalid_setup:
+                Log::Print(Log::LOG_ERROR, "VORBIS_invalid_setup");
+                break;
+            case VORBIS_invalid_stream:
+                Log::Print(Log::LOG_ERROR, "VORBIS_invalid_stream");
+                break;
+            case VORBIS_missing_capture_pattern:
+                Log::Print(Log::LOG_ERROR, "VORBIS_missing_capture_pattern");
+                break;
+            case VORBIS_invalid_stream_structure_version:
+                Log::Print(Log::LOG_ERROR, "VORBIS_invalid_stream_structure_version");
+                break;
+            case VORBIS_continued_packet_flag_invalid:
+                Log::Print(Log::LOG_ERROR, "VORBIS_continued_packet_flag_invalid");
+                break;
+            case VORBIS_incorrect_stream_serial_number:
+                Log::Print(Log::LOG_ERROR, "VORBIS_incorrect_stream_serial_number");
+                break;
+            case VORBIS_invalid_first_page:
+                Log::Print(Log::LOG_ERROR, "VORBIS_invalid_first_page");
+                break;
+            case VORBIS_bad_packet_type:
+                Log::Print(Log::LOG_ERROR, "VORBIS_bad_packet_type");
+                break;
+            case VORBIS_cant_find_last_page:
+                Log::Print(Log::LOG_ERROR, "VORBIS_cant_find_last_page");
+                break;
+            case VORBIS_seek_failed:
+                Log::Print(Log::LOG_ERROR, "VORBIS_seek_failed");
+                break;
+            case VORBIS_ogg_skeleton_not_supported:
+                Log::Print(Log::LOG_ERROR, "VORBIS_ogg_skeleton_not_supported");
+                break;
+            }
+
+            goto OGG_Load_FAIL;
         }
-        
-        goto OGG_Load_FAIL;
+
+        auto info = stb_vorbis_get_info(vorbis->VorbisSTB);
+
+        memset(&ogg->InputFormat, 0, sizeof(SDL_AudioSpec));
+        ogg->InputFormat.format = AUDIO_S16;
+        ogg->InputFormat.channels = info.channels;
+        ogg->InputFormat.freq = (int)info.sample_rate;
+        ogg->InputFormat.samples = 4096;
     }
-
-    info = stb_vorbis_get_info(vorbis->VorbisSTB);
-
-    memset(&ogg->InputFormat, 0, sizeof(SDL_AudioSpec));
-    ogg->InputFormat.format = AUDIO_S16;
-    ogg->InputFormat.channels = info.channels;
-    ogg->InputFormat.freq = (int)info.sample_rate;
-    ogg->InputFormat.samples = 4096;
 
     ogg->TotalPossibleSamples = (int)stb_vorbis_stream_length_in_samples(vorbis->VorbisSTB);
 

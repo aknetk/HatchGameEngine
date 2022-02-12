@@ -101,6 +101,7 @@ public:
 #include <Engine/IO/MemoryStream.h>
 #include <Engine/IO/ResourceStream.h>
 #include <Engine/IO/Compression/ZLibStream.h>
+#include <Engine/ResourceTypes/SceneFormats/HatchSceneReader.h>
 #include <Engine/ResourceTypes/SceneFormats/RSDKSceneReader.h>
 #include <Engine/ResourceTypes/ISound.h>
 #include <Engine/ResourceTypes/ResourceManager.h>
@@ -1047,8 +1048,8 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     MemoryPools::RunGC(MemoryPools::MEMPOOL_STRING);
     MemoryPools::RunGC(MemoryPools::MEMPOOL_SUBOBJECT);
 
-    char pathParent[256];
-    strcpy(pathParent, filename);
+    char pathParent[4096];
+    StringUtils::Copy(pathParent, filename, sizeof(pathParent));
     for (char* i = pathParent + strlen(pathParent); i >= pathParent; i--) {
         if (*i == '/') {
             *++i = 0;
@@ -1066,14 +1067,41 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     Scene::TileSprites.clear();
     Scene::TileSpriteInfos.clear();
 
-
     Log::Print(Log::LOG_INFO, "Starting scene \"%s\"...", filename);
-    if (StringUtils::StrCaseStr(filename, ".bin")) {
-        RSDKSceneReader::Read(filename, pathParent);
+
+    // Try to read it
+    Stream* r = ResourceStream::New(filename);
+
+    if (r) {
+        // Guess from the header first
+        Uint32 magic = r->ReadUInt32();
+
+        if (magic == HatchSceneReader::Magic) {
+            r->Seek(0);
+            HatchSceneReader::Read(r, pathParent);
+        }
+        else if (magic == RSDKSceneReader::Magic) {
+            r->Seek(0);
+            RSDKSceneReader::Read(r, pathParent);
+        }
+        else {
+            r->Close();
+
+            // Guess from the filename
+            if (StringUtils::StrCaseStr(filename, ".bin"))
+                RSDKSceneReader::Read(filename, pathParent);
+            else if (StringUtils::StrCaseStr(filename, ".hcsn"))
+                HatchSceneReader::Read(filename, pathParent);
+            else
+                TiledMapReader::Read(filename, pathParent);
+        }
     }
     else
-        TiledMapReader::Read(filename, pathParent);
+        Log::Print(Log::LOG_ERROR, "Couldn't open file '%s'!", filename);
 
+    Scene::AddStaticClass();
+}
+PUBLIC STATIC void Scene::AddStaticClass() {
     // Add "Static" class
     if (Application::GameStart) {
         Entity* obj = NULL;
@@ -1115,6 +1143,38 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
 
         StaticObject = obj;
     }
+}
+PUBLIC STATIC void Scene::AddManagers() {
+    ObjectList* objectList;
+    Uint32 objectNameHash;
+
+#define ADD_OBJECT_CLASS(objectName) \
+    objectNameHash = CombinedHash::EncryptString(objectName); \
+    if (Scene::ObjectLists->Exists(objectNameHash)) \
+        objectList = Scene::ObjectLists->Get(objectNameHash); \
+    else { \
+        objectList = new ObjectList(); \
+        strcpy(objectList->ObjectName, objectName); \
+        objectList->SpawnFunction = (Entity*(*)())BytecodeObjectManager::GetSpawnFunction(objectNameHash, objectName); \
+        Scene::ObjectLists->Put(objectNameHash, objectList); \
+    } \
+ \
+    if (objectList->SpawnFunction) { \
+        Entity* obj = objectList->SpawnFunction(); \
+        obj->X = 0.0f; \
+        obj->Y = 0.0f; \
+        obj->InitialX = obj->X; \
+        obj->InitialY = obj->Y; \
+        obj->List = objectList; \
+        Scene::AddStatic(objectList, obj); \
+    }
+
+    ADD_OBJECT_CLASS("WindowManager");
+    ADD_OBJECT_CLASS("InputManager");
+    ADD_OBJECT_CLASS("PauseManager");
+    ADD_OBJECT_CLASS("FadeManager");
+
+#undef ADD_OBJECT_CLASS
 }
 PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
     Stream* tileColReader;
@@ -1326,6 +1386,15 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
         tileSize = 16;
 
         Scene::TileCount = tileCount;
+
+        if (Scene::TileSprites.size()) {
+            int numTiles = (int)Scene::TileSprites[0]->Animations[0].Frames.size();
+            if (Scene::TileCount < numTiles) {
+                Log::Print(Log::LOG_WARN, "Less Tile Collisions (%d) than actual Tiles! (%d)", Scene::TileCount, (int)Scene::TileSprites[0]->Animations[0].Frames.size());
+                Scene::TileCount = numTiles;
+            }
+        }
+
         if (Scene::TileCfgA == NULL) {
             int totalTileVariantCount = Scene::TileCount;
             // multiplied by 4: For all combinations of tile flipping
@@ -1339,11 +1408,6 @@ PUBLIC STATIC void Scene::LoadTileCollisions(const char* filename) {
         }
         else if (Scene::TileSize != tileSize) {
             Scene::TileSize = tileSize;
-        }
-
-        if (Scene::TileSprites.size() && Scene::TileCount < (int)Scene::TileSprites[0]->Animations[0].Frames.size()) {
-            Log::Print(Log::LOG_ERROR, "Less Tile Collisions (%d) than actual Tiles! (%d)", Scene::TileCount, (int)Scene::TileSprites[0]->Animations[0].Frames.size());
-            exit(-1);
         }
 
         Uint8 collisionBuffer[16];
@@ -1752,38 +1816,6 @@ PUBLIC STATIC void Scene::SetTile(int layer, int x, int y, int tileID, int flip_
 
 // Tile Collision
 PUBLIC STATIC int  Scene::CollisionAt(int x, int y, int collisionField, int collideSide, int* angle) {
-    int angleMode = 0;
-    switch (collideSide & 15) {
-        case CollideSide::TOP:
-            angleMode = 0;
-            break;
-        case CollideSide::LEFT:
-            angleMode = 1;
-            break;
-        case CollideSide::BOTTOM:
-            angleMode = 2;
-            break;
-        case CollideSide::RIGHT:
-            angleMode = 3;
-            break;
-    }
-
-    Sensor sensor;
-    sensor.X = x;
-    sensor.Y = y;
-    sensor.Collided = false;
-    sensor.Angle = 0;
-    if (angle)
-        sensor.Angle = *angle;
-
-    Scene::CollisionInLine(x, y, angleMode, 1, collisionField, false, &sensor);
-    if (angle)
-        *angle = sensor.Angle;
-    if (!sensor.Collided)
-        return -1;
-    return sensor.Angle;
-
-    /*
     int temp;
     int checkX;
     int probeXOG = x;
@@ -1859,35 +1891,25 @@ PUBLIC STATIC int  Scene::CollisionAt(int x, int y, int collisionField, int coll
 
         tileID = layer.Tiles[tileX + (tileY << layer.WidthInBits)];
         if ((tileID & TILE_IDENT_MASK) != EmptyTile) {
-            flipX      = !!(tileID & TILE_FLIPX_MASK);
-            flipY      = !!(tileID & TILE_FLIPY_MASK);
+            int tileFlipOffset = (
+                ((!!(tileID & TILE_FLIPY_MASK)) << 1) | (!!(tileID & TILE_FLIPX_MASK))
+                ) * Scene::TileCount;
+
             collisionA = (tileID & TILE_COLLA_MASK) >> 28;
             collisionB = (tileID & TILE_COLLB_MASK) >> 26;
             // collisionC = (tileID & TILE_COLLC_MASK) >> 24;
             collision  = collisionField ? collisionB : collisionA;
             tileID = tileID & TILE_IDENT_MASK;
 
-            // Alter check X
-            checkX = x & 0xF;
-            if (flipX)
-                checkX ^= 0xF;
-
             // Check tile config
-            tileCfg = collisionField ? &Scene::TileCfgB[tileID] : &Scene::TileCfgA[tileID];
+            tileCfg = collisionField ? &Scene::TileCfgB[tileID + tileFlipOffset] : &Scene::TileCfgA[tileID + tileFlipOffset];
 
-            Uint8* col = tileCfg->CollisionTop;
+            Uint8* colT = tileCfg->CollisionTop;
+            Uint8* colB = tileCfg->CollisionBottom;
 
-            isCeiling    = tileCfg->IsCeiling;
-            if (isCeiling)
-                col = tileCfg->CollisionBottom;
-
-            height       = col[checkX];
-            hasCollision = col[checkX] < 0xF0;
-            if (!hasCollision)
+            checkX = x & 0xF;
+            if (colT[checkX] >= 0xF0 || colB[checkX] >= 0xF0)
                 continue;
-
-            if (isCeiling)
-                height ^= 15;
 
             // Check if we can collide with the tile side
             check = ((collision & 1) && (collideSide & CollideSide::TOP)) ||
@@ -1898,35 +1920,17 @@ PUBLIC STATIC int  Scene::CollisionAt(int x, int y, int collisionField, int coll
 
             // Check Y
             tileY = tileY << 4;
-            check = ((isCeiling ^ flipY) && (y >= tileY && y < tileY + tileSize - height)) ||
-                    (!(isCeiling ^ flipY) && (y >= tileY + height && y < tileY + tileSize));
+            check = (y >= tileY + colT[checkX] && y <= tileY + colB[checkX]);
             if (!check)
                 continue;
 
-
-            // Determine correct angle to use
-            configIndexCopy = configIndex;
-            if (flipX && configH)
-                configIndexCopy ^= 0x3;
-            if (flipY && configV)
-                configIndexCopy ^= 0x3;
-
             // Return angle
-            tileAngle = (&tileCfg->AngleTop)[configIndexCopy];
-            if (tileAngle != 0xFF) {
-                if (flipX) {
-                    tileAngle ^= 0xFF; tileAngle++;
-                }
-                if (flipY) {
-                    tileAngle ^= 0x7F; tileAngle++;
-                }
-            }
+            tileAngle = (&tileCfg->AngleTop)[configIndex];
             return tileAngle & 0xFF;
         }
     }
 
     return -1;
-    // */
 }
 PUBLIC STATIC int  Scene::CollisionInLine(int x, int y, int angleMode, int checkLen, int collisionField, bool compareAngle, Sensor* sensor) {
     if (checkLen < 0)

@@ -28,6 +28,7 @@ public:
     Uint32         WidthData = 0;
     Uint32         HeightData = 0;
     Uint32         DataSize = 0;
+    Uint32         ScrollIndexCount = 0;
     int            RelativeY = 0x0100;
     int            ConstantY = 0x0000;
     int            OffsetX = 0x0000;

@@ -88,6 +88,8 @@ public:
     static void AfterScene();
     static void Restart();
     static void LoadScene(const char* filename);
+    static void AddStaticClass();
+    static void AddManagers();
     static void LoadTileCollisions(const char* filename);
     static void SaveTileCollisions();
     static void DisposeInScope(Uint32 scope);

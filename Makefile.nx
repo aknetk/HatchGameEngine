@@ -23,7 +23,7 @@ BUILD		:= out/nx
 SOURCES		:= $(SRC_DIRS)
 DATA		:= data
 INCLUDES	:= source include
-# ROMFS		:= source/Resources
+ROMFS		:= romfs
 
 EXEFS_SRC   := exefs
 
@@ -44,8 +44,9 @@ CFLAGS	:=	-g -Wall -O3 -ffunction-sections \
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__ \
  			`freetype-config --cflags` \
 			-DSWITCH -DOGG_MUSIC -DDEBUG -DTARGET_NAME=\"$(TARGETNAME)\"
+CFLAGS	 +=	-DSWITCH_ROMFS
 
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++14 -Wno-unused-variable
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -fexceptions -std=gnu++14 -Wno-unused-variable
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Bdynamic,-Map,$(notdir $*.map)
@@ -68,7 +69,7 @@ LIBS		+=  -lz -lbz2 -lnx
 # CFLAGS	 +=	-DUSING_CURL
 CFLAGS	 +=	-DUSING_OPENGL
 CFLAGS	 +=	-DUSING_VM_DISPATCH_TABLE
-CFLAGS	 += -DUSING_LIBPNG -DUSING_LIBPNG_HEADER=<libpng16/png.h>
+# CFLAGS	 += -DUSING_LIBPNG -DUSING_LIBPNG_HEADER=<libpng16/png.h>
 
 LIBDIRS	:= $(PORTLIBS) $(LIBNX)
 

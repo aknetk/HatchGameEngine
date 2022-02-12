@@ -19,6 +19,7 @@ public:
     Uint32         WidthData = 0;
     Uint32         HeightData = 0;
     Uint32         DataSize = 0;
+    Uint32         ScrollIndexCount = 0;
 
     int            RelativeY = 0x0100;
     int            ConstantY = 0x0000;
@@ -93,16 +94,16 @@ PUBLIC         SceneLayer::SceneLayer(int w, int h) {
     HeightData = h;
     DataSize = w * h * sizeof(Uint32);
 
-    int scrollIndexCount = WidthData;
-    if (scrollIndexCount < HeightData)
-        scrollIndexCount = HeightData;
+    ScrollIndexCount = WidthData;
+    if (ScrollIndexCount < HeightData)
+        ScrollIndexCount = HeightData;
 
     memset(DeformSetA, 0, sizeof(DeformSetA));
     memset(DeformSetB, 0, sizeof(DeformSetB));
 
     Tiles = (Uint32*)Memory::TrackedCalloc("SceneLayer::Tiles", w * h, sizeof(Uint32));
     TilesBackup = (Uint32*)Memory::TrackedCalloc("SceneLayer::TilesBackup", w * h, sizeof(Uint32));
-    ScrollIndexes = (Uint8*)Memory::Calloc(scrollIndexCount * 16, sizeof(Uint8));
+    ScrollIndexes = (Uint8*)Memory::Calloc(ScrollIndexCount * 16, sizeof(Uint8));
     // memset(ScrollIndexes, 0xFF, h * 16 * sizeof(Uint8));
 }
 PUBLIC void    SceneLayer::Dispose() {

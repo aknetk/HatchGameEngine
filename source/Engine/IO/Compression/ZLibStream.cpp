@@ -17,6 +17,7 @@ public:
 #undef min
 #undef max
 
+#define MINIZ_HEADER_FILE_ONLY
 #include <Libraries/miniz.h>
 
 PUBLIC STATIC ZLibStream* ZLibStream::New(Stream* other_stream, uint32_t mode) {

@@ -467,7 +467,6 @@ PUBLIC STATIC void Application::PollEvents() {
                             Scene::Init();
                             if (*StartingScene)
                                 Scene::LoadScene(StartingScene);
-                            // Scene::LoadTileCollisions("Scenes/TileCol.bin");
                             Scene::Restart();
                             Application::UpdateWindowTitle();
                         }
@@ -530,7 +529,6 @@ PUBLIC STATIC void Application::PollEvents() {
                             memcpy(Scene::CurrentScene, temp, 256);
                             Scene::LoadScene(Scene::CurrentScene);
 
-                            // Scene::LoadTileCollisions("Scenes/TileCol.bin");
                             Scene::Restart();
                             Application::UpdateWindowTitle();
                         }
@@ -938,7 +936,8 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
     Application::Settings->GetInteger("dev", "fastforward", &UpdatesPerFastForward);
 
     Scene::Init();
-    if (argc > 1 && !!StringUtils::StrCaseStr(args[1], ".tmx")) {
+
+    if (argc > 1) {
         char* pathStart = StringUtils::StrCaseStr(args[1], "/Resources/");
         if (pathStart == NULL)
             pathStart = StringUtils::StrCaseStr(args[1], "\\Resources\\");
@@ -958,7 +957,6 @@ PUBLIC STATIC void Application::Run(int argc, char* args[]) {
     else if (*StartingScene) {
         Scene::LoadScene(StartingScene);
     }
-    // Scene::LoadTileCollisions("Scenes/TileCol.bin");
 
     Scene::Restart();
     Application::UpdateWindowTitle();
