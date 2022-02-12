@@ -43,6 +43,9 @@ struct TileScanLine {
     int SrcY;
     int DeltaX;
     int DeltaY;
+    Uint8 Opacity;
+    Uint32 MaxHorzCells;
+    Uint32 MaxVertCells;
 };
 struct Viewport {
     float X;
