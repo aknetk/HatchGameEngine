@@ -23,7 +23,7 @@ while [[ $# -gt 0 ]]; do
     -r|--build-root) BUILD_ROOT="$2"; shift; shift ;;
     -e|--executable-name)EXECUTABLE_NAME="$2"; shift; shift ;;
     -t|--target-name) TARGET_NAME="$2"; shift; shift ;;
-    -r|--resource-file) RESOURCE_FILE="$2"; shift; shift ;;
+    -f|--resource-file) RESOURCE_FILE="$2"; shift; shift ;;
     -d|--disable-script-compiling) ENABLE_SCRIPT_COMPILING=OFF; shift ;;
     -*|--*) echo "Unknown option $1"; exit 1 ;;
     *) POSITIONAL_ARGS+=("$1"); shift ;;
