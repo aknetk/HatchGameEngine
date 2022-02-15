@@ -5960,7 +5960,7 @@ VMValue Sound_Loop(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(1);
     ISound* audio = Scene::SoundList[GET_ARG(0, GetInteger)]->AsSound;
     int channel = GET_ARG(0, GetInteger);
-    int loopPoint = argCount >= 2 ? GET_ARG(0, GetInteger) : 0;
+    int loopPoint = argCount >= 2 ? GET_ARG(1, GetInteger) : 0;
     AudioManager::SetSound(channel % AudioManager::SoundArrayLength, audio, true, loopPoint);
     return NULL_VAL;
 }
