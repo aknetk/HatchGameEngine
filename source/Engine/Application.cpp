@@ -313,21 +313,31 @@ PUBLIC STATIC void Application::GetPerformanceSnapshot() {
         }
 
         // Object Performance Snapshot
+        double totalUpdateEarly = 0.0;
         double totalUpdate = 0.0;
+        double totalUpdateLate = 0.0;
         double totalRender = 0.0;
         Log::Print(Log::LOG_IMPORTANT, "Object Performance Snapshot:");
         for (size_t i = 0; i < ListList.size(); i++) {
             ObjectList* list = ListList[i];
             Log::Print(Log::LOG_INFO, "Object \"%s\":\n"
-                "           - Avg Update %6.1f mcs (Total %6.1f mcs, Count %d)\n"
-                "           - Avg Render %6.1f mcs (Total %6.1f mcs, Count %d)", list->ObjectName,
+                "           - Avg Update Early %6.1f mcs (Total %6.1f mcs, Count %d)\n"
+                "           - Avg Update       %6.1f mcs (Total %6.1f mcs, Count %d)\n"
+                "           - Avg Update Late  %6.1f mcs (Total %6.1f mcs, Count %d)\n"
+                "           - Avg Render       %6.1f mcs (Total %6.1f mcs, Count %d)", list->ObjectName,
+                list->AverageUpdateEarlyTime * 1000.0, list->AverageUpdateEarlyTime * list->AverageUpdateEarlyItemCount * 1000.0, (int)list->AverageUpdateEarlyItemCount,
                 list->AverageUpdateTime * 1000.0, list->AverageUpdateTime * list->AverageUpdateItemCount * 1000.0, (int)list->AverageUpdateItemCount,
+                list->AverageUpdateLateTime * 1000.0, list->AverageUpdateLateTime * list->AverageUpdateLateItemCount * 1000.0, (int)list->AverageUpdateLateItemCount,
                 list->AverageRenderTime * 1000.0, list->AverageRenderTime * list->AverageRenderItemCount * 1000.0, (int)list->AverageRenderItemCount);
 
+            totalUpdateEarly += list->AverageUpdateEarlyTime * list->AverageUpdateEarlyItemCount * 1000.0;
             totalUpdate += list->AverageUpdateTime * list->AverageUpdateItemCount * 1000.0;
+            totalUpdateLate += list->AverageUpdateLateTime * list->AverageUpdateLateItemCount * 1000.0;
             totalRender += list->AverageRenderTime * list->AverageRenderItemCount * 1000.0;
         }
+        Log::Print(Log::LOG_WARN, "Total Update Early: %8.3f mcs / %1.3f ms", totalUpdateEarly, totalUpdateEarly / 1000.0);
         Log::Print(Log::LOG_WARN, "Total Update: %8.3f mcs / %1.3f ms", totalUpdate, totalUpdate / 1000.0);
+        Log::Print(Log::LOG_WARN, "Total Update Late: %8.3f mcs / %1.3f ms", totalUpdateLate, totalUpdateLate / 1000.0);
         Log::Print(Log::LOG_WARN, "Total Render: %8.3f mcs / %1.3f ms", totalRender, totalRender / 1000.0);
 
         Log::Print(Log::LOG_IMPORTANT, "Garbage Size:");

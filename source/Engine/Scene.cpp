@@ -200,9 +200,14 @@ void _ObjectList_RemoveNonPersistentDynamicFromLists(Uint32, ObjectList* list) {
 void _ObjectList_Clear(Uint32, ObjectList* list) {
     list->Clear();
 }
+void _ObjectList_FreeBytecode(Uint32, ObjectList* list) {
+    BytecodeObjectManager::FreeObjectClassBytecode(list->ObjectName);
+}
 void _ObjectList_ResetPerf(Uint32, ObjectList* list) {
     // list->AverageUpdateTime = 0.0;
     list->AverageUpdateItemCount = 0.0;
+    list->AverageUpdateEarlyItemCount = 0.0;
+    list->AverageUpdateLateItemCount = 0.0;
     list->AverageRenderItemCount = 0.0;
 }
 void _ObjectList_CallLoads(Uint32, ObjectList* list) {
@@ -223,7 +228,25 @@ void _UpdateObjectEarly(Entity* ent) {
     if (!ent->OnScreen)
         return;
 
+    double elapsed = Clock::GetTicks();
+
     ent->UpdateEarly();
+
+    elapsed = Clock::GetTicks() - elapsed;
+
+    if (ent->List) {
+        ObjectList* list = ent->List;
+        double count = list->AverageUpdateEarlyItemCount;
+        if (count < 60.0 * 60.0) {
+            count += 1.0;
+            if (count == 1.0)
+                list->AverageUpdateEarlyTime = elapsed;
+            else
+                list->AverageUpdateEarlyTime =
+                list->AverageUpdateEarlyTime + (elapsed - list->AverageUpdateEarlyTime) / count;
+            list->AverageUpdateEarlyItemCount = count;
+        }
+    }
 }
 void _UpdateObjectLate(Entity* ent) {
     if (Scene::Paused && ent->Pauseable)
@@ -233,7 +256,25 @@ void _UpdateObjectLate(Entity* ent) {
     if (!ent->OnScreen)
         return;
 
+    double elapsed = Clock::GetTicks();
+
     ent->UpdateLate();
+
+    elapsed = Clock::GetTicks() - elapsed;
+
+    if (ent->List) {
+        ObjectList* list = ent->List;
+        double count = list->AverageUpdateLateItemCount;
+        if (count < 60.0 * 60.0) {
+            count += 1.0;
+            if (count == 1.0)
+                list->AverageUpdateLateTime = elapsed;
+            else
+                list->AverageUpdateLateTime =
+                list->AverageUpdateLateTime + (elapsed - list->AverageUpdateLateTime) / count;
+            list->AverageUpdateLateItemCount = count;
+        }
+    }
 }
 void _UpdateObject(Entity* ent) {
     if (Scene::Paused && ent->Pauseable)
@@ -976,6 +1017,7 @@ PUBLIC STATIC void Scene::LoadScene(const char* filename) {
     // Clear lists
     if (Scene::ObjectLists) {
         Scene::ObjectLists->ForAll(_ObjectList_Clear);
+        Scene::ObjectLists->ForAll(_ObjectList_FreeBytecode);
         Scene::ObjectLists->Clear();
     }
     if (Scene::ObjectRegistries) {

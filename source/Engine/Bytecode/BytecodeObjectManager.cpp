@@ -21,8 +21,10 @@ public:
     static Uint32               CurrentObjectHash;
     static vector<ObjFunction*> FunctionList;
     static vector<ObjFunction*> AllFunctionList;
+    static vector<Uint32>       AllFunctionListObjectOwner;
 
     static HashMap<Uint8*>*     Sources;
+    static HashMap<Uint64>*     OwnedFunctions;
     static HashMap<char*>*      Tokens;
     static vector<char*>        TokensList;
 
@@ -56,8 +58,10 @@ char                 BytecodeObjectManager::CurrentObjectName[256];
 Uint32               BytecodeObjectManager::CurrentObjectHash;
 vector<ObjFunction*> BytecodeObjectManager::FunctionList;
 vector<ObjFunction*> BytecodeObjectManager::AllFunctionList;
+vector<Uint32>       BytecodeObjectManager::AllFunctionListObjectOwner;
 
 HashMap<Uint8*>*     BytecodeObjectManager::Sources = NULL;
+HashMap<Uint64>*     BytecodeObjectManager::OwnedFunctions = NULL;
 HashMap<char*>*      BytecodeObjectManager::Tokens = NULL;
 vector<char*>        BytecodeObjectManager::TokensList;
 
@@ -111,6 +115,8 @@ PUBLIC STATIC void    BytecodeObjectManager::Init() {
         Globals = new HashMap<VMValue>(NULL, 8);
     if (Sources == NULL)
         Sources = new HashMap<Uint8*>(NULL, 8);
+    if (OwnedFunctions == NULL)
+        OwnedFunctions = new HashMap<Uint64>(NULL, 8);
     if (Strings == NULL)
         Strings = new HashMap<VMValue>(NULL, 8);
     if (Tokens == NULL)
@@ -120,7 +126,7 @@ PUBLIC STATIC void    BytecodeObjectManager::Init() {
     BytecodeObjectManager::EjectedGlobals.shrink_to_fit();
 
     GarbageCollector::RootObject = NULL;
-    GarbageCollector::NextGC = 0x100000 / 2;
+    GarbageCollector::NextGC = 0x100000;
     memset(VMThread::InstructionIgnoreMap, 0, sizeof(VMThread::InstructionIgnoreMap));
 
     GlobalLock = SDL_CreateMutex();
@@ -175,7 +181,13 @@ PUBLIC STATIC void    BytecodeObjectManager::Dispose() {
         FreeGlobalValue(0, OBJECT_VAL(AllFunctionList[i]));
     }
     AllFunctionList.clear();
+    AllFunctionListObjectOwner.clear();
 
+    if (OwnedFunctions) {
+        OwnedFunctions->Clear();
+        delete OwnedFunctions;
+        OwnedFunctions = NULL;
+    }
     if (Sources) {
         Sources->WithAll([](Uint32 hash, Uint8* ptr) -> void {
             Memory::Free(ptr);
@@ -677,6 +689,8 @@ PUBLIC STATIC void    BytecodeObjectManager::LinkExtensions() {
     #define FG_RESET "\x1b[m"
 #endif
 
+Uint32 BigFilenameHash = 0;
+
 // #region ObjectFuncs
 PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, size_t size) {
     FunctionList.clear();
@@ -748,6 +762,7 @@ PUBLIC STATIC void    BytecodeObjectManager::RunFromIBC(MemoryStream* stream, si
 
         // if (i == 0) {
             AllFunctionList.push_back(function);
+            AllFunctionListObjectOwner.push_back(BigFilenameHash);
         // }
     }
 
@@ -864,11 +879,15 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
                     Log::WriteToFile ? "" : FG_YELLOW, objectName, Log::WriteToFile ? "" : FG_RESET,
                     (int)filenameHashList->size());
 
+            BigFilenameHash = filenameHash;
+
             MemoryStream* bytecodeStream = MemoryStream::New(bytecode, size);
             if (bytecodeStream) {
                 RunFromIBC(bytecodeStream, size);
                 bytecodeStream->Close();
             }
+
+            BigFilenameHash = 0;
 
             // Set native functions for that new object class
             // Log::Print(Log::LOG_VERBOSE, "Setting native functions for that new object class...");
@@ -901,5 +920,28 @@ PUBLIC STATIC void*   BytecodeObjectManager::GetSpawnFunction(Uint32 objectNameH
 
     BytecodeObjectManager::SetCurrentObjectHash(Globals->HashFunction(objectName, strlen(objectName)));
     return (void*)BytecodeObjectManager::SpawnFunction;
+}
+PUBLIC STATIC void BytecodeObjectManager::FreeObjectClassBytecode(const char* objectName) {
+    vector<Uint32>* filenameHashList = SourceFileMap::ClassMap->Get(objectName);
+    if (filenameHashList == NULL)
+        return;
+
+    for (size_t fn = 0; fn < filenameHashList->size(); fn++) {
+        Uint32 filenameHash = (*filenameHashList)[fn];
+
+        if (Sources->Exists(filenameHash)) {
+            Memory::Free(Sources->Get(filenameHash));
+            Sources->Remove(filenameHash);
+            Globals->Remove(objectName);
+
+            for (size_t i = 0; i < AllFunctionList.size(); i++) {
+                if (AllFunctionListObjectOwner[i] == filenameHash) {
+                    AllFunctionList.erase(AllFunctionList.begin() + i);
+                    AllFunctionListObjectOwner.erase(AllFunctionListObjectOwner.begin() + i);
+                    i--;
+                }
+            }
+        }
+    }
 }
 // #endregion
