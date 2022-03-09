@@ -15,8 +15,7 @@ public:
     int RelativeParallax;
     int ConstantParallax;
     char CanDeform;
-    char Byte2;
-    int Position;
+    Sint64 Position;
     int Offset;
 
 };

@@ -5541,10 +5541,10 @@ VMValue Scene_SetTileScanline(int argCount, VMValue* args, Uint32 threadID) {
     int scanlineIndex = GET_ARG(0, GetInteger);
 
     TileScanLine* scanLine = &SoftwareRenderer::TileScanLineBuffer[scanlineIndex];
-    scanLine->SrcX = (int)(GET_ARG(1, GetDecimal) * 0x10000);
-    scanLine->SrcY = (int)(GET_ARG(2, GetDecimal) * 0x10000);
-    scanLine->DeltaX = (int)(GET_ARG(3, GetDecimal) * 0x10000);
-    scanLine->DeltaY = (int)(GET_ARG(4, GetDecimal) * 0x10000);
+    scanLine->SrcX = (Sint64)(GET_ARG(1, GetDecimal) * 0x10000);
+    scanLine->SrcY = (Sint64)(GET_ARG(2, GetDecimal) * 0x10000);
+    scanLine->DeltaX = (Sint64)(GET_ARG(3, GetDecimal) * 0x10000);
+    scanLine->DeltaY = (Sint64)(GET_ARG(4, GetDecimal) * 0x10000);
 
     int opacity = 0xFF;
     if (argCount >= 6) {

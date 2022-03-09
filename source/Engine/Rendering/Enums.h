@@ -39,10 +39,10 @@ enum {
 #define TILE_IDENT_MASK 0x00FFFFFFU
 
 struct TileScanLine {
-    int SrcX;
-    int SrcY;
-    int DeltaX;
-    int DeltaY;
+    Sint64 SrcX;
+    Sint64 SrcY;
+    Sint64 DeltaX;
+    Sint64 DeltaY;
     Uint8 Opacity;
     Uint32 MaxHorzCells;
     Uint32 MaxVertCells;
