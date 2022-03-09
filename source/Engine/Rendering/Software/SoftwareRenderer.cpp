@@ -3143,7 +3143,7 @@ PUBLIC STATIC void     SoftwareRenderer::DrawTile(int tile, int x, int y, bool f
 PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_InitTileScanLines(SceneLayer* layer, View* currentView) {
     switch (layer->DrawBehavior) {
         case DrawBehavior_PGZ1_BG:
-		case DrawBehavior_HorizontalParallax: {
+        case DrawBehavior_HorizontalParallax: {
             int viewX = (int)currentView->X;
             int viewY = (int)currentView->Y;
             // int viewWidth = (int)currentView->Width;
@@ -3165,9 +3165,9 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_InitTileScanLines(SceneL
             }
 
             // Create scan lines
-            int scrollOffset = Scene::Frame * layer->ConstantY;
-            int scrollLine = (scrollOffset + ((viewY + layerOffsetY) * layer->RelativeY)) >> 8;
-                scrollLine %= layerHeight;
+            Sint64 scrollOffset = Scene::Frame * layer->ConstantY;
+            Sint64 scrollLine = (scrollOffset + ((viewY + layerOffsetY) * layer->RelativeY)) >> 8;
+                   scrollLine %= layerHeight;
             if (scrollLine < 0)
                 scrollLine += layerHeight;
 
@@ -3235,19 +3235,19 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_InitTileScanLines(SceneL
                     parallaxIndex++;
                 }
             }
-			break;
+            break;
         }
-		case DrawBehavior_VerticalParallax: {
-			break;
+        case DrawBehavior_VerticalParallax: {
+            break;
         }
-		case DrawBehavior_CustomTileScanLines: {
-            int scrollOffset = Scene::Frame * layer->ConstantY;
-            int scrollPositionX = ((scrollOffset + (((int)currentView->X + layer->OffsetX) * layer->RelativeY)) >> 8) & 0xFFFF;
-                scrollPositionX %= layer->Width;
-                scrollPositionX <<= 16;
-            int scrollPositionY = ((scrollOffset + (((int)currentView->Y + layer->OffsetY) * layer->RelativeY)) >> 8) & 0xFFFF;
-                scrollPositionY %= layer->Height;
-                scrollPositionY <<= 16;
+        case DrawBehavior_CustomTileScanLines: {
+            Sint64 scrollOffset = Scene::Frame * layer->ConstantY;
+            Sint64 scrollPositionX = ((scrollOffset + (((int)currentView->X + layer->OffsetX) * layer->RelativeY)) >> 8) & 0xFFFF;
+                   scrollPositionX %= layer->Width;
+                   scrollPositionX <<= 16;
+            Sint64 scrollPositionY = ((scrollOffset + (((int)currentView->Y + layer->OffsetY) * layer->RelativeY)) >> 8) & 0xFFFF;
+                   scrollPositionY %= layer->Height;
+                   scrollPositionY <<= 16;
 
             TileScanLine* scanLine = &TileScanLineBuffer[0];
             for (int i = 0; i < currentView->Height; i++) {
@@ -3260,9 +3260,9 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_InitTileScanLines(SceneL
                 scanLine++;
             }
 
-			break;
+            break;
         }
-	}
+    }
 }
 PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(SceneLayer* layer, View* currentView) {
     int dst_x1 = 0;
@@ -3376,12 +3376,13 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_HorizontalParallax(Scene
             tScanLine->SrcX -= layerWidthInPixels;
 
         int dst_x = dst_x1, c_dst_x = dst_x1;
-        int srcX = tScanLine->SrcX, srcY = tScanLine->SrcY, srcTX, srcTY, pixelsOfTileRemaining;
+        int pixelsOfTileRemaining;
+        Sint64 srcX = tScanLine->SrcX, srcY = tScanLine->SrcY;
         index = &SoftwareRenderer::PaletteColors[SoftwareRenderer::PaletteIndexLines[dst_y]][0];
 
         // Draw leftmost tile in scanline
-        srcTX = srcX & 15;
-        srcTY = srcY & 15;
+        int srcTX = srcX & 15;
+        int srcTY = srcY & 15;
         sourceTileCellX = (srcX >> 4);
         sourceTileCellY = (srcY >> 4);
         c_pixelsOfTileRemaining = srcTX;
@@ -3707,11 +3708,10 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_CustomTileScanLines(Scen
     for (int dst_y = dst_y1; dst_y < dst_y2; dst_y++) {
         dstPxLine = dstPx + dst_strideY;
 
-        int srcX = scanLine->SrcX,
-            srcY = scanLine->SrcY,
-            srcDX = scanLine->DeltaX,
-            srcDY = scanLine->DeltaY,
-            srcTX, srcTY;
+        Sint64 srcX = scanLine->SrcX,
+               srcY = scanLine->SrcY,
+               srcDX = scanLine->DeltaX,
+               srcDY = scanLine->DeltaY;
 
         Uint32 maxHorzCells = scanLine->MaxHorzCells;
         Uint32 maxVertCells = scanLine->MaxVertCells;
@@ -3741,10 +3741,9 @@ PUBLIC STATIC void     SoftwareRenderer::DrawSceneLayer_CustomTileScanLines(Scen
         index = &SoftwareRenderer::PaletteColors[SoftwareRenderer::PaletteIndexLines[dst_y]][0];
 
         for (int dst_x = dst_x1; dst_x < dst_x2; dst_x++) {
-            srcTX = srcX >> 16;
-            srcTY = srcY >> 16;
+            int srcTX = srcX >> 16;
+            int srcTY = srcY >> 16;
 
-            // Should probably divide by Scene::TileSize instead
             sourceTileCellX = (srcX >> 20) & layerWidthTileMask;
             sourceTileCellY = (srcY >> 20) & layerHeightTileMask;
 

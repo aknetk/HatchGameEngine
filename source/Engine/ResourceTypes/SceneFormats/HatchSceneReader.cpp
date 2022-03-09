@@ -252,7 +252,6 @@ PRIVATE STATIC void HatchSceneReader::ReadScrollData(Stream* r, SceneLayer layer
 
         r->ReadByte(); // ?
 
-        info->Byte2 = 0;
         info->Position = 0;
         info->Offset = 0;
     }
