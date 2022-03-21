@@ -186,7 +186,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(Stream* r, const char* parentFolder) {
 
             // Object names
             {
-                r = ResourceStream::New("ObjectList.txt");
+                Stream* r = ResourceStream::New("ObjectList.txt");
                 if (!r) break;
 
                 sz = r->Length();
@@ -226,7 +226,7 @@ PUBLIC STATIC bool RSDKSceneReader::Read(Stream* r, const char* parentFolder) {
 
             // Property Names
             {
-                r = ResourceStream::New("PropertyList.txt");
+                Stream* r = ResourceStream::New("PropertyList.txt");
                 if (!r) break;
 
                 sz = r->Length();

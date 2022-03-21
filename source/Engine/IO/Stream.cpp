@@ -6,6 +6,7 @@ public:
 };
 #endif
 
+#include <Engine/Diagnostics/Log.h>
 #include <Engine/IO/Stream.h>
 #include <Engine/IO/Compression/ZLibStream.h>
 
@@ -30,6 +31,12 @@ PUBLIC VIRTUAL size_t  Stream::Length() {
 }
 
 PUBLIC VIRTUAL size_t  Stream::ReadBytes(void* data, size_t n) {
+#if DEBUG
+    if (Position() + n > Length()) {
+        Log::Print(Log::LOG_ERROR, "Attempted to read past stream.");
+        assert(false);
+    }
+#endif
     return 0;
 }
 PUBLIC         Uint8   Stream::ReadByte() {
