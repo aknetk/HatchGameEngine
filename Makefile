@@ -1,12 +1,54 @@
+# recursive wildcard
 rwc = $(foreach d, $(wildcard $1*), $(call rwc,$d/,$2) $(filter $(subst *,%,$2),$d))
+
+PLATFORM_UNKNOWN = 0
+PLATFORM_WINDOWS = 1
+PLATFORM_MACOS = 2
+PLATFORM_LINUX = 3
+
+PLATFORM = $(PLATFORM_UNKNOWN)
+OUT_FOLDER =
+
+# from https://www.msys2.org/wiki/Porting/
+# nonzero value means we're using msys
+MSYS_VERSION := $(if $(findstring Msys, $(shell uname -o)),$(word 1, $(subst ., ,$(shell uname -r))),0)
+
+ifeq ($(OS),Windows_NT)
+	PLATFORM = $(PLATFORM_WINDOWS)
+	OUT_FOLDER = windows
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		PLATFORM = $(PLATFORM_LINUX)
+		OUT_FOLDER = linux
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		PLATFORM = $(PLATFORM_MACOS)
+		OUT_FOLDER = macos
+	endif
+endif
+
+ifeq ($(PLATFORM),0)
+	$(error Unknown platform)
+endif
+
+PROGRAM_SUFFIX :=
+ifeq ($(PLATFORM),$(PLATFORM_WINDOWS))
+PROGRAM_SUFFIX := .exe
+endif
+
+ifeq ($(PLATFORM),$(PLATFORM_LINUX))
+MAKEHEADERS := ./tools/lmakeheaders
+else
+MAKEHEADERS := ./tools/makeheaders$(PROGRAM_SUFFIX)
+endif
 
 USING_LIBAV = 0
 USING_CURL = 0
 USING_LIBPNG = 1
 
 TARGET    = HatchGameEngine
-# $(notdir $(CURDIR))
-TARGETDIR = builds/osx/$(TARGET)
+TARGETDIR = builds/$(OUT_FOLDER)/$(TARGET)
 OBJS      = main.o
 
 SRC_C   = $(call rwc, source/, *.c)
@@ -14,35 +56,47 @@ SRC_CPP = $(call rwc, source/, *.cpp)
 SRC_M   = $(call rwc, source/, *.m)
 
 OBJ_DIRS := $(sort \
-			$(addprefix out/osx/, $(dir $(SRC_C:source/%.c=%.o))) \
-			$(addprefix out/osx/, $(dir $(SRC_CPP:source/%.cpp=%.o))) \
-			$(addprefix out/osx/, $(dir $(SRC_M:source/%.m=%.o))) )
+			$(addprefix out/$(OUT_FOLDER)/, $(dir $(SRC_C:source/%.c=%.o))) \
+			$(addprefix out/$(OUT_FOLDER)/, $(dir $(SRC_CPP:source/%.cpp=%.o))))
+ifeq ($(PLATFORM),$(PLATFORM_MACOS))
+OBJ_DIRS += $(addprefix out/$(OUT_FOLDER)/, $(dir $(SRC_M:source/%.m=%.o)))
+endif
 
-OBJS     := $(addprefix out/osx/, $(SRC_C:source/%.c=%.o)) \
-			$(addprefix out/osx/, $(SRC_CPP:source/%.cpp=%.o)) \
-			$(addprefix out/osx/, $(SRC_M:source/%.m=%.o))
+OBJS     := $(addprefix out/$(OUT_FOLDER)/, $(SRC_C:source/%.c=%.o)) \
+			$(addprefix out/$(OUT_FOLDER)/, $(SRC_CPP:source/%.cpp=%.o))
+ifeq ($(PLATFORM),$(PLATFORM_MACOS))
+OBJ_DIRS += $(addprefix out/$(OUT_FOLDER)/, $(SRC_M:source/%.m=%.o))
+endif
 
 INCLUDES  =	-Wall -Wno-deprecated -Wno-unused-variable \
-			-F/Library/Frameworks/ \
-			-F/System/Library/Frameworks/ \
-			-Fmeta/mac/ \
-			-I/Library/Frameworks/SDL2.framework/Headers/ \
-			-I/System/Library/Frameworks/OpenGL.framework/Headers/ \
 			-I/usr/local/include/ \
 			-I/usr/local/include/freetype2 \
 			-Iinclude/ \
 			-Isource/
+LIBS	  =	-lpng16 -ljpeg -lfreetype $(shell sdl2-config --libs)
+DEFINES   = -DTARGET_NAME=\"$(TARGET)\" \
+			-DUSING_LIBPNG \
+			-DUSING_LIBPNG_HEADER=\<libpng16/png.h\> \
+			-DDEBUG \
+			-DUSING_VM_DISPATCH_TABLE \
+			$(shell sdl2-config --cflags)
 
-			#-F/usr/local/lib
-
-LIBS	  =	-lpng16 -ljpeg -lfreetype
-DEFINES   = -DMACOSX -DTARGET_NAME=\"$(TARGET)\"
-DEFINES  += -DUSING_LIBPNG -DUSING_LIBPNG_HEADER=\<libpng16/png.h\>
-
-DEFINES	 +=	-DDEBUG
-# DEFINES	 +=	-DUSING_OPENGL
-DEFINES	 +=	-DUSING_FRAMEWORK
-DEFINES	 +=	-DUSING_VM_DISPATCH_TABLE
+ifeq ($(PLATFORM),$(PLATFORM_WINDOWS))
+INCLUDES += -Imeta/win/include
+LIBS += -lwsock32 -lws2_32
+DEFINES += -DWIN32
+endif
+ifeq ($(PLATOFRM),$(PLATFORM_MACOS))
+INCLUDES += -F/Library/Frameworks/ \
+			-F/System/Library/Frameworks/ \
+			-Fmeta/mac/ \
+			-I/Library/Frameworks/SDL2.framework/Headers/ \
+			-I/System/Library/Frameworks/OpenGL.framework/Headers/
+DEFINES += -DMACOSX -DUSING_FRAMEWORK
+endif
+ifeq ($(PLATFORM),$(PLATFORM_LINUX))
+DEFINES += -DLINUX
+endif
 
 # Compiler Optimzations
 ifeq ($(USING_COMPILER_OPTS), 1)
@@ -67,56 +121,29 @@ LIBS	 +=	-logg -lvorbis -lvorbisfile
 # zlib Compression
 LIBS	 +=	-lz
 
+ifeq ($(PLATFORM),$(PLATFORM_MACOS))
 LINKER	  =	-framework SDL2 \
 			-framework OpenGL \
 			-framework CoreFoundation \
 			-framework CoreServices \
 			-framework Foundation
 			# \
-			-framework Cocoa \
-			#
+			-framework Cocoa
+endif
 
 all:
-	@mkdir -p $(OBJ_DIRS)
-	@./tools/makeheaders source
-	@make build
-	@(cd source && exec ./../"$(TARGETDIR)")
+	mkdir -p $(OBJ_DIRS)
+	$(MAKEHEADERS) source
+	$(MAKE) build
 
-s1r:
-	@mkdir -p $(OBJ_DIRS)
-	@./tools/makeheaders source
-	@make build
-	@(cd source_s1r && exec ./../"$(TARGETDIR)")
+clean:
+	rm -rf $(OBJS)
 
-gal:
-	@mkdir -p $(OBJ_DIRS)
-	@./tools/makeheaders source
-	@make build
-	@(cd source_galactic && exec ./../"$(TARGETDIR)")
+build: $(OBJS)
+	$(CXX) $^ $(INCLUDES) $(LIBS) $(LINKER) -o "$(TARGETDIR)" -std=c++11
 
-trivia:
-	@mkdir -p $(OBJ_DIRS)
-	@./tools/makeheaders source
-	@make build
-	@(cd source_chat_trivia && exec ./../"$(TARGETDIR)")
-
-binj:
-	@mkdir -p $(OBJ_DIRS)
-	@./tools/makeheaders source
-	@make build
-	@(cd source_binj && exec ./../"$(TARGETDIR)")
-
-mania:
-	@mkdir -p $(OBJ_DIRS)
-	@./tools/makeheaders source
-	@make build
-	@(cd source_mania && exec ./../"$(TARGETDIR)")
-
-layout:
-	@mkdir -p $(OBJ_DIRS)
-	@./tools/makeheaders source
-	@make build
-	@(cd source_layout && lldb -o r -f ./../"$(TARGETDIR)")
+$(OBJ_DIRS):
+	mkdir -p $@
 
 package:
 	@#@rm -rf "$(TARGETDIR).app"
@@ -188,27 +215,11 @@ package:
 	@install_name_tool -change /usr/local/opt/libogg/lib/libogg.0.dylib @executable_path/../Frameworks/_libogg.0.dylib "$(TARGETDIR).app/Contents/Frameworks/_libvorbisfile.3.dylib"
 	@install_name_tool -change /usr/local/Cellar/libvorbis/1.3.6/lib/libvorbis.0.dylib @executable_path/../Frameworks/_libvorbis.0.dylib "$(TARGETDIR).app/Contents/Frameworks/_libvorbisfile.3.dylib"
 
-debug:
-	@mkdir -p $(OBJ_DIRS)
-	@./tools/makeheaders source
-	@make build
-	@(cd source_galactic && lldb -o r -f ./../"$(TARGETDIR)")
+out/$(OUT_FOLDER)/%.o: source/%.cpp
+	$(CXX) -c -g $(INCLUDES) $(DEFINES) -o "$@" "$<" -std=c++11
 
-clean:
-	@@rm -rf $(OBJS)
-	@make all
+out/$(OUT_FOLDER)/%.o: source/%.c
+	$(CC) -c -g $(INCLUDES) $(DEFINES) -o "$@" "$<" -std=c11
 
-build: $(OBJS)
-	@g++ $^ $(INCLUDES) $(LIBS) $(LINKER) -o "$(TARGETDIR)" -std=c++11
-
-$(OBJ_DIRS):
-	@mkdir -p $@
-
-out/osx/%.o: source/%.cpp
-	@g++ -c -g $(INCLUDES) $(DEFINES) -o "$@" "$<" -std=c++11
-
-out/osx/%.o: source/%.c
-	@gcc -c -g $(INCLUDES) $(DEFINES) -o "$@" "$<" -std=c11
-
-out/osx/%.o: source/%.m
-	@gcc -c -g $(INCLUDES) $(DEFINES) -o "$@" "$<"
+out/$(OUT_FOLDER)/%.o: source/%.m
+	$(CC) -c -g $(INCLUDES) $(DEFINES) -o "$@" "$<"
