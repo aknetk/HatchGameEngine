@@ -50,6 +50,10 @@ extern "C" {
 }
 #endif
 
+#ifdef MSYS
+    #include <windows.h>
+#endif
+
 #if   WIN32
     Platforms Application::Platform = Platforms::Windows;
 #elif MACOSX
@@ -99,6 +103,13 @@ void        DEBUG_DrawText(char* text, float x, float y) {
 }
 
 PUBLIC STATIC void Application::Init(int argc, char* args[]) {
+#ifdef MSYS
+    AllocConsole();
+    freopen_s((FILE **)stdin, "CONIN$", "w", stdin);
+    freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
+    freopen_s((FILE **)stderr, "CONOUT$", "w", stderr);
+#endif
+
     Log::Init();
     MemoryPools::Init();
 
@@ -1035,6 +1046,10 @@ PUBLIC STATIC void Application::Cleanup() {
     SDL_Quit();
 
     // Memory::PrintLeak();
+
+#ifdef MSYS
+    FreeConsole();
+#endif
 }
 
 PUBLIC STATIC void Application::LoadGameConfig() {

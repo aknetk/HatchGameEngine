@@ -85,6 +85,9 @@ ifeq ($(PLATFORM),$(PLATFORM_WINDOWS))
 INCLUDES += -Imeta/win/include
 LIBS += -lwsock32 -lws2_32
 DEFINES += -DWIN32
+ifneq ($(MSYS_VERSION),0)
+DEFINES += -DMSYS
+endif
 endif
 ifeq ($(PLATOFRM),$(PLATFORM_MACOS))
 INCLUDES += -F/Library/Frameworks/ \
