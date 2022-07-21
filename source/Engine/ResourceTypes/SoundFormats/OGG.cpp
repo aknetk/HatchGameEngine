@@ -324,6 +324,7 @@ PUBLIC        int          OGG::GetSamples(Uint8* buffer, size_t count) {
         total += read;
     }
     total /= SampleSize;
+    SampleIndex += total;
     return total;
 #else
     int read;
@@ -354,6 +355,7 @@ PUBLIC        int          OGG::GetSamples(Uint8* buffer, size_t count) {
         total += read;
     }
     total /= SampleSize;
+    SampleIndex += total;
     return total;
 #endif
     return 0;

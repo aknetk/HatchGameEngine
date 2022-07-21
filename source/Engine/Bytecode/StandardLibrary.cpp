@@ -3925,6 +3925,39 @@ VMValue Music_Play(int argCount, VMValue* args, Uint32 threadID) {
     return NULL_VAL;
 }
 /***
+ * Music.PlayAtTime
+ * \desc Places the music onto the music stack and plays it at a sample.
+ * \param music (Integer): The music index to play.
+ * \param startPoint (Integer): The time (in seconds) to start the music at.
+ * \ns Music
+ */
+VMValue Music_PlayAtTime(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    ISound* audio = Scene::MusicList[GET_ARG(0, GetInteger)]->AsMusic;
+    double start_point = GET_ARG(1, GetDecimal);
+
+    AudioManager::PushMusicAt(audio, start_point, false, 0);
+    return NULL_VAL;
+}
+/***
+ * Music.PlayAtTimeWithLoop
+ * \desc Places the music onto the music stack and plays it at a sample.
+ * \param music (Integer): The music index to play.
+ * \param startPoint (Integer): The time (in seconds) to start the music at.
+ * \param loop (Boolean): Unused.
+ * \param loopPoint (Integer): The sample index to loop back to.
+ * \ns Music
+ */
+VMValue Music_PlayAtTimeWithLoop(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(4);
+    ISound* audio = Scene::MusicList[GET_ARG(0, GetInteger)]->AsMusic;
+    double start_point = GET_ARG(1, GetDecimal);
+    int loop_point = GET_ARG(2, GetInteger);
+
+    AudioManager::PushMusicAt(audio, start_point, true, loop_point);
+    return NULL_VAL;
+}
+/***
  * Music.Stop
  * \desc Removes the music from the music stack, stopping it if currently playing.
  * \param music (Integer): The music index to play.
@@ -4016,6 +4049,17 @@ VMValue Music_IsPlaying(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISound* audio = Scene::MusicList[GET_ARG(0, GetInteger)]->AsMusic;
     return INTEGER_VAL(AudioManager::IsPlayingMusic(audio));
+}
+/***
+ * Music.GetPosition
+ * \desc Gets the position of the current track playing.
+ * \param music (Integer): The music index to get the current position (in seconds) of.
+ * \ns Music
+ */
+VMValue Music_GetPosition(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    ISound* audio = Scene::MusicList[GET_ARG(0, GetInteger)]->AsMusic;
+    return DECIMAL_VAL(audio->SoundData->GetPosition());
 }
 // #endregion
 
@@ -8056,6 +8100,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     // #region Music
     INIT_CLASS(Music);
     DEF_NATIVE(Music, Play);
+    DEF_NATIVE(Music, PlayAtTime);
+    DEF_NATIVE(Music, PlayAtTimeWithLoop);
     DEF_NATIVE(Music, Stop);
     DEF_NATIVE(Music, StopWithFadeOut);
     DEF_NATIVE(Music, Pause);
@@ -8063,6 +8109,7 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Music, Clear);
     DEF_NATIVE(Music, Loop);
     DEF_NATIVE(Music, IsPlaying);
+    DEF_NATIVE(Music, GetPosition);
     // #endregion
 
     // #region Number
