@@ -3926,7 +3926,7 @@ VMValue Music_Play(int argCount, VMValue* args, Uint32 threadID) {
 }
 /***
  * Music.PlayAtTime
- * \desc Places the music onto the music stack and plays it at a sample.
+ * \desc Places the music onto the music stack and plays it at a time (in seconds).
  * \param music (Integer): The music index to play.
  * \param startPoint (Integer): The time (in seconds) to start the music at.
  * \ns Music
@@ -3941,7 +3941,7 @@ VMValue Music_PlayAtTime(int argCount, VMValue* args, Uint32 threadID) {
 }
 /***
  * Music.PlayAtTimeWithLoop
- * \desc Places the music onto the music stack and plays it at a sample.
+ * \desc Places the music onto the music stack and plays it at a time (in seconds).
  * \param music (Integer): The music index to play.
  * \param startPoint (Integer): The time (in seconds) to start the music at.
  * \param loop (Boolean): Unused.
@@ -3952,7 +3952,7 @@ VMValue Music_PlayAtTimeWithLoop(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(4);
     ISound* audio = Scene::MusicList[GET_ARG(0, GetInteger)]->AsMusic;
     double start_point = GET_ARG(1, GetDecimal);
-    int loop_point = GET_ARG(2, GetInteger);
+    int loop_point = GET_ARG(3, GetInteger);
 
     AudioManager::PushMusicAt(audio, start_point, true, loop_point);
     return NULL_VAL;
