@@ -10,6 +10,13 @@
 *.userosscache
 *.sln.docstates
 
+# MacOS Specific files
+.DS_Store
+*.xcodeproj/xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.xcodeproj/*
+
 HatchGameEngine.exe
 *-Debug.exe
 *-Release.exe

@@ -254,6 +254,9 @@ PUBLIC STATIC void    BytecodeObjectManager::FreeNativeValue(Uint32 hash, VMValu
                 GarbageCollector::GarbageSize -= sizeof(ObjNative);
                 Memory::Free(AS_OBJECT(value));
                 break;
+                
+            default:
+                break;
         }
     }
 }

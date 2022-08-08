@@ -16,6 +16,7 @@ namespace MemoryPools {
         MEMPOOL_SUBOBJECT,
         MEMPOOL_STRING,
         MEMPOOL_TEMP,
+        MEMPOOL_IMAGEDATA,
 
         MEMPOOL_COUNT,
     };

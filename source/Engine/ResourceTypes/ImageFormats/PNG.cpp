@@ -186,7 +186,7 @@ PUBLIC STATIC  PNG*   PNG::Load(const char* filename) {
     Uint32* pixelData = NULL;
     int num_channels;
     int width, height;
-    Uint32 Rmask, Gmask, Bmask, Amask;
+    Uint32 Rmask = 0, Gmask = 0, Bmask = 0, Amask = 0;
     bool doConvert;
     Uint8* buffer = NULL;
     size_t buffer_len = 0;

@@ -849,7 +849,7 @@ PUBLIC STATIC void Scene::Render() {
 
                 float out_x = 0.0f;
                 float out_y = 0.0f;
-                float out_w, out_h;
+                float out_w = 0.0f, out_h = 0.0f;
                 float scale = 1.f;
                 // bool needClip = false;
                 int aspectMode = (viewCount > 1) ? 3 : 1;
