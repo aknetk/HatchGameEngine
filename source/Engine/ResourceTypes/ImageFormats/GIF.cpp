@@ -15,11 +15,14 @@ public:
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Clock.h>
 #include <Engine/Diagnostics/Memory.h>
+#include <Engine/Diagnostics/MemoryPools.h>
 #include <Engine/IO/FileStream.h>
 #include <Engine/IO/MemoryStream.h>
 #include <Engine/IO/ResourceStream.h>
 
 #include <Engine/Graphics.h>
+
+#include <Libraries/stb_image.h>
 
 struct Node {
     Uint16 Key;
@@ -159,9 +162,19 @@ PRIVATE STATIC void   GIF::FreeTree(void* root, int degree) {
     Memory::Free(root);
 }
 
+#define MARK_PERF(line) { \
+float delta = Clock::End(); \
+Log::Print(Log::LOG_VERBOSE, "- Mark at line %d took %.3f ms to reach from last mark.", line, delta); \
+Clock::Start(); \
+}
+#define MARK_PERF_LABEL(label) { \
+float delta = Clock::End(); \
+Log::Print(Log::LOG_VERBOSE, "- Mark '%s' took %.3f ms to reach.", label, delta); \
+Clock::Start(); \
+}
+
 PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
     bool loadPalette = Graphics::UsePalettes;
-    // Entry* codeTable = (Entry*)Memory::Calloc(0x1000, sizeof(Entry));
     Entry* codeTable = (Entry*)Memory::Malloc(0x1000 * sizeof(Entry));
 
     GIF* gif = new GIF;
@@ -169,7 +182,9 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
 
     size_t fileSize;
     void*  fileBuffer = NULL;
-
+    
+    Clock::Start();
+    
     if (strncmp(filename, "file://", 7) == 0)
         stream = FileStream::New(filename + 7, FileStream::READ_ACCESS);
     else
@@ -178,15 +193,21 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
         Log::Print(Log::LOG_ERROR, "Could not open file '%s'!", filename);
         goto GIF_Load_FAIL;
     }
-
+    
+    MARK_PERF_LABEL("stream open");
+    
     fileSize = stream->Length();
     fileBuffer = Memory::Malloc(fileSize);
     stream->ReadBytes(fileBuffer, fileSize);
     stream->Close();
+    
+    MARK_PERF_LABEL("read to buffer");
 
     stream = MemoryStream::New(fileBuffer, fileSize);
     if (!stream)
         goto GIF_Load_FAIL;
+    
+    MARK_PERF_LABEL("memorystream transfer");
 
     Uint8 magicGIF[4];
     stream->ReadBytes(magicGIF, 3);
@@ -230,6 +251,8 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
     paletteTableSize = 2 << (logicalScreenDesc & 0x7);
 
     gif->TransparentColorIndex = transparentColorIndex;
+    
+    MARK_PERF_LABEL("gif header read");
 
     // Prepare image data
     gif->Data = (Uint32*)Memory::TrackedMalloc("GIF::Data", width * height * sizeof(Uint32));
@@ -257,12 +280,11 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
             gif->Colors[p] |= stream->ReadByte();
         }
     }
+    
+    MARK_PERF_LABEL("allocate image & palette buffer");
 
     gif->Paletted = loadPalette;
 
-    if (colorBitDepth != 4) {
-
-    }
     memset(gif->Colors + paletteTableSize, 0, (0x100 - paletteTableSize) * sizeof(Uint32));
 
     width--;
@@ -272,6 +294,8 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
     quarterHeight = gif->Height >> 2;
     halfHeight = gif->Height >> 1;
 
+    MARK_PERF_LABEL("clear unused palette memory");
+    
     // Get frame
     Uint8 type, subtype, temp;
     type = stream->ReadByte();
@@ -460,7 +484,7 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
 
         if (type == 0x3B) break;
     }
-
+    
     goto GIF_Load_Success;
 
     GIF_Load_FAIL:
@@ -468,6 +492,8 @@ PUBLIC STATIC  GIF*   GIF::Load(const char* filename) {
         gif = NULL;
 
     GIF_Load_Success:
+    MARK_PERF_LABEL("decode gif data");
+        Clock::End();
         if (stream)
             stream->Close();
         Memory::Free(fileBuffer);

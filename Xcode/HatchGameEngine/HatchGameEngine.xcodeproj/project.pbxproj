@@ -7,11 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D0B1451B268B6BB000CDA5EF /* libvorbis.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14515268B6BB000CDA5EF /* libvorbis.0.dylib */; };
-		D0B1451C268B6BB000CDA5EF /* libogg.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14516268B6BB000CDA5EF /* libogg.0.dylib */; };
-		D0B1451E268B6BB000CDA5EF /* libpng16.16.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14518268B6BB000CDA5EF /* libpng16.16.dylib */; };
-		D0B1451F268B6BB000CDA5EF /* libvorbisfile.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14519268B6BB000CDA5EF /* libvorbisfile.3.dylib */; };
-		D0B14520268B6BB000CDA5EF /* libcurl.4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B1451A268B6BB000CDA5EF /* libcurl.4.dylib */; };
+		D037A4CF28A06D7A0028AF07 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D037A4CE28A06D7A0028AF07 /* SDL2.framework */; };
+		D037A4D028A06D820028AF07 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14623268B723B00CDA5EF /* libz.tbd */; };
+		D037A4D928A06DCE0028AF07 /* miniz.c in Sources */ = {isa = PBXBuildFile; fileRef = D037A4D328A06DCE0028AF07 /* miniz.c */; };
+		D037A4DA28A06DCE0028AF07 /* stb_vorbis.c in Sources */ = {isa = PBXBuildFile; fileRef = D037A4D428A06DCE0028AF07 /* stb_vorbis.c */; };
+		D037A4DC28A06E6C0028AF07 /* HatchSceneReader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D037A4DB28A06E6C0028AF07 /* HatchSceneReader.cpp */; };
+		D037A4DE28A06E7A0028AF07 /* MemoryPools.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D037A4DD28A06E7A0028AF07 /* MemoryPools.cpp */; };
 		D0B145C9268B6FA700CDA5EF /* Filesystem.m in Sources */ = {isa = PBXBuildFile; fileRef = D0B14529268B6FA700CDA5EF /* Filesystem.m */; };
 		D0B145CA268B6FA700CDA5EF /* DrawGroupList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0B14530268B6FA700CDA5EF /* DrawGroupList.cpp */; };
 		D0B145CB268B6FA700CDA5EF /* Entity.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0B14531268B6FA700CDA5EF /* Entity.cpp */; };
@@ -102,8 +103,6 @@
 		D0B14620268B6FA800CDA5EF /* AudioDecoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0B145C6268B6FA700CDA5EF /* AudioDecoder.cpp */; };
 		D0B14621268B6FA800CDA5EF /* VideoDecoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0B145C7268B6FA700CDA5EF /* VideoDecoder.cpp */; };
 		D0B14622268B6FA800CDA5EF /* Decoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0B145C8268B6FA700CDA5EF /* Decoder.cpp */; };
-		D0B14624268B723B00CDA5EF /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14623268B723B00CDA5EF /* libz.tbd */; };
-		D0B14626268B74B000CDA5EF /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B14625268B74B000CDA5EF /* SDL2.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -119,6 +118,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D037A4CE28A06D7A0028AF07 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = ../../../../../../../Library/Frameworks/SDL2.framework; sourceTree = "<group>"; };
+		D037A4D328A06DCE0028AF07 /* miniz.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = miniz.c; sourceTree = "<group>"; };
+		D037A4D428A06DCE0028AF07 /* stb_vorbis.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = stb_vorbis.c; sourceTree = "<group>"; };
+		D037A4D528A06DCE0028AF07 /* stb_image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
+		D037A4D628A06DCE0028AF07 /* miniz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = miniz.h; sourceTree = "<group>"; };
+		D037A4D728A06DCE0028AF07 /* ini.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ini.h; sourceTree = "<group>"; };
+		D037A4D828A06DCE0028AF07 /* stb_vorbis.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stb_vorbis.h; sourceTree = "<group>"; };
+		D037A4DB28A06E6C0028AF07 /* HatchSceneReader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HatchSceneReader.cpp; sourceTree = "<group>"; };
+		D037A4DD28A06E7A0028AF07 /* MemoryPools.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryPools.cpp; sourceTree = "<group>"; };
 		D0B1450A268B6B5C00CDA5EF /* HatchGameEngine */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = HatchGameEngine; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B14515268B6BB000CDA5EF /* libvorbis.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libvorbis.0.dylib; path = ../../meta/mac/libvorbis.0.dylib; sourceTree = "<group>"; };
 		D0B14516268B6BB000CDA5EF /* libogg.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libogg.0.dylib; path = ../../meta/mac/libogg.0.dylib; sourceTree = "<group>"; };
@@ -260,19 +268,27 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0B14626268B74B000CDA5EF /* SDL2.framework in Frameworks */,
-				D0B14624268B723B00CDA5EF /* libz.tbd in Frameworks */,
-				D0B1451B268B6BB000CDA5EF /* libvorbis.0.dylib in Frameworks */,
-				D0B1451C268B6BB000CDA5EF /* libogg.0.dylib in Frameworks */,
-				D0B1451E268B6BB000CDA5EF /* libpng16.16.dylib in Frameworks */,
-				D0B1451F268B6BB000CDA5EF /* libvorbisfile.3.dylib in Frameworks */,
-				D0B14520268B6BB000CDA5EF /* libcurl.4.dylib in Frameworks */,
+				D037A4D028A06D820028AF07 /* libz.tbd in Frameworks */,
+				D037A4CF28A06D7A0028AF07 /* SDL2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D037A4D228A06DCE0028AF07 /* Libraries */ = {
+			isa = PBXGroup;
+			children = (
+				D037A4D328A06DCE0028AF07 /* miniz.c */,
+				D037A4D428A06DCE0028AF07 /* stb_vorbis.c */,
+				D037A4D528A06DCE0028AF07 /* stb_image.h */,
+				D037A4D628A06DCE0028AF07 /* miniz.h */,
+				D037A4D728A06DCE0028AF07 /* ini.h */,
+				D037A4D828A06DCE0028AF07 /* stb_vorbis.h */,
+			);
+			path = Libraries;
+			sourceTree = "<group>";
+		};
 		D0B14501268B6B5C00CDA5EF = {
 			isa = PBXGroup;
 			children = (
@@ -294,6 +310,7 @@
 			isa = PBXGroup;
 			children = (
 				D0B14625268B74B000CDA5EF /* SDL2.framework */,
+				D037A4CE28A06D7A0028AF07 /* SDL2.framework */,
 				D0B14623268B723B00CDA5EF /* libz.tbd */,
 				D0B1451A268B6BB000CDA5EF /* libcurl.4.dylib */,
 				D0B14516268B6BB000CDA5EF /* libogg.0.dylib */,
@@ -308,6 +325,7 @@
 		D0B14523268B6FA600CDA5EF /* source */ = {
 			isa = PBXGroup;
 			children = (
+				D037A4D228A06DCE0028AF07 /* Libraries */,
 				D0B14525268B6FA600CDA5EF /* Engine */,
 				D0B14524268B6FA600CDA5EF /* HatchGameEngine.log */,
 			);
@@ -474,6 +492,7 @@
 		D0B14556268B6FA700CDA5EF /* SceneFormats */ = {
 			isa = PBXGroup;
 			children = (
+				D037A4DB28A06E6C0028AF07 /* HatchSceneReader.cpp */,
 				D0B14557268B6FA700CDA5EF /* TiledMapReader.cpp */,
 				D0B14558268B6FA700CDA5EF /* RSDKSceneReader.cpp */,
 			);
@@ -566,6 +585,7 @@
 		D0B1457B268B6FA700CDA5EF /* Diagnostics */ = {
 			isa = PBXGroup;
 			children = (
+				D037A4DD28A06E7A0028AF07 /* MemoryPools.cpp */,
 				D0B1457C268B6FA700CDA5EF /* Memory.cpp */,
 				D0B1457D268B6FA700CDA5EF /* Log.cpp */,
 				D0B1457E268B6FA700CDA5EF /* Clock.cpp */,
@@ -823,6 +843,7 @@
 				D0B145EF268B6FA700CDA5EF /* CombinedHash.cpp in Sources */,
 				D0B145E2268B6FA700CDA5EF /* Image.cpp in Sources */,
 				D0B14615268B6FA800CDA5EF /* ScrollingInfo.cpp in Sources */,
+				D037A4DC28A06E6C0028AF07 /* HatchSceneReader.cpp in Sources */,
 				D0B14609268B6FA800CDA5EF /* Texture.cpp in Sources */,
 				D0B145D1268B6FA700CDA5EF /* HTTP.cpp in Sources */,
 				D0B145D8268B6FA700CDA5EF /* LZ11.cpp in Sources */,
@@ -857,6 +878,7 @@
 				D0B145F6268B6FA700CDA5EF /* Discord.cpp in Sources */,
 				D0B14611268B6FA800CDA5EF /* Application.cpp in Sources */,
 				D0B145FF268B6FA700CDA5EF /* PerformanceMeasure.cpp in Sources */,
+				D037A4D928A06DCE0028AF07 /* miniz.c in Sources */,
 				D0B145F4268B6FA700CDA5EF /* Math.cpp in Sources */,
 				D0B14604268B6FA700CDA5EF /* GarbageCollector.cpp in Sources */,
 				D0B145E1268B6FA700CDA5EF /* WAV.cpp in Sources */,
@@ -892,9 +914,11 @@
 				D0B145F2268B6FA700CDA5EF /* FNV1A.cpp in Sources */,
 				D0B145F0268B6FA700CDA5EF /* CRC32.cpp in Sources */,
 				D0B1460F268B6FA800CDA5EF /* SDL2Renderer.cpp in Sources */,
+				D037A4DE28A06E7A0028AF07 /* MemoryPools.cpp in Sources */,
 				D0B145FC268B6FA700CDA5EF /* Log.cpp in Sources */,
 				D0B1461A268B6FA800CDA5EF /* Main.cpp in Sources */,
 				D0B14621268B6FA800CDA5EF /* VideoDecoder.cpp in Sources */,
+				D037A4DA28A06DCE0028AF07 /* stb_vorbis.c in Sources */,
 				D0B145ED268B6FA700CDA5EF /* COLLADAReader.cpp in Sources */,
 				D0B145E0268B6FA700CDA5EF /* OGG.cpp in Sources */,
 				D0B145CA268B6FA700CDA5EF /* DrawGroupList.cpp in Sources */,
@@ -1031,11 +1055,8 @@
 					"$(inherited)",
 					MACOSX,
 					"TARGET_NAME=\\\"HatchGameEngine\\\"",
-					USING_LIBPNG,
-					"USING_LIBPNG_HEADER=\\<libpng16/png.h\\>",
 					USING_FRAMEWORK,
 					USING_VM_DISPATCH_TABLE,
-					USING_LIBOGG,
 				);
 				HEADER_SEARCH_PATHS = (
 					../../include,

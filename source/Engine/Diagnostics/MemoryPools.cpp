@@ -13,6 +13,7 @@ namespace MemoryPools {
         MemoryPools[MEMPOOL_SUBOBJECT].BlocksDataSize  = 0x200000;
         MemoryPools[MEMPOOL_STRING].BlocksDataSize  = 0x200000;
         MemoryPools[MEMPOOL_TEMP].BlocksDataSize = 0x200000;
+        MemoryPools[MEMPOOL_IMAGEDATA].BlocksDataSize = 0x400;
 
         int totalPoolSize = 0;
 

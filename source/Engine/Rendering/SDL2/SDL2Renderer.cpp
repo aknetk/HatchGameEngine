@@ -35,9 +35,15 @@ PUBLIC STATIC void     SDL2Renderer::Init() {
     if (Graphics::VsyncEnabled)
         flags |= SDL_RENDERER_PRESENTVSYNC;
     Renderer = SDL_CreateRenderer(Application::Window, -1, flags);
+    
+    SDL_RendererInfo rendererInfo;
+    SDL_GetRendererInfo(Renderer, &rendererInfo);
 
     Graphics::SupportsBatching = false;
     Graphics::PreferredPixelFormat = SDL_PIXELFORMAT_ARGB8888;
+    
+    Graphics::MaxTextureWidth = rendererInfo.max_texture_width;
+    Graphics::MaxTextureHeight = rendererInfo.max_texture_height;
 
     int w, h, ww, wh;
     // SDL_GL_GetDrawableSize(Application::Window, &w, &h);

@@ -164,7 +164,7 @@ PUBLIC void    VMThread::PrintStack() {
 }
 PUBLIC void    VMThread::ReturnFromNative() throw() {
     // std::longjmp(VMThread::JumpBuffer, 1);
-    throw "should be ignored";
+    // throw "should be ignored";
 }
 // #endregion
 

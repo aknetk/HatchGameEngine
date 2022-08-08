@@ -93,7 +93,7 @@ PUBLIC STATIC SoundFormat* WAV::Load(const char* filename) {
     wav->DataStart = (int)stream->Position();
 
     wav->TotalPossibleSamples = (int)(header.DATASize / (((header.BitsPerSample & 0xFF) >> 3) * header.Channels));
-    stream->Seek(wav->DataStart);
+    // stream->Seek(wav->DataStart);
 
     // Common
     wav->LoadFinish();
