@@ -86,7 +86,7 @@ PUBLIC STATIC void  InputManager::Poll() {
         TouchState* states = (TouchState*)TouchStates;
         SDL_GetWindowSize(Application::Window, &w, &h);
 
-        bool OneDown;
+        bool OneDown = false;
         for (int d = 0; d < SDL_GetNumTouchDevices(); d++) {
             TouchDevice = SDL_GetTouchDevice(d);
             if (TouchDevice) {

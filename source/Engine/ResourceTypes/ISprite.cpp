@@ -32,6 +32,7 @@ public:
 #include <Engine/Diagnostics/Log.h>
 #include <Engine/Diagnostics/Clock.h>
 #include <Engine/Diagnostics/Memory.h>
+#include <Engine/Diagnostics/MemoryPools.h>
 
 #include <Engine/IO/FileStream.h>
 #include <Engine/IO/ResourceStream.h>
@@ -73,7 +74,7 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
         loadDelta = Clock::End();
 
         if (png && png->Data) {
-            Log::Print(Log::LOG_VERBOSE, "PNG load took %.3f ms", loadDelta);
+            Log::Print(Log::LOG_VERBOSE, "PNG load took %.3f ms (%s)", loadDelta, altered);
             width = png->Width;
             height = png->Height;
 
@@ -97,7 +98,7 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
         loadDelta = Clock::End();
 
         if (jpeg && jpeg->Data) {
-            Log::Print(Log::LOG_VERBOSE, "JPEG load took %.3f ms", loadDelta);
+            Log::Print(Log::LOG_VERBOSE, "JPEG load took %.3f ms (%s)", loadDelta, altered);
             width = jpeg->Width;
             height = jpeg->Height;
 
@@ -118,12 +119,13 @@ PUBLIC STATIC Texture* ISprite::AddSpriteSheet(const char* filename) {
         loadDelta = Clock::End();
 
         if (gif && gif->Data) {
-            Log::Print(Log::LOG_VERBOSE, "GIF load took %.3f ms", loadDelta);
+            Log::Print(Log::LOG_VERBOSE, "GIF load took %.3f ms (%s)", loadDelta, altered);
             width = gif->Width;
             height = gif->Height;
 
             data = gif->Data;
             paletted = gif->Paletted;
+            
             // Palette = gif->Colors;
             // PaletteAlt = (Uint32*)Memory::TrackedCalloc("Sprite::PaletteAlt", 256, sizeof(Uint32));
             // PaletteCount = 1;

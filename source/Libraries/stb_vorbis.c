@@ -3016,7 +3016,7 @@ static int do_floor(vorb* f, Mapping* map, int i, int n, float* target, YTYPE* f
                 if (lx != hx)
                     draw_line(target, lx, ly, hx, hy, n2);
                 CHECK(f);
-                lx = hx, ly = hy;
+                lx = hx; ly = hy;
             }
         }
         if (lx < n2) {

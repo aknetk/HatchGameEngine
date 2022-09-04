@@ -75,7 +75,7 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
         Clock::Start();
         PNG* png = PNG::Load(altered);
         if (png) {
-            Log::Print(Log::LOG_VERBOSE, "PNG load took %.3f ms", Clock::End());
+            Log::Print(Log::LOG_VERBOSE, "PNG load took %.3f ms (%s)", Clock::End(), altered);
             width = (Uint32)png->Width;
             height = (Uint32)png->Height;
 
@@ -95,7 +95,7 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
         Clock::Start();
         JPEG* jpeg = JPEG::Load(altered);
         if (jpeg) {
-            Log::Print(Log::LOG_VERBOSE, "JPEG load took %.3f ms", Clock::End());
+            Log::Print(Log::LOG_VERBOSE, "JPEG load took %.3f ms (%s)", Clock::End(), altered);
             width = (Uint32)jpeg->Width;
             height = (Uint32)jpeg->Height;
 
@@ -113,7 +113,7 @@ PUBLIC STATIC Texture* Image::LoadTextureFromResource(const char* filename) {
         Clock::Start();
         GIF* gif = GIF::Load(altered);
         if (gif) {
-            Log::Print(Log::LOG_VERBOSE, "GIF load took %.3f ms", Clock::End());
+            Log::Print(Log::LOG_VERBOSE, "GIF load took %.3f ms (%s)", Clock::End(), altered);
             width = (Uint32)gif->Width;
             height = (Uint32)gif->Height;
 
