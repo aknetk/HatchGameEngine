@@ -12,6 +12,7 @@ struct StackNode {
     bool     Stopped = false;
     Uint32   Speed = 0x10000;
     float    Pan = 0.0f;
+    float    Volume = 0.0f;
 };
 
 #endif /* ENGINE_AUDIO_STACKNODE_H */

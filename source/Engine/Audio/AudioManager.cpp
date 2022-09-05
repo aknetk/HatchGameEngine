@@ -207,9 +207,9 @@ PUBLIC STATIC void   AudioManager::Init() {
 }
 
 PUBLIC STATIC void   AudioManager::SetSound(int channel, ISound* music) {
-    AudioManager::SetSound(channel, music, false, 0, 0.0f, 1.0f);
+    AudioManager::SetSound(channel, music, false, 0, 0.0f, 1.0f, 1.0f);
 }
-PUBLIC STATIC void   AudioManager::SetSound(int channel, ISound* music, bool loop, int loopPoint, float pan, float speed) {
+PUBLIC STATIC void   AudioManager::SetSound(int channel, ISound* music, bool loop, int loopPoint, float pan, float speed, float volume) {
     AudioManager::Lock();
 
     StackNode* audio = &SoundArray[channel];
@@ -229,14 +229,15 @@ PUBLIC STATIC void   AudioManager::SetSound(int channel, ISound* music, bool loo
     audio->FadeOut = false;
     audio->Pan = pan;
     audio->Speed = (Uint32)(speed * 0x10000);
+    audio->Volume = volume;
 
     AudioManager::Unlock();
 }
 
-PUBLIC STATIC void   AudioManager::PushMusic(ISound* music, bool loop, Uint32 lp, float pan, float speed) {
-    PushMusicAt(music, 0.0, loop, lp, pan, speed);
+PUBLIC STATIC void   AudioManager::PushMusic(ISound* music, bool loop, Uint32 lp, float pan, float speed, float volume) {
+    PushMusicAt(music, 0.0, loop, lp, pan, speed, volume);
 }
-PUBLIC STATIC void   AudioManager::PushMusicAt(ISound* music, double at, bool loop, Uint32 lp, float pan, float speed) {
+PUBLIC STATIC void   AudioManager::PushMusicAt(ISound* music, double at, bool loop, Uint32 lp, float pan, float speed, float volume) {
     if (music->LoadFailed) return;
 
     AudioManager::Lock();
@@ -259,6 +260,7 @@ PUBLIC STATIC void   AudioManager::PushMusicAt(ISound* music, double at, bool lo
     newms->FadeOut = false;
     newms->Pan = pan;
     newms->Speed = (Uint32)(speed * 0x10000);
+    newms->Volume = volume;
     MusicStack.push_front(newms);
 
     for (size_t i = 1; i < MusicStack.size(); i++)
@@ -307,11 +309,12 @@ PUBLIC STATIC void   AudioManager::FadeMusic(double seconds) {
     }
     AudioManager::Unlock();
 }
-PUBLIC STATIC void   AudioManager::AlterMusic(float pan, float speed) {
+PUBLIC STATIC void   AudioManager::AlterMusic(float pan, float speed, float volume) {
     AudioManager::Lock();
     if (MusicStack.size() > 0) {
         MusicStack[0]->Pan = pan;
         MusicStack[0]->Speed = (Uint32)(speed * 0x10000);
+        MusicStack[0]->Volume = volume;
     }
     AudioManager::Unlock();
 }
@@ -482,10 +485,10 @@ PUBLIC STATIC void   AudioManager::AudioCallback(void* data, Uint8* stream, int 
 
     // Make track system
     if (MusicStack.size() > 0) {
-        StackNode* audio = MusicStack[0];
+        StackNode* audio = MusicStack.front();
         if (!audio->Paused) {
-            if (AudioManager::AudioPlayMix(MusicStack[0], stream, len, MusicVolume)) {
-                delete MusicStack[0];
+            if (AudioManager::AudioPlayMix(audio, stream, len, audio->Volume * MusicVolume)) {
+                delete audio;
                 MusicStack.pop_front();
             }
         }
@@ -496,7 +499,7 @@ PUBLIC STATIC void   AudioManager::AudioCallback(void* data, Uint8* stream, int 
         if (!audio->Audio || audio->Stopped || audio->Paused)
             continue;
 
-        if (AudioManager::AudioPlayMix(audio, stream, len, SoundVolume)) {
+        if (AudioManager::AudioPlayMix(audio, stream, len, audio->Volume * SoundVolume)) {
             audio->Stopped = true;
         }
     }

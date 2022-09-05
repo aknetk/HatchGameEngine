@@ -2401,6 +2401,34 @@ VMValue Draw_ResetTextureTarget(int argCount, VMValue* args, Uint32 threadID) {
 	Graphics::UpdateProjectionMatrix();
     return NULL_VAL;
 }
+
+/***
+ * Draw.UseSpriteDeform
+ * \desc Sets whether or not to use sprite deform when drawing.
+ * \param useDeform (Boolean): Whether or not to use sprite deform when drawing.
+ * \ns Scene
+ */
+VMValue Draw_UseSpriteDeform(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(1);
+    int useDeform = GET_ARG(0, GetInteger);
+    SoftwareRenderer::UseSpriteDeform = useDeform;
+    return NULL_VAL;
+}
+/***
+ * Draw.SetSpriteDeformLine
+ * \desc Sets the sprite deform line at the specified line index.
+ * \param deformIndex (Integer): Index of deform line. (0 = top of screen, 1 = the line below it, 2 = etc.)
+ * \param deformValue (Decimal): Deform value.
+ * \ns Scene
+ */
+VMValue Draw_SetSpriteDeformLine(int argCount, VMValue* args, Uint32 threadID) {
+    CHECK_ARGCOUNT(2);
+    int lineIndex = GET_ARG(0, GetInteger);
+    int deformValue = (int)GET_ARG(1, GetDecimal);
+
+    SoftwareRenderer::SpriteDeformBuffer[lineIndex] = deformValue;
+    return NULL_VAL;
+}
 // #endregion
 
 // #region Ease
@@ -3940,6 +3968,7 @@ VMValue Matrix_Rotate(int argCount, VMValue* args, Uint32 threadID) {
  * \param music (Integer): The music index to play.
  * \paramOpt panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)
  * \paramOpt speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed. (1.0 is the default.)
+ * \paramOpt volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume. (1.0 is the default.)
  * \ns Music
  */
 VMValue Music_Play(int argCount, VMValue* args, Uint32 threadID) {
@@ -3947,8 +3976,9 @@ VMValue Music_Play(int argCount, VMValue* args, Uint32 threadID) {
     ISound* audio = GET_ARG(0, GetMusic);
     float panning = GET_ARG_OPT(1, GetDecimal, 0.0f);
     float speed = GET_ARG_OPT(2, GetDecimal, 1.0f);
+    float volume = GET_ARG_OPT(3, GetDecimal, 1.0f);
 
-    AudioManager::PushMusic(audio, false, 0, panning, speed);
+    AudioManager::PushMusic(audio, false, 0, panning, speed, volume);
     return NULL_VAL;
 }
 /***
@@ -4022,6 +4052,7 @@ VMValue Music_Clear(int argCount, VMValue* args, Uint32 threadID) {
  * \param loopPoint (Integer): The sample index to loop back to.
  * \paramOpt panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)
  * \paramOpt speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed. (1.0 is the default.)
+ * \paramOpt volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume. (1.0 is the default.)
  * \ns Music
  */
 VMValue Music_Loop(int argCount, VMValue* args, Uint32 threadID) {
@@ -4031,8 +4062,9 @@ VMValue Music_Loop(int argCount, VMValue* args, Uint32 threadID) {
     int loop_point = GET_ARG(2, GetInteger);
     float panning = GET_ARG_OPT(3, GetDecimal, 0.0f);
     float speed = GET_ARG_OPT(4, GetDecimal, 1.0f);
+    float volume = GET_ARG_OPT(5, GetDecimal, 1.0f);
 
-    AudioManager::PushMusic(audio, true, loop_point, panning, speed);
+    AudioManager::PushMusic(audio, true, loop_point, panning, speed, volume);
     return NULL_VAL;
 }
 /***
@@ -4061,16 +4093,18 @@ VMValue Music_GetPosition(int argCount, VMValue* args, Uint32 threadID) {
 /***
  * Music.Alter
  * \desc Alters the playback conditions of the current track playing.
- * \param panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)
- * \param speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed. (1.0 is the default.)
+ * \param panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it.
+ * \param speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed.
+ * \param volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume.
  * \ns Music
  */
 VMValue Music_Alter(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(2);
     float panning = GET_ARG(1, GetDecimal);
     float speed = GET_ARG(2, GetDecimal);
+    float volume = GET_ARG(3, GetDecimal);
 
-    AudioManager::AlterMusic(panning, speed);
+    AudioManager::AlterMusic(panning, speed, volume);
     return NULL_VAL;
 }
 // #endregion
@@ -5996,6 +6030,7 @@ VMValue SocketClient_WriteString(int argCount, VMValue* args, Uint32 threadID) {
  * \param sound (Integer): The sound index to play.
  * \paramOpt panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)
  * \paramOpt speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed. (1.0 is the default.)
+ * \paramOpt volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume. (1.0 is the default.)
  * \return
  * \ns Sound
  */
@@ -6005,7 +6040,8 @@ VMValue Sound_Play(int argCount, VMValue* args, Uint32 threadID) {
     int channel = GET_ARG(0, GetInteger);
     float panning = GET_ARG_OPT(1, GetDecimal, 0.0f);
     float speed = GET_ARG_OPT(2, GetDecimal, 1.0f);
-    AudioManager::SetSound(channel % AudioManager::SoundArrayLength, audio, false, 0, panning, speed);
+    float volume = GET_ARG_OPT(3, GetDecimal, 1.0f);
+    AudioManager::SetSound(channel % AudioManager::SoundArrayLength, audio, false, 0, panning, speed, volume);
     return NULL_VAL;
 }
 /***
@@ -6015,6 +6051,7 @@ VMValue Sound_Play(int argCount, VMValue* args, Uint32 threadID) {
  * \paramOpt loopPoint (Integer): Loop point in samples.
  * \paramOpt panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)
  * \paramOpt speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed. (1.0 is the default.)
+ * \paramOpt volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume. (1.0 is the default.)
  * \return
  * \ns Sound
  */
@@ -6025,7 +6062,8 @@ VMValue Sound_Loop(int argCount, VMValue* args, Uint32 threadID) {
     int loopPoint = GET_ARG_OPT(1, GetInteger, 0);
     float panning = GET_ARG_OPT(2, GetDecimal, 0.0f);
     float speed = GET_ARG_OPT(3, GetDecimal, 1.0f);
-    AudioManager::SetSound(channel % AudioManager::SoundArrayLength, audio, true, loopPoint, panning, speed);
+    float volume = GET_ARG_OPT(4, GetDecimal, 1.0f);
+    AudioManager::SetSound(channel % AudioManager::SoundArrayLength, audio, true, loopPoint, panning, speed, volume);
     return NULL_VAL;
 }
 /***
@@ -7957,6 +7995,8 @@ PUBLIC STATIC void StandardLibrary::Link() {
     DEF_NATIVE(Draw, SetTextureTarget);
     DEF_NATIVE(Draw, Clear);
     DEF_NATIVE(Draw, ResetTextureTarget);
+    DEF_NATIVE(Draw, UseSpriteDeform);
+    DEF_NATIVE(Draw, SetSpriteDeformLine);
 
     BytecodeObjectManager::GlobalConstInteger(NULL, "DrawMode_LINES", 0);
     BytecodeObjectManager::GlobalConstInteger(NULL, "DrawMode_POLYGONS", 1);
