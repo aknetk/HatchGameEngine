@@ -12,6 +12,7 @@ public:
 
     Uint8*            Buffer = NULL;
     Uint8*            UnconvertedSampleBuffer = NULL;
+    Uint32            BufferedSamples = 0;
 
     char              Filename[256];
     SDL_AudioStream*  Stream = NULL;
@@ -136,6 +137,8 @@ PUBLIC int  ISound::RequestSamples(int samples, bool loop, int sample_to_loop_to
         if (num_samples == 0)
             return AudioManager::REQUEST_EOF;
 
+        BufferedSamples = num_samples;
+
         num_samples *= SoundData->SampleSize;
         return num_samples;
     }
@@ -177,6 +180,8 @@ PUBLIC int  ISound::RequestSamples(int samples, bool loop, int sample_to_loop_to
     // Wait for data if we got none
     if (received_bytes == 0)
         return AudioManager::REQUEST_CONVERTING;
+
+    BufferedSamples = received_bytes / bytesPerSample;
 
     return received_bytes;
 }

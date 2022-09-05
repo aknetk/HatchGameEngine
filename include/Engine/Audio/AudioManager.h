@@ -43,14 +43,15 @@ public:
     static float  ProcessSampleFloat(float inSample, int channel);
     static void   Init();
     static void   SetSound(int channel, ISound* music);
-    static void   SetSound(int channel, ISound* music, bool loop, int loopPoint);
-    static void   PushMusic(ISound* music, bool loop, Uint32 lp);
-    static void   PushMusicAt(ISound* music, double at, bool loop, Uint32 lp);
+    static void   SetSound(int channel, ISound* music, bool loop, int loopPoint, float pan, float speed);
+    static void   PushMusic(ISound* music, bool loop, Uint32 lp, float pan, float speed);
+    static void   PushMusicAt(ISound* music, double at, bool loop, Uint32 lp, float pan, float speed);
     static void   RemoveMusic(ISound* music);
     static bool   IsPlayingMusic();
     static bool   IsPlayingMusic(ISound* music);
     static void   ClearMusic();
     static void   FadeMusic(double seconds);
+    static void   AlterMusic(float pan, float speed);
     static void   Lock();
     static void   Unlock();
     static bool   AudioIsPlaying(int channel);
