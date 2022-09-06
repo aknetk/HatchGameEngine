@@ -333,8 +333,6 @@
                 <i>Functions:</i>
                 <ul>
                     <li><a href="#Reference_Music_Play">Music.Play</a></li>
-                    <li><a href="#Reference_Music_PlayAtTime">Music.PlayAtTime</a></li>
-                    <li><a href="#Reference_Music_PlayAtTimeWithLoop">Music.PlayAtTimeWithLoop</a></li>
                     <li><a href="#Reference_Music_Stop">Music.Stop</a></li>
                     <li><a href="#Reference_Music_StopWithFadeOut">Music.StopWithFadeOut</a></li>
                     <li><a href="#Reference_Music_Pause">Music.Pause</a></li>
@@ -343,6 +341,7 @@
                     <li><a href="#Reference_Music_Loop">Music.Loop</a></li>
                     <li><a href="#Reference_Music_IsPlaying">Music.IsPlaying</a></li>
                     <li><a href="#Reference_Music_GetPosition">Music.GetPosition</a></li>
+                    <li><a href="#Reference_Music_Alter">Music.Alter</a></li>
                 </ul>
             </p>
             <p id="Reference_Number">
@@ -391,6 +390,8 @@
                 <h2>Scene</h2>
                 <i>Functions:</i>
                 <ul>
+                    <li><a href="#Reference_Draw_UseSpriteDeform">Draw.UseSpriteDeform</a></li>
+                    <li><a href="#Reference_Draw_SetSpriteDeformLine">Draw.SetSpriteDeformLine</a></li>
                     <li><a href="#Reference_Scene_Load">Scene.Load</a></li>
                     <li><a href="#Reference_Scene_LoadTileCollisions">Scene.LoadTileCollisions</a></li>
                     <li><a href="#Reference_Scene_AreTileCollisionsLoaded">Scene.AreTileCollisionsLoaded</a></li>
@@ -412,8 +413,8 @@
                     <li><a href="#Reference_Scene_SetLayerInternalSize">Scene.SetLayerInternalSize</a></li>
                     <li><a href="#Reference_Scene_SetLayerOffsetPosition">Scene.SetLayerOffsetPosition</a></li>
                     <li><a href="#Reference_Scene_SetLayerDrawGroup">Scene.SetLayerDrawGroup</a></li>
-                    <li><a href="#Reference_/ul>">/ul></a></li>
-                    <li><a href="#Reference_/ul>">/ul></a></li>
+                    <li><a href="#Reference_Scene_SetLayerDrawBehavior">Scene.SetLayerDrawBehavior</a></li>
+                    <li><a href="#Reference_Scene_SetLayerBlend">Scene.SetLayerBlend</a></li>
                     <li><a href="#Reference_Scene_SetLayerOpacity">Scene.SetLayerOpacity</a></li>
                     <li><a href="#Reference_Scene_SetLayerScroll">Scene.SetLayerScroll</a></li>
                     <li><a href="#Reference_Scene_SetLayerSetParallaxLinesBegin">Scene.SetLayerSetParallaxLinesBegin</a></li>
@@ -1523,6 +1524,27 @@
         <div style="margin-top: 8px; font-size: 14px;"></div>
         </p>
         <hr/>
+        <p id="Reference_Draw_UseSpriteDeform">
+        <h2 style="margin-bottom: 8px;">Draw.UseSpriteDeform</h2>
+        <code>Draw.UseSpriteDeform(useDeform)</code>
+        <div style="margin-top: 8px; font-size: 14px;">Sets whether or not to use sprite deform when drawing.</div>
+        <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
+        <ul style="margin-top: 0px; font-size: 14px;">
+        <li>useDeform (Boolean): Whether or not to use sprite deform when drawing.</li>
+        </ul>
+        </p>
+        <hr/>
+        <p id="Reference_Draw_SetSpriteDeformLine">
+        <h2 style="margin-bottom: 8px;">Draw.SetSpriteDeformLine</h2>
+        <code>Draw.SetSpriteDeformLine(deformIndex, deformValue)</code>
+        <div style="margin-top: 8px; font-size: 14px;">Sets the sprite deform line at the specified line index.</div>
+        <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
+        <ul style="margin-top: 0px; font-size: 14px;">
+        <li>deformIndex (Integer): Index of deform line. (0 = top of screen, 1 = the line below it, 2 = etc.)</li>
+        <li>deformValue (Decimal): Deform value.</li>
+        </ul>
+        </p>
+        <hr/>
         <p id="Reference_Ease_InSine">
         <h2 style="margin-bottom: 8px;">Ease.InSine</h2>
         <code>Ease.InSine(value)</code>
@@ -2542,35 +2564,14 @@
         <hr/>
         <p id="Reference_Music_Play">
         <h2 style="margin-bottom: 8px;">Music.Play</h2>
-        <code>Music.Play(music)</code>
+        <code>Music.Play(music[, panning, speed, volume])</code>
         <div style="margin-top: 8px; font-size: 14px;">Places the music onto the music stack and plays it.</div>
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
         <li>music (Integer): The music index to play.</li>
-        </ul>
-        </p>
-        <hr/>
-        <p id="Reference_Music_PlayAtTime">
-        <h2 style="margin-bottom: 8px;">Music.PlayAtTime</h2>
-        <code>Music.PlayAtTime(music, startPoint)</code>
-        <div style="margin-top: 8px; font-size: 14px;">Places the music onto the music stack and plays it at a time (in seconds).</div>
-        <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
-        <ul style="margin-top: 0px; font-size: 14px;">
-        <li>music (Integer): The music index to play.</li>
-        <li>startPoint (Integer): The time (in seconds) to start the music at.</li>
-        </ul>
-        </p>
-        <hr/>
-        <p id="Reference_Music_PlayAtTimeWithLoop">
-        <h2 style="margin-bottom: 8px;">Music.PlayAtTimeWithLoop</h2>
-        <code>Music.PlayAtTimeWithLoop(music, startPoint, loop, loopPoint)</code>
-        <div style="margin-top: 8px; font-size: 14px;">Places the music onto the music stack and plays it at a time (in seconds).</div>
-        <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
-        <ul style="margin-top: 0px; font-size: 14px;">
-        <li>music (Integer): The music index to play.</li>
-        <li>startPoint (Integer): The time (in seconds) to start the music at.</li>
-        <li>loop (Boolean): Unused.</li>
-        <li>loopPoint (Integer): The sample index to loop back to.</li>
+        <li>panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)</li>
+        <li>speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed. (1.0 is the default.)</li>
+        <li>volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume. (1.0 is the default.)</li>
         </ul>
         </p>
         <hr/>
@@ -2610,13 +2611,16 @@
         <hr/>
         <p id="Reference_Music_Loop">
         <h2 style="margin-bottom: 8px;">Music.Loop</h2>
-        <code>Music.Loop(music, loop, loopPoint)</code>
+        <code>Music.Loop(music, loop, loopPoint[, panning, speed, volume])</code>
         <div style="margin-top: 8px; font-size: 14px;">Places the music onto the music stack and plays it, looping back to the specified sample index if it reaches the end of playback.</div>
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
         <li>music (Integer): The music index to play.</li>
         <li>loop (Boolean): Unused.</li>
         <li>loopPoint (Integer): The sample index to loop back to.</li>
+        <li>panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)</li>
+        <li>speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed. (1.0 is the default.)</li>
+        <li>volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume. (1.0 is the default.)</li>
         </ul>
         </p>
         <hr/>
@@ -2639,6 +2643,18 @@
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
         <li>music (Integer): The music index to get the current position (in seconds) of.</li>
+        </ul>
+        </p>
+        <hr/>
+        <p id="Reference_Music_Alter">
+        <h2 style="margin-bottom: 8px;">Music.Alter</h2>
+        <code>Music.Alter(panning, speed, volume)</code>
+        <div style="margin-top: 8px; font-size: 14px;">Alters the playback conditions of the current track playing.</div>
+        <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
+        <ul style="margin-top: 0px; font-size: 14px;">
+        <li>panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it.</li>
+        <li>speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed.</li>
+        <li>volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume.</li>
         </ul>
         </p>
         <hr/>
@@ -3145,26 +3161,26 @@
         </ul>
         </p>
         <hr/>
-        <p id="Reference_/ul>">
-        <h2 style="margin-bottom: 8px;">/ul></h2>
-        <code>/ul>(layerIndex, drawBehavior)</code>
-        <div style="margin-top: 8px; font-size: 14px;">Sets the parallax direction of the layer.</div>
+        <p id="Reference_Scene_SetLayerDrawBehavior">
+        <h2 style="margin-bottom: 8px;">Scene.SetLayerDrawBehavior</h2>
+        <code>Scene.SetLayerDrawBehavior(layerIndex, drawBehavior)</code>
+        <div style="margin-top: 8px; font-size: 14px;">Sets the parallax direction of the layer. <br/></br>Behaviors:<ul><li><code>DrawBehavior_HorizontalParallax</code>: Horizontal parallax.</li><li><code>DrawBehavior_VerticalParallax</code>: Do not use.</li><li><code>DrawBehavior_CustomTileScanLines</code>: Custom scanline behavior.</li></ul></div>
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
         <li>layerIndex (Integer): Index of layer.</li>
-        <li>drawBehavior (Integer): Draw behavior. <br/>\</li>
+        <li>drawBehavior (Integer): Draw behavior.</li>
         </ul>
         </p>
         <hr/>
-        <p id="Reference_/ul>">
-        <h2 style="margin-bottom: 8px;">/ul></h2>
-        <code>/ul>(layerIndex, doBlend[, blendMode])</code>
-        <div style="margin-top: 8px; font-size: 14px;">Sets whether or not to use color and alpha blending on this layer.</div>
+        <p id="Reference_Scene_SetLayerBlend">
+        <h2 style="margin-bottom: 8px;">Scene.SetLayerBlend</h2>
+        <code>Scene.SetLayerBlend(layerIndex, doBlend[, blendMode])</code>
+        <div style="margin-top: 8px; font-size: 14px;">Sets whether or not to use color and alpha blending on this layer. <br/></br>Blend Modes:<ul><li><code>BlendMode_NORMAL</code>: Normal pixel blending.</li><li><code>BlendMode_ADD</code>: Additive pixel blending.</li><li><code>BlendMode_MAX</code>: Maximum pixel blending.</li><li><code>BlendMode_SUBTRACT</code>: Subtractive pixel blending.</li><li><code>BlendMode_MATCH_EQUAL</code>: (software-renderer only) Draw pixels only where it matches the Comparison Color.</li><li><code>BlendMode_MATCH_NOT_EQUAL</code>: (software-renderer only) Draw pixels only where it does not match the Comparison Color.</li></ul></div>
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
         <li>layerIndex (Integer): Index of layer.</li>
         <li>doBlend (Boolean): Whether or not to use blending.</li>
-        <li>blendMode (Integer): The desired blend mode. <br/>\</li>
+        <li>blendMode (Integer): The desired blend mode.</li>
         </ul>
         </p>
         <hr/>
@@ -3431,22 +3447,28 @@
         <hr/>
         <p id="Reference_Sound_Play">
         <h2 style="margin-bottom: 8px;">Sound.Play</h2>
-        <code>Sound.Play(sound)</code>
+        <code>Sound.Play(sound[, panning, speed, volume])</code>
         <div style="margin-top: 8px; font-size: 14px;">Plays a sound once.</div>
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
         <li>sound (Integer): The sound index to play.</li>
+        <li>panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)</li>
+        <li>speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed. (1.0 is the default.)</li>
+        <li>volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume. (1.0 is the default.)</li>
         </ul>
         </p>
         <hr/>
         <p id="Reference_Sound_Loop">
         <h2 style="margin-bottom: 8px;">Sound.Loop</h2>
-        <code>Sound.Loop(sound[, loopPoint])</code>
+        <code>Sound.Loop(sound[, loopPoint, panning, speed, volume])</code>
         <div style="margin-top: 8px; font-size: 14px;">Plays a sound, looping back when it ends.</div>
         <div style="font-weight: bold; margin-top: 8px;">Parameters:</div>
         <ul style="margin-top: 0px; font-size: 14px;">
         <li>sound (Integer): The sound index to play.</li>
         <li>loopPoint (Integer): Loop point in samples.</li>
+        <li>panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)</li>
+        <li>speed (Decimal): Control the speed of the audio. > 1.0 makes it faster, < 1.0 is slower, 1.0 is normal speed. (1.0 is the default.)</li>
+        <li>volume (Decimal): Controls the volume of the audio. 0.0 is muted, 1.0 is normal volume. (1.0 is the default.)</li>
         </ul>
         </p>
         <hr/>
@@ -4446,6 +4468,6 @@
         <div style="font-weight: bold; margin-top: 8px;">Returns:</div>
         <div style="font-size: 14px;">Returns <code>true</code> if the window is fullscreen, <code>false</code> if otherwise.</div>
         </p>
-        <p>287 out of 359 functions have descriptions. </p>
+        <p>288 out of 360 functions have descriptions. </p>
     </body>
 </html>
