@@ -4100,16 +4100,16 @@ VMValue Music_Loop(int argCount, VMValue* args, Uint32 threadID) {
  * \ns Music
  */
 VMValue Music_LoopAtTime(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_AT_LEAST_ARGCOUNT(3);
+    CHECK_AT_LEAST_ARGCOUNT(4);
     ISound* audio = GET_ARG(0, GetMusic);
-    // int loop = GET_ARG(1, GetInteger);
     double start_point = GET_ARG(1, GetDecimal);
+    // int loop = GET_ARG(2, GetInteger);
     int loop_point = GET_ARG(3, GetInteger);
     float panning = GET_ARG_OPT(4, GetDecimal, 0.0f);
     float speed = GET_ARG_OPT(5, GetDecimal, 1.0f);
     float volume = GET_ARG_OPT(6, GetDecimal, 1.0f);
 
-    AudioManager::PushMusicAt(audio,start_point, true, loop_point, panning, speed, volume);
+    AudioManager::PushMusicAt(audio, start_point, true, loop_point, panning, speed, volume);
     return NULL_VAL;
 }
 /***
