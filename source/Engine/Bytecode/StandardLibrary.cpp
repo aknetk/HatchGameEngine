@@ -3995,9 +3995,9 @@ VMValue Music_PlayAtTime(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_AT_LEAST_ARGCOUNT(2);
     ISound* audio = GET_ARG(0, GetMusic);
     double start_point = GET_ARG(1, GetDecimal);
-    float panning = GET_ARG_OPT(1, GetDecimal, 0.0f);
-    float speed = GET_ARG_OPT(2, GetDecimal, 1.0f);
-    float volume = GET_ARG_OPT(3, GetDecimal, 1.0f);
+    float panning = GET_ARG_OPT(2, GetDecimal, 0.0f);
+    float speed = GET_ARG_OPT(3, GetDecimal, 1.0f);
+    float volume = GET_ARG_OPT(4, GetDecimal, 1.0f);
 
     AudioManager::PushMusicAt(audio, start_point, false, 0, panning, speed, volume);
     return NULL_VAL;
