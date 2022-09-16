@@ -4092,6 +4092,7 @@ VMValue Music_Loop(int argCount, VMValue* args, Uint32 threadID) {
  * Music.LoopAtTime
  * \desc Places the music onto the music stack and plays it, looping back to the specified sample index if it reaches the end of playback.
  * \param music (Integer): The music index to play.
+ * \param startPoint (Decimal): The time (in seconds) to start the music at.
  * \param loop (Boolean): Unused.
  * \param loopPoint (Integer): The sample index to loop back to.
  * \paramOpt panning (Decimal): Control the panning of the audio. -1.0 makes it sound in left ear only, 1.0 makes it sound in right ear, and closer to 0.0 centers it. (0.0 is the default.)
