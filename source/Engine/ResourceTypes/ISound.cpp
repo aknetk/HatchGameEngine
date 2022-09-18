@@ -94,7 +94,7 @@ PUBLIC void ISound::Load(const char* filename, bool streamFromFile) {
     requiredSamples      = AudioManager::DeviceFormat.samples * FIRST_LOAD_SAMPLE_BOOST;
 
     BytesPerSample       = ((Format.format & 0xFF) >> 3) * Format.channels;
-    deviceBytesPerSample = ((AudioManager::DeviceFormat.format & 0xFF) >> 3) * AudioManager::DeviceFormat.channels;
+    deviceBytesPerSample = AudioManager::BytesPerSample;
 
     Buffer = (Uint8*)Memory::TrackedMalloc("ISound::Buffer", requiredSamples * deviceBytesPerSample);
     UnconvertedSampleBuffer = (Uint8*)Memory::TrackedMalloc("ISound::UnconvertedSampleBuffer", requiredSamples * BytesPerSample);
@@ -121,7 +121,7 @@ PUBLIC int  ISound::RequestSamples(int samples, bool loop, int sample_to_loop_to
     if (!SoundData)
         return AudioManager::REQUEST_ERROR;
 
-    int bytesPerSample = ((AudioManager::DeviceFormat.format & 0xFF) >> 3) * AudioManager::DeviceFormat.channels;
+    int bytesPerSample = AudioManager::BytesPerSample;
 
     // If the format is the same, no need to convert.
     if (Format.freq == AudioManager::DeviceFormat.freq &&

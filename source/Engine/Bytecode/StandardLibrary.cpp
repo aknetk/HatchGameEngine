@@ -4134,7 +4134,7 @@ VMValue Music_IsPlaying(int argCount, VMValue* args, Uint32 threadID) {
 VMValue Music_GetPosition(int argCount, VMValue* args, Uint32 threadID) {
     CHECK_ARGCOUNT(1);
     ISound* audio = GET_ARG(0, GetMusic);
-    return DECIMAL_VAL(audio->SoundData->GetPosition());
+    return DECIMAL_VAL((float)audio->SoundData->GetPosition());
 }
 /***
  * Music.Alter
@@ -4145,7 +4145,7 @@ VMValue Music_GetPosition(int argCount, VMValue* args, Uint32 threadID) {
  * \ns Music
  */
 VMValue Music_Alter(int argCount, VMValue* args, Uint32 threadID) {
-    CHECK_ARGCOUNT(2);
+    CHECK_ARGCOUNT(3);
     float panning = GET_ARG(1, GetDecimal);
     float speed = GET_ARG(2, GetDecimal);
     float volume = GET_ARG(3, GetDecimal);

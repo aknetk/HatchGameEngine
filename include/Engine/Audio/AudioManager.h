@@ -20,6 +20,9 @@ public:
     static SDL_AudioDeviceID Device;
     static SDL_AudioSpec     DeviceFormat;
     static bool              AudioEnabled;
+    static Uint8             BytesPerSample;
+    static Uint8*            MixBuffer;
+    static size_t            MixBufferSize;
     static deque<StackNode*> MusicStack;
     static StackNode*        SoundArray;
     static int               SoundArrayLength;
@@ -42,6 +45,7 @@ public:
     static Sint16 ProcessSample(Sint16 inSample, int channel);
     static float  ProcessSampleFloat(float inSample, int channel);
     static void   Init();
+    static void   ClampParams(float& pan, float& speed, float& volume);
     static void   SetSound(int channel, ISound* music);
     static void   SetSound(int channel, ISound* music, bool loop, int loopPoint, float pan, float speed, float volume);
     static void   PushMusic(ISound* music, bool loop, Uint32 lp, float pan, float speed, float volume);
@@ -61,6 +65,7 @@ public:
     static void   AudioUnpauseAll();
     static void   AudioPauseAll();
     static void   AudioStopAll();
+    static void   MixAudioLR(Uint8* dest, Uint8* src, size_t len, float volumeL, float volumeR);
     static bool   AudioPlayMix(StackNode* audio, Uint8* stream, int len, float volume);
     static void   AudioCallback(void* data, Uint8* stream, int len);
     static void   Dispose();
