@@ -486,15 +486,16 @@ PUBLIC STATIC bool   AudioManager::AudioPlayMix(StackNode* audio, Uint8* stream,
             if (speed == 0x10000) {
                 if (!doPanning)
                     SDL_MixAudioFormat(stream, audio->Audio->Buffer, DeviceFormat.format, (Uint32)bytes, mixVolume);
-                else for (Uint32 o = 0; o < len; o += MixBufferSize * bytesPerSample) {
-                    memset(MixBuffer, 0, MixBufferSize * BytesPerSample);
-                    AudioManager::MixAudioLR(MixBuffer, audio->Audio->Buffer + advanceReadIndex, MixBufferSize, volumeL, volumeR);
-                    SDL_MixAudioFormat(stream + o, MixBuffer, DeviceFormat.format, (Uint32)MixBufferSize * bytesPerSample, mixVolume);
-
-                    advanceReadIndex += MixBufferSize * bytesPerSample;
+                else {
+                    Uint32 mixAdvance = MixBufferSize * bytesPerSample;
+                    for (Uint32 o = 0; o < len; o += mixAdvance) {
+                        AudioManager::MixAudioLR(MixBuffer, audio->Audio->Buffer + advanceReadIndex, MixBufferSize, volumeL, volumeR);
+                        SDL_MixAudioFormat(stream + o, MixBuffer, DeviceFormat.format, mixAdvance, mixVolume);
+                        advanceReadIndex += mixAdvance;
+                    }
                 }
 
-                audio->Audio->BufferedSamples -= (bytes / bytesPerSample);
+                audio->Audio->BufferedSamples -= bytes / bytesPerSample;
             }
             else for (Uint32 o = 0; o < len; o += bytesPerSample) {
                 advanceAccumulator += speed;
@@ -502,7 +503,6 @@ PUBLIC STATIC bool   AudioManager::AudioPlayMix(StackNode* audio, Uint8* stream,
                 advanceAccumulator &= 0xFFFF;
 
                 if (doPanning) {
-                    memset(MixBuffer, 0, BytesPerSample);
                     AudioManager::MixAudioLR(MixBuffer, audio->Audio->Buffer + advanceReadIndex, 1, volumeL, volumeR);
                     SDL_MixAudioFormat(stream + o, MixBuffer, DeviceFormat.format, (Uint32)bytesPerSample, mixVolume);
                 }
